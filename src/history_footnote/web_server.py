@@ -169,26 +169,36 @@ INDEX_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f0e1">
 <title>历史注脚·万历十五年</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* 🆕 v1.6.2 移动端适配：使用 dvh（dynamic viewport height）解决 iOS Safari URL 栏遮挡 */
+  html, body { height: 100%; }
   body {
     font-family: "Songti SC", "SimSun", "Source Han Serif SC", serif;
     background: #f5f0e1;
     color: #2c2416;
     height: 100vh;
+    height: 100dvh; /* 移动端动态高度（适配 iOS Safari URL 栏） */
     overflow: hidden;
+    -webkit-text-size-adjust: 100%; /* 防止 iOS Safari 自动放大字体 */
   }
   .layout {
     display: grid;
     grid-template-columns: 1fr 320px;
     grid-template-rows: 1fr;
     height: 100vh;
+    height: 100dvh; /* 🆕 v1.6.2 移动端 */
   }
   .main {
     overflow-y: auto;
     padding: 24px 32px;
     background: linear-gradient(180deg, #f5f0e1 0%, #ede4cc 100%);
+    -webkit-overflow-scrolling: touch; /* 🆕 v1.6.2 iOS 弹性滚动 */
   }
   .sidebar {
     background: #2c2416;
@@ -196,6 +206,7 @@ INDEX_HTML = """<!DOCTYPE html>
     padding: 20px;
     overflow-y: auto;
     border-left: 2px solid #8b6f47;
+    -webkit-overflow-scrolling: touch; /* 🆕 v1.6.2 iOS 弹性滚动 */
   }
   .action-point-bar {
     display: flex;
@@ -405,6 +416,10 @@ INDEX_HTML = """<!DOCTYPE html>
     margin: 20px 0;
     position: sticky;
     bottom: 0;
+    z-index: 5;
+    /* 🆕 v1.6.2：背景半透明 + backdrop-filter 让底部输入区更优雅 */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
   .input-area textarea {
     width: 100%;
@@ -534,6 +549,98 @@ INDEX_HTML = """<!DOCTYPE html>
     margin: 2px;
     border-radius: 3px;
     font-size: 11px;
+  }
+
+  /* ============================================================ */
+  /* 🆕 v1.6.2 移动端适配（响应式断点）                              */
+  /* ============================================================ */
+
+  /* 平板（≤1024px）：侧边栏变窄 */
+  @media (max-width: 1024px) {
+    .layout {
+      grid-template-columns: 1fr 240px;
+    }
+    .sidebar { padding: 16px 12px; }
+    .sidebar h3 { font-size: 14px; }
+  }
+
+  /* 手机横屏（≤768px）：侧边栏移到底部，主内容区独占 */
+  @media (max-width: 768px) {
+    .layout {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto;
+      grid-template-areas:
+        "main"
+        "sidebar";
+    }
+    .main {
+      grid-area: main;
+      padding: 16px;
+    }
+    .sidebar {
+      grid-area: sidebar;
+      max-height: 35vh;        /* 侧边栏最多占屏幕 35% */
+      border-left: none;
+      border-top: 2px solid #8b6f47;
+      padding: 12px;
+    }
+    /* 隐藏侧边栏内次要内容（保留：回合/日期/身份/Session/行动点）*/
+    .sidebar .sidebar-secondary { display: none; }
+
+    /* 字号适配 */
+    .main { font-size: 15px; line-height: 1.7; }
+    .round-tag { font-size: 14px; padding: 6px 10px; }
+    .voice-options-header { font-size: 13px; letter-spacing: 1px; }
+    .voice-option-btn { padding: 10px 12px; }
+    .voice-option-btn .voice-name { font-size: 14px; }
+    .voice-option-btn .voice-intent { font-size: 12px; }
+    .input-area { padding: 12px; margin: 12px 0; }
+    .input-area textarea { font-size: 16px; min-height: 60px; }  /* 16px 防 iOS 缩放 */
+    .input-area button { padding: 10px 20px; font-size: 15px; min-height: 44px; min-width: 44px; }  /* 44px 触屏目标 */
+    .input-area .hint { font-size: 11px; }
+    .stat-line { font-size: 13px; padding: 3px 0; }
+    .ap-dot { width: 12px; height: 12px; }
+    .ap-label { font-size: 11px; }
+    .start-screen h2 { font-size: 22px; }
+    .archive-item { padding: 12px; }
+    .ar-session { font-size: 14px; }
+    .ar-meta { font-size: 12px; }
+  }
+
+  /* 手机竖屏（≤480px）：极致压缩 */
+  @media (max-width: 480px) {
+    .layout {
+      grid-template-rows: 1fr auto;
+    }
+    .main {
+      padding: 12px;
+      font-size: 14px;
+    }
+    .sidebar {
+      max-height: 30vh;
+      padding: 10px;
+      font-size: 12px;
+    }
+    .voice-options-grid {
+      grid-template-columns: 1fr;  /* 选项全部堆叠为单列 */
+      gap: 8px;
+    }
+    .input-area { padding: 10px; }
+    .input-area textarea { min-height: 50px; font-size: 16px; }
+    .input-area .row { flex-wrap: wrap; gap: 6px; }
+    .input-area button {
+      width: 100%;
+      min-height: 44px;
+      font-size: 15px;
+    }
+    .round-tag { font-size: 13px; padding: 4px 8px; }
+  }
+
+  /* 🆕 v1.6.2 iOS 键盘弹出时自适应 */
+  /* 当 input-area 获得焦点时，确保它在可视区域内 */
+  .input-area:focus-within {
+    position: relative;
+    z-index: 10;
   }
 </style>
 </head>
@@ -971,6 +1078,26 @@ async function loadArchive(session_id) {
   renderGame(data);
 }
 
+// 🆕 v1.6.2 移动端适配：iOS 键盘弹出时滚动到输入区
+function setupMobileKeyboardFix() {
+  if (window.visualViewport) {
+    const onResize = () => {
+      // 当键盘弹出时，visualViewport.height < window.innerHeight
+      const $inputArea = document.getElementById("input-area");
+      if (!$inputArea) return;
+      // 让 input-area 跟随键盘顶部位置
+      const keyboardTop = window.visualViewport.height;
+      const $layout = document.querySelector(".layout");
+      if ($layout) {
+        $layout.style.height = keyboardTop + "px";
+      }
+    };
+    window.visualViewport.addEventListener("resize", onResize);
+    window.visualViewport.addEventListener("scroll", onResize);
+  }
+}
+setupMobileKeyboardFix();
+
 function renderGame(data) {
   renderSidebar(data);
   $main.innerHTML = "";
@@ -1267,16 +1394,18 @@ function renderSidebar(data) {
       💬 问询/观察不消耗行动点，可继续追问。
     </div>
 
-    <h3>已解锁认知 (${(data.unlocked_insights || []).length}/14)</h3>
-    <div>${(data.unlocked_insights || []).map(i => `<span class="insight-tag">${i}</span>`).join("") || "<span style='color:#5a4a30;font-size:12px'>尚无</span>"}</div>
+    <div class="sidebar-secondary"> <!-- 🆕 v1.6.2 移动端隐藏次要信息 -->
+      <h3>已解锁认知 (${(data.unlocked_insights || []).length}/14)</h3>
+      <div>${(data.unlocked_insights || []).map(i => `<span class="insight-tag">${i}</span>`).join("") || "<span style='color:#5a4a30;font-size:12px'>尚无</span>"}</div>
 
-    <h3>已触发事件 (${(data.triggered_events || []).length})</h3>
-    <div>${(data.triggered_events || []).map(e => `<span class="event-tag">${e}</span>`).join("") || "<span style='color:#5a4a30;font-size:12px'>尚无</span>"}</div>
+      <h3>已触发事件 (${(data.triggered_events || []).length})</h3>
+      <div>${(data.triggered_events || []).map(e => `<span class="event-tag">${e}</span>`).join("") || "<span style='color:#5a4a30;font-size:12px'>尚无</span>"}</div>
 
-    <h3>关键变量</h3>
-    ${Object.entries(v).map(([k, val]) =>
-      `<div class="stat-line"><span class="label">${k}</span><span class="val">${val}</span></div>`
-    ).join("")}
+      <h3>关键变量</h3>
+      ${Object.entries(v).map(([k, val]) =>
+        `<div class="stat-line"><span class="label">${k}</span><span class="val">${val}</span></div>`
+      ).join("")}
+    </div>
   `;
 }
 
