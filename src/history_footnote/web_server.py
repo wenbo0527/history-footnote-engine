@@ -1,0 +1,1567 @@
+"""轻量Web体验入口——基于Python标准库http.server
+
+提供：
+- GET / → 体验主页（HTML+JS）
+- POST /api/start → 创建新session
+- POST /api/input → 玩家输入
+- GET /api/state → 当前状态
+- GET /api/archives → 列出存档
+- POST /api/continue → 继续最近session
+- POST /api/load → 加载指定session
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import threading
+import uuid
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+from datetime import datetime
+
+# 让本模块在src/history_footnote/下可以独立运行
+_HERE = Path(__file__).resolve().parent
+_ROOT = _HERE.parent.parent
+sys.path.insert(0, str(_ROOT / "src"))
+
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(_ROOT / ".env")
+
+from history_footnote.llm_providers import make_llm  # noqa: E402
+from history_footnote.game_loop import GameLoop  # noqa: E402
+from history_footnote.storage.save_manager import (  # noqa: E402
+    DEFAULT_SAVE_ROOT,
+    SaveManager,
+    SaveSession,
+)
+# 🆕 v1.6+ 并发支持：复用全局 SessionPool
+from history_footnote.concurrency import SESSION_POOL, LLM_THROTTLE, SAVE_QUEUE, SessionLock
+
+
+# 全局 session 池（v1.6+ 改用 SessionPool）
+# 旧版 _SESSIONS dict 已被 SESSION_POOL 替代
+def _session_get(sid): return SESSION_POOL.get(sid)
+def _session_set(sid, game): return SESSION_POOL.add(sid, game)
+def _session_pop(sid): SESSION_POOL.remove(sid)
+
+
+def _format_state(game: GameLoop) -> dict:
+    """序列化当前游戏状态供前端展示"""
+    s = game.state
+    recent_narr = []
+    for nh in s.narrative_history[-3:]:
+        recent_narr.append({
+            "round": nh.get("round"),
+            "summary": nh.get("summary", ""),
+            "narrative": nh.get("narrative", ""),
+        })
+    return {
+        "session_id": game.session.session_id,
+        "era_id": game.era_id,
+        "era_name": game.era_config.get("era_name", game.era_id),
+        "round_number": s.round_number,
+        "current_date": s.current_date,
+        "action_points_current": s.action_points_current,
+        "action_points_max": s.action_points_max,
+        "selected_identity": s.selected_identity,
+        "player_gender": s.player_gender,
+        "unlocked_insights": sorted(s.unlocked_insights),
+        "triggered_events": sorted(s.triggered_events),
+        "variables": dict(s.variables),
+        "value_shifts": dict(s.value_shifts),
+        "recent_narratives": recent_narr,
+        # 🐛 v1.5.1 P0 Bug #1 修复：暴露 custom_character 给前端
+        "custom_character": getattr(s, "custom_character", {}),
+        # 🐛 v1.5.1 P1 Issue 5 修复：暴露 last_voice_options 给前端
+        "last_voice_options": list(getattr(s, "last_voice_options", []) or []),
+    }
+
+
+def _detect_intent_for_response(player_input: str, dm_response: dict) -> str:
+    """🐛 v1.5.1 P1 Issue 6 修复：统一意图判定
+
+    优先用 dm_skills._detect_intent_type（规则判定，更可靠），
+    LLM 返回的 intent_type 仅作 fallback。
+    """
+    try:
+        from history_footnote.dm_skills import _detect_intent_type
+        rule_intent = _detect_intent_type(player_input)
+        if rule_intent and rule_intent != "action":
+            # 规则判定为 describe/inquire → 比 LLM 更可靠
+            return rule_intent
+    except Exception:
+        pass
+    # Fallback: LLM 返回的 intent_type
+    return dm_response.get("intent_type", "action")
+
+
+def _get_or_load_session(session_id: str | None) -> GameLoop | None:
+    """获取session，不存在则从存档加载"""
+    if not session_id:
+        return None
+    entry = _session_get(session_id)
+    if entry is not None:
+        return entry[0]
+
+    save_manager = SaveManager(DEFAULT_SAVE_ROOT)
+    session = save_manager.find_session(session_id)
+    if session is None:
+        return None
+
+    loaded = save_manager.load_state(session, "auto")
+    if loaded is None:
+        return None
+
+    config = json.loads((_ROOT / "eras" / session.era_id / "era.json").read_text(encoding="utf-8"))
+    llm = make_llm(provider="minimax-anthropic", era_config=config)
+    game = GameLoop(
+        era_id=session.era_id,
+        era_config=config,
+        llm_model=llm,
+        session=session,
+        load_state_data=loaded,
+    )
+    _session_set(session_id, game)
+    return game
+
+
+def _new_session(era_id: str, identity: str, gender: str, custom_character: dict | None = None) -> GameLoop:
+    """创建新session"""
+    config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
+    llm = make_llm(provider="minimax-anthropic", era_config=config)
+    game = GameLoop(
+        era_id=era_id,
+        era_config=config,
+        llm_model=llm,
+        selected_identity=identity,
+        custom_character=custom_character,  # 🐛 v1.5.1 P0 Bug #1 修复
+    )
+    if gender:
+        game.state.player_gender = gender
+    _session_set(game.session.session_id, game)
+    return game
+
+
+# HTML首页（带引导界面、回合交互、状态面板）
+INDEX_HTML = """<!DOCTYPE html>
+<!-- v1.3.1 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>历史注脚·万历十五年</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Songti SC", "SimSun", "Source Han Serif SC", serif;
+    background: #f5f0e1;
+    color: #2c2416;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    grid-template-rows: 1fr;
+    height: 100vh;
+  }
+  .main {
+    overflow-y: auto;
+    padding: 24px 32px;
+    background: linear-gradient(180deg, #f5f0e1 0%, #ede4cc 100%);
+  }
+  .sidebar {
+    background: #2c2416;
+    color: #d8c89c;
+    padding: 20px;
+    overflow-y: auto;
+    border-left: 2px solid #8b6f47;
+  }
+  .action-point-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 6px 0;
+  }
+  .ap-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #c4a878;
+    border: 1px solid #5a4a30;
+  }
+  .ap-dot.filled { background: #f0d8a0; box-shadow: 0 0 4px #f0d8a0; }
+  .ap-label { color: #c4a878; font-size: 11px; margin-left: 4px; }
+  .player-echo {
+    color: #8b6f47;
+    font-style: italic;
+    border-left: 3px solid #c4a878;
+    padding: 4px 10px;
+    margin: 8px 0 4px;
+    background: rgba(196, 168, 120, 0.1);
+  }
+  .action-tag {
+    display: inline-block;
+    background: #4a3820;
+    color: #f0d8a0;
+    padding: 3px 10px;
+    margin: 6px 0;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+  .action-tag.inquire { background: #2c4a3e; }
+  .month-marker {
+    text-align: center;
+    color: #8b6f47;
+    font-weight: bold;
+    margin: 16px 0;
+    padding: 8px;
+    background: rgba(139, 111, 71, 0.1);
+    border-top: 1px dashed #8b6f47;
+    border-bottom: 1px dashed #8b6f47;
+  }
+  /* 🆕 v1.5+ DE 风格：内在声音选项 */
+  .voice-options {
+    background: linear-gradient(180deg, rgba(60,48,24,0.05) 0%, rgba(60,48,24,0.15) 100%);
+    border: 2px solid #8b6f47;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 20px 0;
+  }
+  .voice-options-header {
+    color: #8b6f47;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 12px;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+  .voice-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .voice-option-btn {
+    background: rgba(255, 250, 235, 0.9);
+    border: 1px solid #8b6f47;
+    border-radius: 4px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .voice-option-btn:hover {
+    background: #f5e6c8;
+    border-color: #c4a878;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(139, 111, 71, 0.2);
+  }
+  .voice-option-btn .voice-name {
+    color: #5a3e1f;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .voice-option-btn .voice-intent {
+    color: #6b5b3f;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .voice-option-btn.free-input {
+    background: rgba(139, 111, 71, 0.08);
+    border-style: dashed;
+  }
+  .voice-option-btn.free-input:hover {
+    background: rgba(139, 111, 71, 0.18);
+  }
+  /* 🆕 v1.6+ Tab 式 UX：其他选项按钮样式（更柔和，引导用） */
+  .voice-option-btn.other {
+    background: rgba(60, 48, 24, 0.06);
+    border-style: dashed;
+    border-color: #b8a578;
+    opacity: 0.85;
+  }
+  .voice-option-btn.other:hover {
+    background: rgba(139, 111, 71, 0.15);
+    border-color: #8b6f47;
+    opacity: 1;
+  }
+  .voice-option-btn.other .voice-name {
+    color: #8b6f47;
+    font-style: italic;
+  }
+  /* 🆕 v1.6+ Tab 式 UX：自由发挥提示区 */
+  .free-input-banner {
+    background: linear-gradient(180deg, rgba(139,111,71,0.12) 0%, rgba(139,111,71,0.05) 100%);
+    border-left: 3px solid #8b6f47;
+    border-right: 1px solid #8b6f47;
+    border-top: 1px solid #8b6f47;
+    border-bottom: none;
+    padding: 10px 14px;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    font-size: 13px;
+  }
+  .free-input-banner-text {
+    color: #5a3e1f;
+    font-weight: bold;
+  }
+  .free-input-cancel {
+    background: transparent;
+    border: 1px solid #8b6f47;
+    color: #8b6f47;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .free-input-cancel:hover {
+    background: #8b6f47;
+    color: #f5e6c8;
+  }
+  /* 🆕 v1.5+ 描述类提示 */
+  .describe-tag {
+    display: inline-block;
+    background: #4a3e7a;
+    color: #f0e8c0;
+    padding: 3px 10px;
+    margin: 6px 0;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+  .sidebar h3 {
+    font-size: 14px;
+    color: #c4a878;
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+  .sidebar .stat-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 13px;
+  }
+  .sidebar .stat-line .label { color: #a08858; }
+  .sidebar .stat-line .val { color: #f0d8a0; font-weight: bold; }
+  .sidebar .insight-tag {
+    display: inline-block;
+    background: #4a3820;
+    color: #f0d8a0;
+    padding: 2px 8px;
+    margin: 2px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .narrative {
+    background: rgba(255, 250, 235, 0.7);
+    border-left: 4px solid #8b6f47;
+    padding: 16px 20px;
+    margin: 16px 0;
+    border-radius: 2px;
+    line-height: 1.9;
+    font-size: 16px;
+    white-space: pre-wrap;
+  }
+  .narrative .round-tag {
+    color: #8b6f47;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .input-area {
+    background: rgba(255, 250, 235, 0.9);
+    border: 1px solid #8b6f47;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 20px 0;
+    position: sticky;
+    bottom: 0;
+  }
+  .input-area textarea {
+    width: 100%;
+    min-height: 70px;
+    border: 1px solid #c4a878;
+    background: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 8px;
+    border-radius: 3px;
+    resize: vertical;
+  }
+  .input-area .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .input-area button {
+    background: #8b6f47;
+    color: #f5f0e1;
+    border: none;
+    padding: 8px 24px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .input-area button:hover { background: #a08858; }
+  .input-area button:disabled { background: #c4a878; cursor: not-allowed; }
+  .input-area .hint { color: #8b6f47; font-size: 12px; }
+  .start-screen {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .start-screen h1 {
+    font-size: 42px;
+    color: #2c2416;
+    margin-bottom: 12px;
+    letter-spacing: 4px;
+  }
+  .start-screen .subtitle {
+    color: #5a4a30;
+    font-size: 18px;
+    margin-bottom: 32px;
+  }
+  .start-screen .era-desc {
+    max-width: 600px;
+    margin: 0 auto 32px;
+    line-height: 1.8;
+    text-align: left;
+    color: #3c3018;
+  }
+  .form-group {
+    max-width: 500px;
+    margin: 16px auto;
+    text-align: left;
+  }
+  .form-group label {
+    display: block;
+    color: #5a4a30;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .form-group select, .form-group input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 15px;
+    border: 1px solid #8b6f47;
+    background: #fff;
+    border-radius: 3px;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: #8b6f47;
+    color: #f5f0e1;
+    border: none;
+    padding: 12px 36px;
+    font-size: 16px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+    margin: 8px;
+  }
+  .btn-primary:hover { background: #a08858; }
+  .btn-secondary {
+    background: transparent;
+    color: #8b6f47;
+    border: 1px solid #8b6f47;
+    padding: 12px 36px;
+    font-size: 16px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+    margin: 8px;
+  }
+  .btn-secondary:hover { background: #ede4cc; }
+  .archive-item {
+    background: #3c3018;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .archive-item:hover { border-color: #c4a878; }
+  .archive-item .ar-session { color: #f0d8a0; font-weight: bold; }
+  .archive-item .ar-meta { color: #a08858; margin-top: 3px; }
+  .loading {
+    display: inline-block;
+    color: #8b6f47;
+    font-size: 13px;
+  }
+  .error {
+    color: #c0504d;
+    background: #f0d8a0;
+    padding: 8px;
+    border-radius: 3px;
+    margin: 8px 0;
+  }
+  .event-tag {
+    display: inline-block;
+    background: #6b4423;
+    color: #f0d8a0;
+    padding: 2px 8px;
+    margin: 2px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="main" id="main"></div>
+  <div class="sidebar" id="sidebar"></div>
+</div>
+
+<script>
+let state = {
+  session_id: null,
+  identity: null,
+  gender: null,
+  era_id: "wanli1587",
+};
+
+const $main = document.getElementById("main");
+const $side = document.getElementById("sidebar");
+
+async function api(path, method = "GET", body = null) {
+  const opts = { method, headers: {"Content-Type": "application/json"} };
+  if (body) opts.body = JSON.stringify(body);
+  const resp = await fetch(path, opts);
+  return await resp.json();
+}
+
+let wizard = {
+  step: 1,  // 1-8
+  era_id: "wanli1587",
+  era_data: null,
+  gender: null,
+  location: null,      // 盛泽镇内的具体位置
+  identity_description: "",
+  life_expectation: "",
+  character: null,    // LLM 生成的人设
+  world_dwell: null,  // LLM 生成的世界画卷
+};
+
+const STEP_TITLES = [
+  "", // step 0 unused
+  "1. 选择时代",        // step 1
+  "2. 世界画卷",        // step 2
+  "3. 选择性别",        // step 3
+  "4. 选择你的位置",    // step 4 NEW
+  "5. 描述你的身份",    // step 5
+  "6. 描述期望生活",    // step 6
+  "7. AI 生成人设",     // step 7
+  "8. 确认 / 开始",     // step 8
+];
+
+// 盛泽镇内的具体位置（基于 era.json 知识条目）
+const SHENGZE_LOCATIONS = [
+  {
+    id: "family_workshop",
+    name: "自家织坊",
+    icon: "🏠",
+    desc: "镇中巷子里的两台织机，前面是作坊，后头是灶房。你和家人住在这里。",
+    traits: "最经典的小织户起点——日常就是织布、卖丝、纳粮、应付催税的里长。",
+    default: true,
+  },
+  {
+    id: "yaxing_east",
+    name: "镇东牙行",
+    icon: "🏪",
+    desc: "王掌柜的牙行在镇东头，你在这里做事——帮忙看丝、议价、跑腿。",
+    traits: "更接近商业。容易听到行情、客商的传闻，但议价和催账是你的日常压力。",
+  },
+  {
+    id: "market_west",
+    name: "镇西市集",
+    icon: "🛒",
+    desc: "卖桑叶、染料、丝线的市集，茶馆也在这里。",
+    traits: "市井气息最浓。各种小道消息、邻居闲聊、季节变化都在这里。",
+  },
+  {
+    id: "sang_field",
+    name: "镇外桑田",
+    icon: "🌱",
+    desc: "盛泽镇外几亩桑田，靠种桑养蚕为生。",
+    traits: "更农耕。节奏跟着季节走，春蚕三眠、夏剪枝、冬埋根，辛苦但稳。",
+  },
+  {
+    id: "rented_house",
+    name: "租住的平房",
+    icon: "🏚️",
+    desc: "新近迁来盛泽镇，没有自己的作坊，租了间平房安身。",
+    traits: "外来者视角。对镇上的事情不熟，没有织机，但也没有历史包袱——可以从头来。",
+  },
+  {
+    id: "li_jia_house",
+    name: "里长老宅",
+    icon: "🏛️",
+    desc: "里长家的偏院，你在这里帮工（或是里长的亲戚）。",
+    traits: "离权力更近——知道镇上谁家纳了税、谁家出了事，但也被里长看得紧。",
+  },
+];
+
+function renderStart() {
+  wizard.step = 1;
+  renderWizard();
+}
+
+function renderWizard() {
+  $side.innerHTML = "<h2>开始游戏</h2>" +
+    "<p style='color:#a08858;font-size:12px;line-height:1.7'>" +
+    "本体验调用真实 Minimax LLM，每步调用约 5-15 秒。<br>" +
+    "设计灵感来自《极乐迪斯科》：<br>" +
+    "· 内在声音（你脑海中的声音）<br>" +
+    "· 失败也是叙事<br>" +
+    "· 行动点系统（耗尽才跳月）" +
+    "</p>";
+  $main.innerHTML = renderWizardStep(wizard.step);
+  attachWizardHandlers();
+}
+
+function renderWizardStep(step) {
+  let html = `<div class="start-screen">`;
+  html += `<div style="color:#8b6f47;font-size:13px;margin-bottom:8px">${STEP_TITLES[step]}</div>`;
+  html += `<h1 style="font-size:32px;margin-bottom:24px">历史注脚</h1>`;
+
+  if (step === 1) {
+    // Step 1: 选择时代
+    html += `<div id="era-list">加载中…</div>`;
+    html += `<div style="margin-top:24px"><button class="btn-secondary" onclick="renderWizardStep(0);showArchives()">继续存档</button></div>`;
+  } else if (step === 2) {
+    // Step 2: 世界画卷
+    if (!wizard.world_dwell) {
+      html += `<div id="dwell-area"><span class="loading">⏳ 正在绘制「${wizard.era_data?.name || '...'}」的世界画卷…</span></div>`;
+    } else {
+      html += renderWorldDwell(wizard.world_dwell);
+      html += `<div style="margin-top:24px;text-align:center">
+        <button class="btn-primary" onclick="wizard.step=3;renderWizard()">继续</button>
+      </div>`;
+    }
+  } else if (step === 3) {
+    // Step 3: 选择性别
+    html += `
+      <div class="form-group" style="max-width:400px">
+        <label>你是男是女？</label>
+        <div style="display:flex;gap:16px;margin-top:8px">
+          <button class="btn-secondary" style="flex:1" onclick="wizard.gender='male';wizard.step=4;renderWizard()">男</button>
+          <button class="btn-secondary" style="flex:1" onclick="wizard.gender='female';wizard.step=4;renderWizard()">女</button>
+        </div>
+      </div>`;
+  } else if (step === 4) {
+    // Step 4: 选择位置（盛泽镇内的具体地点）
+    html += `
+      <div style="max-width:600px;margin:0 auto;text-align:left">
+        <div style="text-align:center;color:#5a4a30;margin-bottom:16px;line-height:1.7">
+          你的故事将发生在 <strong style="color:#8b6f47">苏州府吴江县盛泽镇</strong>——
+          万历年间江南最繁华的丝织市镇之一。<br>
+          选一个你的「位置」，这决定你日常接触的人和事。
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">`;
+    SHENGZE_LOCATIONS.forEach(loc => {
+      html += `<div class="archive-item" style="cursor:pointer" onclick='selectLocation("${loc.id}")'>
+        <div class="ar-session" style="font-size:15px">${loc.icon} ${escapeHtml(loc.name)}</div>
+        <div class="ar-meta" style="margin-top:4px;line-height:1.5">${escapeHtml(loc.desc)}</div>
+        <div class="ar-meta" style="color:#8b6f47;margin-top:4px;font-style:italic">${escapeHtml(loc.traits)}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  } else if (step === 5) {
+    // Step 5: 描述身份
+    html += `
+      <div class="form-group" style="max-width:500px;margin:0 auto">
+        <label>你是谁？用一两句话描述你的身份/来历</label>
+        <div style="margin-top:4px;color:#8b6f47;font-size:12px">
+          你的位置：<strong>${getLocationName(wizard.location)}</strong>
+        </div>
+        <textarea id="identity_desc" rows="3" style="width:100%;padding:8px;font-size:14px;font-family:inherit;border:1px solid #8b6f47;background:#fff;border-radius:3px;margin-top:8px"
+          placeholder="例：盛泽镇的小织户 / 从福建逃难来的破产绸缎商人 / 准备科举的穷书生 / 嫁到本地的年轻媳妇"></textarea>
+        <div style="margin-top:8px;color:#8b6f47;font-size:12px">可选：留空将由 AI 自由发挥</div>
+      </div>
+      <div style="margin-top:16px;text-align:center">
+        <button class="btn-secondary" onclick="wizard.step=4;renderWizard()">← 改位置</button>
+        <button class="btn-primary" onclick="wizard.identity_description=document.getElementById('identity_desc').value;wizard.step=6;renderWizard()">继续</button>
+      </div>`;
+  } else if (step === 6) {
+    // Step 6: 期望生活
+    html += `
+      <div class="form-group" style="max-width:500px;margin:0 auto">
+        <label>你想体验什么样的生活？</label>
+        <textarea id="life_exp" rows="3" style="width:100%;padding:8px;font-size:14px;font-family:inherit;border:1px solid #8b6f47;background:#fff;border-radius:3px"
+          placeholder="例：想体验小商贩的挣扎求生 / 想做点小生意改变命运 / 想安安稳稳养大孩子 / 想看看万历的繁华与崩塌"></textarea>
+        <div style="margin-top:8px;color:#8b6f47;font-size:12px">可选：留空将由 AI 推测</div>
+      </div>
+      <div style="margin-top:16px;text-align:center">
+        <button class="btn-secondary" onclick="wizard.step=5;renderWizard()">← 改身份</button>
+        <button class="btn-primary" onclick="wizard.life_expectation=document.getElementById('life_exp').value;wizard.step=7;renderWizard()">继续</button>
+      </div>`;
+  } else if (step === 7) {
+    // Step 7: AI 生成人设
+    if (!wizard.character) {
+      html += `<div id="char-area"><span class="loading">⏳ AI 正在根据你的描述生成专属人设…</span></div>`;
+    } else {
+      html += renderCharacter(wizard.character);
+      html += `<div style="margin-top:24px;text-align:center">
+        <button class="btn-secondary" onclick="generateCharacter()">🔄 重新生成</button>
+        <button class="btn-primary" onclick="wizard.step=8;renderWizard()">确认</button>
+      </div>`;
+    }
+  } else if (step === 8) {
+    // Step 8: 确认/开始
+    if (!wizard.character) {
+      html += `<div class="error">请先生成人设</div>`;
+    } else {
+      html += renderCharacter(wizard.character);
+      html += `<div style="margin-top:24px;text-align:center">
+        <button class="btn-secondary" onclick="wizard.step=5;renderWizard()">← 修改身份</button>
+        <button class="btn-primary" onclick="startGame()">开始游戏 →</button>
+      </div>`;
+    }
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderWorldDwell(d) {
+  let html = `<div style="max-width:600px;margin:0 auto;text-align:left;font-family:serif;line-height:1.9;color:#2c2416">`;
+  html += `<h2 style="text-align:center;color:#8b6f47;margin-bottom:24px;letter-spacing:4px">${escapeHtml(d.title || '世界画卷')}</h2>`;
+  (d.paragraphs || []).forEach(p => {
+    html += `<p style="margin-bottom:12px;text-indent:2em">${escapeHtml(p)}</p>`;
+  });
+  if (d.key_themes && d.key_themes.length) {
+    html += `<div style="margin-top:20px;padding:12px;background:rgba(139,111,71,0.1);border-radius:4px">
+      <strong>时代主题：</strong>${d.key_themes.map(t => `<span class="insight-tag" style="background:#8b6f47;color:#f5f0e1;padding:2px 8px;margin:2px;border-radius:3px;display:inline-block">${escapeHtml(t)}</span>`).join('')}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderCharacter(c) {
+  let html = `<div style="max-width:600px;margin:0 auto;text-align:left;line-height:1.8">`;
+  html += `<h2 style="text-align:center;color:#8b6f47">${escapeHtml(c.name || '无名氏')}</h2>`;
+  if (c.hometown) html += `<div style="text-align:center;color:#5a4a30;font-size:14px">${escapeHtml(c.hometown)} · ${c.age || '?'}岁</div>`;
+  if (c.background) html += `<div style="margin:16px 0;padding:12px;background:rgba(139,111,71,0.08);border-left:3px solid #8b6f47">${escapeHtml(c.background)}</div>`;
+  if (c.personality) html += `<div style="margin:8px 0"><strong>性格：</strong>${escapeHtml(c.personality)}</div>`;
+  if (c.tics) html += `<div style="margin:8px 0"><strong>习惯：</strong>${escapeHtml(c.tics)}</div>`;
+  if (c.family) {
+    html += `<div style="margin:8px 0"><strong>家庭：</strong><br>`;
+    for (const [k, v] of Object.entries(c.family)) {
+      html += `· <span style="color:#5a4a30">${escapeHtml(k)}：</span>${escapeHtml(typeof v === 'string' ? v : JSON.stringify(v))}<br>`;
+    }
+    html += `</div>`;
+  }
+  if (c.starting_situation) html += `<div style="margin:8px 0;padding:8px;background:rgba(196,168,120,0.15);border-radius:3px"><strong>开局处境：</strong>${escapeHtml(c.starting_situation)}</div>`;
+  if (c.voices && c.voices.length) {
+    html += `<div style="margin:16px 0"><strong>🎭 内在声音：</strong>`;
+    c.voices.forEach(v => {
+      html += `<div style="margin:6px 0;padding:8px;background:rgba(60,48,24,0.85);color:#f0d8a0;border-radius:3px">
+        <strong>${escapeHtml(v.name || '?')}</strong> <span style="color:#a08858;font-size:11px">(${escapeHtml(v.trigger || '')})</span><br>
+        <span style="font-size:13px">${escapeHtml(v.description || '')}</span><br>
+        <span style="color:#c4a878;font-size:12px;font-style:italic">「${escapeHtml(v.first_words || '')}」</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  if (c.skills && c.skills.length) {
+    html += `<div style="margin:16px 0"><strong>⚔️ 初始技能：</strong>`;
+    c.skills.forEach(s => {
+      const stars = "★".repeat(s.level || 1) + "☆".repeat(5 - (s.level || 1));
+      html += `<div style="margin:4px 0">${stars} <strong>${escapeHtml(s.name || '?')}</strong> <span style="color:#8b6f47;font-size:12px">— ${escapeHtml(s.description || '')}</span></div>`;
+    });
+    html += `</div>`;
+  }
+  if (c.opening_paragraph) {
+    html += `<div style="margin:16px 0;padding:12px;background:rgba(60,48,24,0.05);border-radius:3px">
+      <strong>📜 开场白：</strong><br>${escapeHtml(c.opening_paragraph)}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+async function attachWizardHandlers() {
+  if (wizard.step === 1) {
+    const data = await api("/api/eras");
+    const $el = document.getElementById("era-list");
+    $el.innerHTML = data.eras.map(e => `
+      <div class="archive-item" onclick='selectEra("${e.id}", ${JSON.stringify(e).replace(/'/g, "&#39;")})'>
+        <div class="ar-session">${escapeHtml(e.name)} <span style="color:#a08858;font-size:12px">(${escapeHtml(e.year_range)})</span></div>
+        <div class="ar-meta">${escapeHtml(e.description || '')}</div>
+        <div class="ar-meta">可选身份：${e.identities_count} 个</div>
+      </div>
+    `).join("");
+  } else if (wizard.step === 2) {
+    if (!wizard.world_dwell && !wizard._generating_dwell) {
+      wizard._generating_dwell = true;
+      const data = await api("/api/generate_world_dwell", "POST", {era_id: wizard.era_id});
+      wizard._generating_dwell = false;
+      if (data.error) {
+        const $el = document.getElementById("dwell-area");
+        if ($el) $el.innerHTML = "<div class='error'>" + data.error + "</div>";
+      } else {
+        wizard.world_dwell = data.world_dwell;
+        // 用局部重渲染避免触发 attachWizardHandlers
+        const $main = document.getElementById("main");
+        $main.innerHTML = renderWizardStep(2);
+      }
+    }
+  } else if (wizard.step === 7) {
+    if (!wizard.character && !wizard._generating_character) {
+      // 不 await（fire-and-forget），让 generateCharacter 自己管理渲染
+      generateCharacter().catch(err => console.error("generateCharacter failed:", err));
+    }
+  }
+}
+
+async function selectEra(era_id, era_data) {
+  wizard.era_id = era_id;
+  wizard.era_data = era_data;
+  wizard.world_dwell = null;
+  wizard.character = null;
+  wizard.step = 2;
+  renderWizard();
+}
+
+function getLocationName(loc_id) {
+  if (!loc_id) return "未选择";
+  const loc = SHENGZE_LOCATIONS.find(l => l.id === loc_id);
+  return loc ? loc.icon + " " + loc.name : loc_id;
+}
+
+function getLocationDescription(loc_id) {
+  const loc = SHENGZE_LOCATIONS.find(l => l.id === loc_id);
+  return loc ? loc.desc + " " + loc.traits : "";
+}
+
+async function selectLocation(loc_id) {
+  wizard.location = loc_id;
+  wizard.character = null;  // 改了位置就重置人设
+  wizard.step = 5;
+  renderWizard();
+}
+
+async function generateCharacter() {
+  // 防止重入：如果已经在生成中，直接返回
+  if (wizard._generating_character) return;
+  wizard._generating_character = true;
+
+  wizard.character = null;
+  // 重新渲染（显示"生成中"）
+  if (wizard.step === 7) {
+    const $main = document.getElementById("main");
+    $main.innerHTML = renderWizardStep(7);
+  }
+
+  try {
+    const data = await api("/api/generate_character", "POST", {
+      era_id: wizard.era_id,
+      gender: wizard.gender,
+      location: wizard.location,
+      location_description: getLocationDescription(wizard.location),
+      identity_description: wizard.identity_description,
+      life_expectation: wizard.life_expectation,
+    });
+    if (data.error) {
+      const $el = document.getElementById("char-area");
+      if ($el) $el.innerHTML = "<div class='error'>" + data.error + "</div>";
+    } else {
+      wizard.character = data.character;
+      // 重新渲染 step 7 显示结果（不重新 attach，因为 character 已设置）
+      if (wizard.step === 7) {
+        const $main = document.getElementById("main");
+        $main.innerHTML = renderWizardStep(7);
+      }
+    }
+  } finally {
+    wizard._generating_character = false;
+  }
+}
+
+// 🐛 Bug #3 修复：位置 → identity 映射
+// 6 个 SHENGZE_LOCATIONS 对应 era.json 6 个 identity
+const LOCATION_TO_IDENTITY = {
+  "family_workshop": {"male": "weaving_male", "female": "weaving_female"},   // 自家织坊 → 织户
+  "yaxing_east":     {"male": "merchant_male", "female": "merchant_female"},// 镇东牙行 → 商人
+  "market_west":     {"male": "merchant_male", "female": "merchant_female"},// 镇西市集 → 商人
+  "sang_field":      {"male": "weaving_male", "female": "weaving_female"},   // 镇外桑田 → 织户
+  "rented_house":    {"male": "weaving_male", "female": "weaving_female"},   // 租住平房 → 织户（外来者）
+  "li_jia_house":    {"male": "scholar_male", "female": "scholar_female"},   // 里长老宅 → 读书人
+};
+
+async function startGame() {
+  // 🐛 Bug #3 修复：根据位置 + 性别 选择对应 identity
+  let identity = "default";
+  if (wizard.era_id === "wanli1587") {
+    const map = LOCATION_TO_IDENTITY[wizard.location] || LOCATION_TO_IDENTITY["family_workshop"];
+    identity = map[wizard.gender] || map["male"];
+  }
+  state.gender = wizard.gender;
+  state.identity = identity;
+  state.era_id = wizard.era_id;
+  state.location = wizard.location;
+  const data = await api("/api/start", "POST", {era_id: wizard.era_id, identity, gender: wizard.gender, character: wizard.character});
+  if (data.error) {
+    alert(data.error);
+    return;
+  }
+  state.session_id = data.session_id;
+  renderGame(data);
+}
+
+async function showArchives() {
+  const data = await api("/api/archives?era_id=" + state.era_id);
+  let html = "<div class='start-screen'><h2>存档列表</h2><div style='max-width:500px;margin:0 auto;text-align:left'>";
+  if (data.archives.length === 0) {
+    html += "<p style='color:#5a4a30;text-align:center'>暂无存档</p>";
+  } else {
+    data.archives.forEach(a => {
+      html += `<div class='archive-item' onclick='loadArchive("${a.session_id}")'>
+        <div class='ar-session'>${a.session_id}</div>
+        <div class='ar-meta'>${a.current_date} · 第${a.current_round}回合 · 进度摘要: ${a.summary}</div>
+        <div class='ar-meta'>身份: ${a.selected_identity} (${a.player_gender})</div>
+      </div>`;
+    });
+  }
+  html += "<div style='text-align:center;margin-top:24px'><button class='btn-secondary' onclick='renderStart()'>返回</button></div></div>";
+  $main.innerHTML = html;
+}
+
+async function loadArchive(session_id) {
+  const data = await api("/api/load", "POST", {session_id});
+  if (data.error) {
+    alert(data.error);
+    return;
+  }
+  state.session_id = session_id;
+  state.gender = data.player_gender;
+  state.identity = data.selected_identity;
+  renderGame(data);
+}
+
+function renderGame(data) {
+  renderSidebar(data);
+  $main.innerHTML = "";
+  appendOpening(data);
+  appendInputArea();
+  // 🆕 v1.5.1 P0 Bug #2 修复：开局渲染 voice_options
+  // 如果是加载存档且有 last_voice_options，复用它；否则用预定义开局选项
+  if (data.last_voice_options && data.last_voice_options.length > 0) {
+    appendVoiceOptions(data.last_voice_options);
+  } else {
+    appendOpeningVoiceOptions(data);
+  }
+}
+
+function appendOpeningVoiceOptions(data) {
+  // 🐛 v1.5.1 P0 Bug #2 修复：开局的 DE 风格选项（基于开局处境）
+  // 这些是"你脑海中的声音"——基于玩家人设给 2-3 个开局方向
+  const cc = data.custom_character || {};
+  const openingOptions = [
+    {
+      voice_id: "voice_observe",
+      voice_name: "先看看家里情况",
+      intent_text: "我先扫一眼家里有什么，银钱还剩多少，灶房是什么光景",
+    },
+    {
+      voice_id: "voice_action",
+      voice_name: "出门找活路",
+      intent_text: "我去牙行问问最近有没有活计可接",
+    },
+    {
+      voice_id: "voice_moral",
+      voice_name: "先顾眼前",
+      intent_text: "我想想今天的米缸还够不够，今天必须先吃饱",
+    },
+  ];
+  appendVoiceOptions(openingOptions);
+}
+
+function appendOpening(data) {
+  const nh = data.recent_narratives || [];
+  nh.forEach(n => appendNarrative(n, null));
+}
+
+function appendNarrative(n, lastMeta) {
+  const div = document.createElement("div");
+  div.className = "narrative";
+  let tag = `<div class="round-tag">第${n.round}回合 · ${n.summary || ""}</div>`;
+  if (lastMeta && lastMeta.player_input) {
+    tag = `<div class="player-echo">> ${escapeHtml(lastMeta.player_input)}</div>` + tag;
+  }
+  // 🆕 v1.5+：describe/intent_type 标签
+  if (lastMeta && lastMeta.intent_type === "describe") {
+    tag += `<div class="describe-tag">🪞 描述（你在补充身份/处境，不消耗行动点）</div>`;
+  } else if (lastMeta && lastMeta.intent_type === "voice") {
+    tag += `<div class="describe-tag">🎭 内在声音（${escapeHtml(state._selectedVoice?.voice_name || '?')}）</div>`;
+  } else if (lastMeta && lastMeta.is_action === false) {
+    tag += `<div class="action-tag inquire">💬 问询（不消耗行动点）</div>`;
+  } else if (lastMeta && lastMeta.time_cost !== undefined) {
+    const cost = lastMeta.time_cost;
+    const costLabel = cost === 0 ? "瞬时" : cost === 1 ? "半日" : cost === 2 ? "一日" : cost === 3 ? "数日" : `${cost}点`;
+    tag += `<div class="action-tag">⚡ 行动 · 消耗 ${cost} 点（${costLabel}）</div>`;
+  }
+  if (lastMeta && lastMeta.month_advanced) {
+    tag = `<div class="month-marker">━━━ 行动点耗尽，进入 ${lastMeta.new_date} ━━━</div>` + tag;
+  }
+  div.innerHTML = tag + `<div>${escapeHtml(n.narrative)}</div>`;
+  $main.insertBefore(div, $main.lastElementChild);
+}
+
+function appendInputArea() {
+  const div = document.createElement("div");
+  div.className = "input-area";
+  div.id = "input-area";
+  div.innerHTML = `
+    <textarea id="player_input" placeholder="或自由输入（你想做什么/想描述什么都可以）"></textarea>
+    <div class="row">
+      <span class="hint">/help 查看元指令 · /state 查看状态 · /save slot1 存档</span>
+      <button id="btn_submit" onclick="submitInput()">行动</button>
+    </div>
+    <div id="submit_msg"></div>
+  `;
+  $main.appendChild(div);
+  document.getElementById("player_input").focus();
+  document.getElementById("player_input").addEventListener("keydown", e => {
+    if (e.ctrlKey && e.key === "Enter") submitInput();
+  });
+}
+
+function appendVoiceOptions(voiceOptions) {
+  // 🆕 v1.6+ Tab 式 UX：先显示 2-4 个选项 + 「其他」按钮
+  // 点「其他」后才展开自由输入框，避免玩家直接打字跳过选项
+  if (!voiceOptions || voiceOptions.length === 0) return;
+  const div = document.createElement("div");
+  div.className = "voice-options";
+  div.id = "voice-options";
+  div.innerHTML = `
+    <div class="voice-options-header">🎭 你脑海中的声音——选择按哪个行动</div>
+    <div class="voice-options-grid">
+      ${voiceOptions.map((opt, i) => `
+        <button class="voice-option-btn" onclick="submitVoiceOption(${i}, ${JSON.stringify(opt).replace(/"/g, '&quot;')})">
+          <span class="voice-name">${escapeHtml(opt.voice_name || '?')}</span>
+          <span class="voice-intent">${escapeHtml(opt.intent_text || '?')}</span>
+        </button>
+      `).join("")}
+      <button class="voice-option-btn other" onclick="showFreeInputTab()">
+        <span class="voice-name">✍️ 其他...</span>
+        <span class="voice-intent">如果都不对，自己描述要做什么</span>
+      </button>
+    </div>
+  `;
+  // 🐛 Issue #4 修复：voice_options 应该插到 input_area 之前
+  const $inputArea = document.getElementById("input-area");
+  if ($inputArea && $main.contains($inputArea)) {
+    $main.insertBefore(div, $inputArea);
+  } else {
+    $main.appendChild(div);
+  }
+}
+
+function showFreeInputTab() {
+  // 🆕 v1.6+ Tab 式 UX：玩家点「其他」后展开自由输入框
+  // 1. 隐藏选项区（避免视觉混乱）
+  const $opts = document.getElementById("voice-options");
+  if ($opts) $opts.style.display = "none";
+
+  // 2. 在 input-area 上方插入一个"自由发挥"提示区
+  const $inputArea = document.getElementById("input-area");
+  if ($inputArea && !$main.querySelector(".free-input-banner")) {
+    const banner = document.createElement("div");
+    banner.className = "free-input-banner";
+    banner.innerHTML = `
+      <span class="free-input-banner-text">✍️ 自由发挥 — 自己描述要做什么</span>
+      <button class="free-input-cancel" onclick="cancelFreeInput()">← 返回选项</button>
+    `;
+    $main.insertBefore(banner, $inputArea);
+  }
+
+  // 3. 聚焦输入框 + 自动滚动到底部
+  const $ta = document.getElementById("player_input");
+  if ($ta) {
+    $ta.focus();
+    $ta.placeholder = "（自由发挥）想做什么 / 想说什么？例：我要去乡试考场亲眼看看……";
+  }
+  $main.scrollTop = $main.scrollHeight;
+}
+
+function cancelFreeInput() {
+  // 🆕 v1.6+：玩家可以「← 返回选项」回到选项区
+  const $opts = document.getElementById("voice-options");
+  if ($opts) $opts.style.display = "";
+
+  const $banner = $main.querySelector(".free-input-banner");
+  if ($banner) $banner.remove();
+
+  const $ta = document.getElementById("player_input");
+  if ($ta) {
+    $ta.placeholder = "或自由输入（你想做什么/想描述什么都可以）";
+    $ta.value = "";
+  }
+}
+
+async function submitVoiceOption(index, opt) {
+  // 🆕 v1.5+：玩家点击内在声音选项 → 用 intent_text 作为输入
+  // 🐛 Issue #3 修复：双击防护
+  if (state._submitting) return;
+  const inputText = (opt.intent_text || (opt.voice_name + "的想法")).trim();
+  if (!inputText) {
+    console.warn("Empty intent_text in voice option", opt);
+    return;
+  }
+  state._submitting = true;
+  state._selectedVoice = opt;
+  await submitInputWithText(inputText);
+  state._submitting = false;
+}
+
+async function submitInputWithText(inputText) {
+  const $btn = document.getElementById("btn_submit");
+  if ($btn) {
+    $btn.disabled = true;
+    $btn.innerHTML = "<span class='loading'>⏳ DM 正在叙述...</span>";
+  }
+  const data = await api("/api/input", "POST", {session_id: state.session_id, input: inputText});
+  if ($btn) {
+    $btn.disabled = false;
+    $btn.innerHTML = "行动";
+  }
+  if (data.error) {
+    const $m = document.getElementById("submit_msg");
+    if ($m) $m.innerHTML = "<div class='error'>" + data.error + "</div>";
+    return;
+  }
+  renderSidebar(data);
+  if (data.last_narrative) {
+    const lastMeta = {
+      player_input: inputText,
+      is_action: data.last_is_action,
+      time_cost: data.last_time_cost,
+      intent_type: data.last_intent_type,
+      month_advanced: data.last_month_advanced,
+      new_date: data.last_new_date,
+    };
+    appendNarrative(data.last_narrative, lastMeta);
+  }
+  // 🆕 v1.5+：渲染新一轮的内在声音选项
+  // 🐛 v1.6+ 修复：先清理旧选项区 + 旧 banner，避免重复
+  const oldVoice = document.getElementById("voice-options");
+  if (oldVoice) oldVoice.remove();
+  const oldBanner = $main.querySelector(".free-input-banner");
+  if (oldBanner) oldBanner.remove();
+
+  if (data.last_voice_options && data.last_voice_options.length > 0) {
+    appendVoiceOptions(data.last_voice_options);
+  } else {
+    // 没有新选项 → 重置输入框 placeholder 为默认
+    const $ta = document.getElementById("player_input");
+    if ($ta) {
+      $ta.placeholder = "或自由输入（你想做什么/想描述什么都可以）";
+      $ta.value = "";
+    }
+  }
+  $main.scrollTop = $main.scrollHeight;
+}
+
+async function submitInput() {
+  // 🐛 Issue #3 修复：双击防护
+  if (state._submitting) return;
+  const $ta = document.getElementById("player_input");
+  const input = $ta.value.trim();
+  if (!input) return;
+  $ta.value = "";
+  state._submitting = true;
+  const $btn = document.getElementById("btn_submit");
+  $btn.disabled = true;
+  $btn.innerHTML = "<span class='loading'>⏳ DM 正在叙述...</span>";
+  const data = await api("/api/input", "POST", {session_id: state.session_id, input});
+  $btn.disabled = false;
+  $btn.innerHTML = "行动";
+  if (data.error) {
+    document.getElementById("submit_msg").innerHTML = "<div class='error'>" + data.error + "</div>";
+    return;
+  }
+  renderSidebar(data);
+  if (data.last_narrative) {
+    const lastMeta = {
+      player_input: input,
+      is_action: data.last_is_action,
+      time_cost: data.last_time_cost,
+      intent_type: data.last_intent_type,
+      month_advanced: data.last_month_advanced,
+      new_date: data.last_new_date,
+    };
+    appendNarrative(data.last_narrative, lastMeta);
+  }
+  // 🆕 v1.5+：渲染新一轮的内在声音选项
+  // 🐛 v1.6+ 修复：清理旧选项区 + banner（Tab 式 UX 一致）
+  const oldVoice = document.getElementById("voice-options");
+  if (oldVoice) oldVoice.remove();
+  const oldBanner = $main.querySelector(".free-input-banner");
+  if (oldBanner) oldBanner.remove();
+
+  if (data.last_voice_options && data.last_voice_options.length > 0) {
+    appendVoiceOptions(data.last_voice_options);
+  } else {
+    // 没有新选项 → 重置 placeholder
+    $ta.placeholder = "或自由输入（你想做什么/想描述什么都可以）";
+    $ta.value = "";
+  }
+  document.getElementById("submit_msg").innerHTML = "";
+  $main.scrollTop = $main.scrollHeight;
+  // 🐛 Issue #3 修复：解锁
+  state._submitting = false;
+}
+
+function renderSidebar(data) {
+  const v = data.variables || {};
+  const apCur = data.action_points_current ?? 3;
+  const apMax = data.action_points_max ?? 3;
+  let apDots = "";
+  for (let i = 0; i < apMax; i++) {
+    apDots += `<div class="ap-dot${i < apCur ? " filled" : ""}"></div>`;
+  }
+  $side.innerHTML = `
+    <h2>${data.era_name || "万历十五年"}</h2>
+    <div class="stat-line"><span class="label">回合</span><span class="val">${data.round_number}</span></div>
+    <div class="stat-line"><span class="label">日期</span><span class="val">${data.current_date}</span></div>
+    <div class="stat-line"><span class="label">身份</span><span class="val">${data.selected_identity || "?"} (${data.player_gender || "?"})</span></div>
+    <div class="stat-line"><span class="label">Session</span><span class="val" style="font-size:11px">${(data.session_id || "").slice(-8)}</span></div>
+
+    <h3>本月行动点</h3>
+    <div class="action-point-bar">${apDots}<span class="ap-label">${apCur}/${apMax}</span></div>
+    <div style="color:#a08858;font-size:11px;line-height:1.5;margin-top:4px">
+      ⚡ 行动点耗尽时自动跳到下月。<br>
+      💬 问询/观察不消耗行动点，可继续追问。
+    </div>
+
+    <h3>已解锁认知 (${(data.unlocked_insights || []).length}/14)</h3>
+    <div>${(data.unlocked_insights || []).map(i => `<span class="insight-tag">${i}</span>`).join("") || "<span style='color:#5a4a30;font-size:12px'>尚无</span>"}</div>
+
+    <h3>已触发事件 (${(data.triggered_events || []).length})</h3>
+    <div>${(data.triggered_events || []).map(e => `<span class="event-tag">${e}</span>`).join("") || "<span style='color:#5a4a30;font-size:12px'>尚无</span>"}</div>
+
+    <h3>关键变量</h3>
+    ${Object.entries(v).map(([k, val]) =>
+      `<div class="stat-line"><span class="label">${k}</span><span class="val">${val}</span></div>`
+    ).join("")}
+  `;
+}
+
+function escapeHtml(s) {
+  if (!s) return "";
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+renderStart();
+</script>
+</body>
+</html>
+"""
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args):
+        pass  # 静默
+
+    def _json(self, status: int, data: dict):
+        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _html(self, html: str):
+        body = html.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        path = urlparse(self.path).path
+        if path == "/" or path == "/index.html":
+            self._html(INDEX_HTML)
+            return
+        if path == "/api/eras":
+            # 列出所有可用时代包（含摘要）
+            try:
+                out = []
+                for era_dir in (_ROOT / "eras").iterdir():
+                    if era_dir.is_dir() and not era_dir.name.startswith(("_", ".")):
+                        era_json = era_dir / "era.json"
+                        if era_json.exists():
+                            config = json.loads(era_json.read_text(encoding="utf-8"))
+                            timeline = config.get("world", {}).get("timeline", {})
+                            out.append({
+                                "id": config.get("era_id", era_dir.name),
+                                "name": config.get("era_name", "未命名"),
+                                "version": config.get("version", "?"),
+                                "year_range": f"{timeline.get('start', {}).get('year', '?')}-{timeline.get('end', {}).get('year', '?')}",
+                                "description": timeline.get("description", "")[:200],
+                                "identities_count": len(config.get("world", {}).get("player_identities", {})),
+                            })
+                self._json(200, {"eras": out})
+            except Exception as e:
+                self._json(500, {"error": str(e)})
+            return
+        if path == "/api/identities":
+            qs = parse_qs(urlparse(self.path).query)
+            era_id = qs.get("era_id", ["wanli1587"])[0]
+            try:
+                config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
+                ids = config.get("world", {}).get("player_identities", {})
+                out = [{"id": k, "label": v.get("label", k), "role": v.get("role", ""), "gender": v.get("gender")}
+                       for k, v in ids.items()]
+                self._json(200, {"identities": out})
+            except Exception as e:
+                self._json(500, {"error": str(e)})
+            return
+        if path == "/api/archives":
+            qs = parse_qs(urlparse(self.path).query)
+            era_id = qs.get("era_id", [None])[0]
+            save_manager = SaveManager(DEFAULT_SAVE_ROOT)
+            sessions = save_manager.list_sessions(era_id=era_id)
+            out = []
+            for s in sessions[:10]:
+                out.append({
+                    "session_id": s.session_id,
+                    "era_id": s.era_id,
+                    "current_round": s.current_round,
+                    "current_date": s.current_date,
+                    "summary": s.summary,
+                    "selected_identity": s.selected_identity,
+                    "player_gender": s.player_gender,
+                })
+            self._json(200, {"archives": out})
+            return
+        self._json(404, {"error": "not found"})
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length).decode("utf-8") if length else "{}"
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            data = {}
+
+        try:
+            if path == "/api/generate_character":
+                # 玩家输入自由描述 → LLM 生成完整人设
+                era_id = data.get("era_id", "wanli1587")
+                gender = data.get("gender", "male")
+                location = data.get("location", "")
+                location_desc = data.get("location_description", "")
+                identity_desc = data.get("identity_description", "")
+                life_exp = data.get("life_expectation", "")
+                try:
+                    config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
+                    from history_footnote.character_generator import build_character_prompt, parse_character_response
+                    prompt = build_character_prompt(config, gender, identity_desc, life_exp, location=location, location_desc=location_desc)
+                    llm = make_llm(provider="minimax-anthropic", era_config=config)
+                    from langchain_core.messages import SystemMessage, HumanMessage
+                    resp = llm.invoke([
+                        SystemMessage(content="你是人设生成助手。严格按 JSON 格式输出。"),
+                        HumanMessage(content=prompt),
+                    ])
+                    parsed = parse_character_response(resp.content)
+                    self._json(200, {"character": parsed, "raw": resp.content})
+                except Exception as e:
+                    import traceback
+                    self._json(500, {"error": str(e), "trace": traceback.format_exc()})
+                return
+
+            if path == "/api/generate_world_dwell":
+                # 生成「世界画卷」
+                era_id = data.get("era_id", "wanli1587")
+                try:
+                    config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
+                    from history_footnote.character_generator import build_world_dwell_prompt, parse_world_dwell
+                    prompt = build_world_dwell_prompt(config)
+                    llm = make_llm(provider="minimax-anthropic", era_config=config)
+                    from langchain_core.messages import SystemMessage, HumanMessage
+                    resp = llm.invoke([
+                        SystemMessage(content="你是世界画卷绘制师。严格按 JSON 格式输出。"),
+                        HumanMessage(content=prompt),
+                    ])
+                    parsed = parse_world_dwell(resp.content)
+                    self._json(200, {"world_dwell": parsed, "raw": resp.content})
+                except Exception as e:
+                    import traceback
+                    self._json(500, {"error": str(e), "trace": traceback.format_exc()})
+                return
+
+            if path == "/api/lore":
+                # 游戏内查 lore（脱剧情）
+                sid = data.get("session_id")
+                topic = data.get("topic", "")
+                if not sid or not topic:
+                    self._json(400, {"error": "missing session_id or topic"})
+                    return
+                if _session_get(sid) is None:
+                    game = _get_or_load_session(sid)
+                    if game is None:
+                        self._json(404, {"error": "session not found"})
+                        return
+                entry = _session_get(sid)
+                game = entry[0]
+                lock = entry[1]
+                try:
+                    from history_footnote.knowledge_base import KnowledgeBase
+                    kb = game.knowledge_base
+                    results = kb.search(topic, top_k=5) if hasattr(kb, "search") else []
+                    self._json(200, {"topic": topic, "results": results})
+                except Exception as e:
+                    self._json(500, {"error": str(e)})
+                return
+
+            if path == "/api/start":
+                era_id = data.get("era_id", "wanli1587")
+                identity = data.get("identity", "weaving_male")
+                gender = data.get("gender", "male")
+                custom_character = data.get("character")  # 🐛 v1.5.1 P0 Bug #1 修复
+                game = _new_session(era_id, identity, gender, custom_character=custom_character)
+                # 捕获开场白到 narrative_history（用 StringIO 重定向）
+                import io
+                from contextlib import redirect_stdout
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    game._print_opening()
+                opening_text = buf.getvalue().strip()
+                if opening_text:
+                    game.state.append_narrative(0, opening_text, "开场")
+                self._json(200, {
+                    "session_id": game.session.session_id,
+                    **_format_state(game),
+                })
+                return
+
+            if path == "/api/input":
+                sid = data.get("session_id")
+                inp = data.get("input", "").strip()
+                if not sid or not inp:
+                    self._json(400, {"error": "missing session_id or input"})
+                    return
+                if _session_get(sid) is None:
+                    game = _get_or_load_session(sid)
+                    if game is None:
+                        self._json(404, {"error": "session not found"})
+                        return
+                entry = _session_get(sid)
+                game = entry[0]
+                lock = entry[1]
+                with lock:
+                    if inp.startswith("/quit") or inp.startswith("/exit"):
+                        # 退出
+                        _session_pop(sid)
+                        self._json(200, {"session_id": sid, "quit": True, **_format_state(game)})
+                        return
+                    if inp.startswith("/state"):
+                        self._json(200, {"session_id": sid, **_format_state(game)})
+                        return
+                    if inp.startswith("/save"):
+                        slot = inp.split()[1] if len(inp.split()) > 1 else "slot1"
+                        game._handle_meta_command(inp)
+                        self._json(200, {"session_id": sid, "saved_to": slot, **_format_state(game)})
+                        return
+                    # 普通输入：执行一回合
+                    pre = game._preprocess_input(inp)
+                    # 记录行动点状态变化
+                    ap_before = game.state.action_points_current
+                    date_before = game.state.current_date
+                    # 重定向 stdout 捕获 DM 输出
+                    import io
+                    from contextlib import redirect_stdout
+                    buf = io.StringIO()
+                    with redirect_stdout(buf):
+                        game._run_round(pre)
+                    dm_output = buf.getvalue()
+                    last = game.state.narrative_history[-1] if game.state.narrative_history else None
+
+                    # 计算行动点消耗情况
+                    ap_after = game.state.action_points_current
+                    consumed = ap_before - ap_after
+                    # 月是否推进：日期变了
+                    month_advanced = date_before != game.state.current_date
+                    new_date = game.state.current_date if month_advanced else None
+
+                    # 从 DM 输出中提取 is_action/time_cost（通过正则）
+                    import re
+                    is_action = True  # 默认 true
+                    time_cost = consumed if consumed > 0 else 1
+                    if "[💬 问询]" in dm_output:
+                        is_action = False
+                        time_cost = 0
+                    else:
+                        m = re.search(r"本次行动消耗\s*(\d+)\s*点", dm_output)
+                        if m:
+                            time_cost = int(m.group(1))
+
+                    self._json(200, {
+                        "session_id": sid,
+                        **_format_state(game),
+                        "last_narrative": last,
+                        "last_is_action": is_action,
+                        "last_time_cost": time_cost,
+                        # 🐛 v1.5.1 P1 Issue 6 修复：优先用规则判定的 intent_type（更可靠）
+                        "last_intent_type": _detect_intent_for_response(inp, {}),  # dm_response 暂不可访问，用空 dict fallback
+                        "last_voice_options": game.state.last_voice_options,  # 🆕 v1.5+
+                        "last_consumed": consumed,
+                        "last_month_advanced": month_advanced,
+                        "last_new_date": new_date,
+                        "dm_output": dm_output,
+                    })
+                return
+
+            if path == "/api/load":
+                sid = data.get("session_id")
+                game = _get_or_load_session(sid)
+                if game is None:
+                    self._json(404, {"error": "session not found"})
+                    return
+                self._json(200, _format_state(game))
+                return
+
+            self._json(404, {"error": "unknown path"})
+        except SystemExit:
+            self._json(200, {"session_id": data.get("session_id"), "quit": True})
+        except Exception as e:
+            import traceback
+            self._json(500, {"error": str(e), "trace": traceback.format_exc()})
+
+
+def run(host: str = "0.0.0.0", port: int = 8765):
+    server = ThreadingHTTPServer((host, port), Handler)
+    print(f"[HF Web] 历史注脚体验入口已启动: http://localhost:{port}/")
+    print(f"[HF Web] 访问 http://localhost:{port}/ 开始游戏")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\n[HF Web] 已停止")
+        server.shutdown()
+
+
+if __name__ == "__main__":
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("--host", default="0.0.0.0")
+    p.add_argument("--port", type=int, default=8765)
+    args = p.parse_args()
+    run(args.host, args.port)

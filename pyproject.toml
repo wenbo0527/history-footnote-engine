@@ -1,0 +1,58 @@
+[project]
+name = "history-footnote-engine"
+version = "0.1.0"
+description = "AI DM历史体验引擎——配置驱动的历史叙事系统，AI当DM，你当历史里的小人物"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "History Footnote Engine Contributors"}
+]
+keywords = ["ai", "gaming", "narrative", "agent", "langgraph", "history"]
+
+# 核心依赖（Phase 1）
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.5",
+]
+minimax = [
+    "openai>=1.50",  # Minimax兼容OpenAI协议
+]
+
+[project.scripts]
+history-footnote = "history_footnote.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"history_footnote" = ["py.typed"]
+
+# 时代包作为数据文件包含
+[tool.setuptools]
+include-package-data = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]  # 行长度由formatter管
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,4822 @@
+{
+  "era_id": "wanli1587",
+  "era_name": "万历十五年",
+  "version": "1.1.0",
+  "world": {
+    "timeline": {
+      "start": {
+        "year": 1587,
+        "month": 1
+      },
+      "end": {
+        "year": 1601,
+        "month": 10
+      },
+      "round_unit": "month",
+      "total_rounds": 50,
+      "description": "从万历十五年（1587）到国本之争落幕（1601），帝国由盛转衰的关键十五年"
+    },
+    "iron_laws": [
+      {
+        "id": "il_01",
+        "fact": "万历帝自1585年起逐渐怠政，1587年后长期不视朝",
+        "source": "明史·神宗本纪"
+      },
+      {
+        "id": "il_02",
+        "fact": "张居正于万历十年（1582）去世，死后遭清算，改革人亡政息",
+        "source": "明史·张居正传"
+      },
+      {
+        "id": "il_03",
+        "fact": "海瑞于万历十五年（1587）十一月死于南京官邸",
+        "source": "明史·海瑞传"
+      },
+      {
+        "id": "il_04",
+        "fact": "戚继光于万历十五年（1587）十二月去世",
+        "source": "明史·戚继光传"
+      },
+      {
+        "id": "il_05",
+        "fact": "一条鞭法推行后赋役折银缴纳，百姓须以白银纳税",
+        "source": "明史·食货志"
+      },
+      {
+        "id": "il_06",
+        "fact": "万历三大征（宁夏1592、援朝1592-1598、播州1600）耗费巨大",
+        "source": "明史·神宗本纪"
+      },
+      {
+        "id": "il_07",
+        "fact": "万历二十四年（1596）起派矿监税监搜刮民间",
+        "source": "明史·宦官传"
+      },
+      {
+        "id": "il_08",
+        "fact": "万历二十九年（1601）皇长子朱常洛立为太子，国本之争结束",
+        "source": "明史·诸王传"
+      },
+      {
+        "id": "il_09",
+        "fact": "努尔哈赤于1583年起统一建州女真，1616年建立后金",
+        "source": "清史稿·太祖本纪"
+      },
+      {
+        "id": "il_10",
+        "fact": "江南经济繁荣但北方边患日深，南北感受截然不同",
+        "source": "刘勃讲中国史280"
+      }
+    ],
+    "plausibility_rules": [
+      "丝织户可接触市集行情、牙行交易、官府告示、茶馆传闻",
+      "江南人几乎无法直接感知北方边患，只能通过传闻和加税间接感受",
+      "匠户身份不能参加科举，但可以供子弟读书应试",
+      "白银流通受季节和海外贸易影响，丰年银贱粮贱、灾年银贵粮贵",
+      "女性可参与丝织劳动和市集交易，但社会活动受礼法约束",
+      "与官府打交道需通过里长或牙行，不能直接面见知县以上官员",
+      "矿监税监到来后，任何商业活动都可能被额外征税",
+      "作坊规模超过5台织机后，必须通过行会接单子，否则客商不敢直接交易",
+      "上供不是一次性的，是持续性的——给了第一次就有第二次、第三次"
+    ],
+    "freedom_scope": {
+      "player_can_decide": [
+        "织什么品种的丝绸",
+        "卖不卖、卖给谁",
+        "要不要扩大作坊",
+        "供不供孩子读书",
+        "帮不帮邻居",
+        "要不要离开盛泽镇",
+        "对官府加税的态度和应对方式",
+        "上供还是不上供"
+      ],
+      "player_cannot_change": [
+        "皇帝是否视朝",
+        "一条鞭法是否执行",
+        "矿监税监是否到来",
+        "三大征是否发生",
+        "北方边患走向",
+        "国本之争结果"
+      ]
+    },
+    "seasons": [
+      {
+        "month": 1,
+        "season": "深冬",
+        "solar_term": "大寒→立春",
+        "farming": "桑树休眠，修整织机",
+        "festival": "元宵",
+        "market": "淡季，客商稀少",
+        "narrative_flavor": "河面结冰，手指冻得发僵，织机声在寒气里显得格外清脆"
+      },
+      {
+        "month": 2,
+        "season": "初春",
+        "solar_term": "雨水→惊蛰",
+        "farming": "桑树萌芽，修整桑田",
+        "festival": "花朝",
+        "market": "客商开始南下",
+        "narrative_flavor": "桑枝上冒出第一茬嫩芽，空气里有泥土和青草的味道"
+      },
+      {
+        "month": 3,
+        "season": "仲春",
+        "solar_term": "春分→清明",
+        "farming": "采桑养蚕（春蚕）",
+        "festival": "清明",
+        "market": "春丝上市前，行情看涨",
+        "narrative_flavor": "蚕房里沙沙的食桑声，比织机还密"
+      },
+      {
+        "month": 4,
+        "season": "暮春",
+        "solar_term": "谷雨→立夏",
+        "farming": "春蚕结茧、缫丝",
+        "festival": "蚕神节",
+        "market": "春丝上市，牙行最忙",
+        "narrative_flavor": "缫丝锅里的水汽弥漫整条巷子，空气都是甜的"
+      },
+      {
+        "month": 5,
+        "season": "初夏",
+        "solar_term": "小满→芒种",
+        "farming": "织造旺季，赶制夏单",
+        "festival": "端午",
+        "market": "旺季，客商云集",
+        "narrative_flavor": "织机从天亮转到天黑，手指磨出了茧"
+      },
+      {
+        "month": 6,
+        "season": "仲夏",
+        "solar_term": "夏至→小暑",
+        "farming": "夏蚕饲养",
+        "festival": "",
+        "market": "旺季延续",
+        "narrative_flavor": "暑气蒸人，织房里热得像蒸笼，但不敢停机"
+      },
+      {
+        "month": 7,
+        "season": "盛夏",
+        "solar_term": "大暑→立秋",
+        "farming": "夏蚕结茧",
+        "festival": "中元",
+        "market": "洋船到港季，白银充裕",
+        "narrative_flavor": "河面上停满了运丝的船，牙行里人声鼎沸"
+      },
+      {
+        "month": 8,
+        "season": "初秋",
+        "solar_term": "处暑→白露",
+        "farming": "秋蚕饲养",
+        "festival": "中秋",
+        "market": "秋丝行情看品种",
+        "narrative_flavor": "桂花开了，镇上弥漫着甜丝丝的香气"
+      },
+      {
+        "month": 9,
+        "season": "深秋",
+        "solar_term": "秋分→寒露",
+        "farming": "秋蚕结茧、缫丝",
+        "festival": "重阳",
+        "market": "秋丝上市，行情分化",
+        "narrative_flavor": "桑叶开始发黄，今年的蚕事快收尾了"
+      },
+      {
+        "month": 10,
+        "season": "初冬",
+        "solar_term": "霜降→立冬",
+        "farming": "收尾织造，赶冬单",
+        "festival": "",
+        "market": "淡季将至，客商北返",
+        "narrative_flavor": "河面上起了薄雾，客商的船一天比一天少"
+      },
+      {
+        "month": 11,
+        "season": "隆冬",
+        "solar_term": "小雪→冬至",
+        "farming": "织机检修，备料来年",
+        "festival": "冬至",
+        "market": "淡季，纳税季",
+        "narrative_flavor": "税单来了，算算今年的账，不知道够不够交"
+      },
+      {
+        "month": 12,
+        "season": "岁末",
+        "solar_term": "大寒",
+        "farming": "年终结账",
+        "festival": "除夕",
+        "market": "年关清账，还债催款",
+        "narrative_flavor": "年关难过，欠的银子得还，该收的账不一定收得回来"
+      }
+    ],
+    "silk_varieties": [
+      {
+        "id": "sv_satin",
+        "name": "素缎",
+        "difficulty": "低",
+        "price_range": "3-5两/匹",
+        "buyers": "本地商户",
+        "note": "最基础的丝织品，新手也能织"
+      },
+      {
+        "id": "sv_ling",
+        "name": "花绫",
+        "difficulty": "中",
+        "price_range": "6-10两/匹",
+        "buyers": "外地客商",
+        "note": "需提花技术，花色决定价格"
+      },
+      {
+        "id": "sv_husi",
+        "name": "湖丝",
+        "difficulty": "缫丝",
+        "price_range": "8-15两/担",
+        "buyers": "洋商/京商",
+        "note": "优质生丝，一根白净柔韧之丝能承七枚铜钱而不绝"
+      },
+      {
+        "id": "sv_zhuanghua",
+        "name": "妆花缎",
+        "difficulty": "高",
+        "price_range": "15-30两/匹",
+        "buyers": "官府/大商",
+        "note": "需大花楼提花机，workshop_scale≥6才能织"
+      },
+      {
+        "id": "sv_juan",
+        "name": "绢",
+        "difficulty": "低",
+        "price_range": "2-4两/匹",
+        "buyers": "普通百姓",
+        "note": "最低档，粗丝织成"
+      }
+    ],
+    "market_cycles": [
+      {
+        "season": "春丝上市（4月）",
+        "effect": "生丝供给增加，丝价短期下跌，但织成品价格稳定",
+        "variable_effect": {
+          "silver_pressure": -1,
+          "livelihood": 1
+        }
+      },
+      {
+        "season": "洋船到港（7月）",
+        "effect": "白银流入，需求上升，丝价上涨，湖丝尤其抢手",
+        "variable_effect": {
+          "silver_pressure": -1,
+          "livelihood": 1
+        }
+      },
+      {
+        "season": "三大征期间",
+        "effect": "辽饷加派，白银回流国库，民间银荒，丝价下跌",
+        "variable_effect": {
+          "silver_pressure": 1,
+          "livelihood": -1
+        }
+      },
+      {
+        "season": "矿监到来后",
+        "effect": "额外税负，织户成本上升，但客商压价，利润空间被挤压",
+        "variable_effect": {
+          "tax_burden": 1,
+          "tribute_pressure": 1
+        }
+      },
+      {
+        "season": "海外贸易中断",
+        "effect": "白银断流，银贵丝贱，折银纳税更困难",
+        "variable_effect": {
+          "silver_pressure": 2
+        }
+      }
+    ],
+    "family_members": [
+      {
+        "id": "fm_wife",
+        "name": "沈氏",
+        "role": "妻子",
+        "description": "嫁过来八年，操持家务也帮忙缫丝。性子沉稳，话不多，但算账比你还利索。娘家在隔壁村，也是织户出身。",
+        "interaction": "可帮忙缫丝、管账、照看蚕房；会提醒纳税期限、催你还邻居的借款",
+        "story_hook": "她一直想攒钱供儿子读书，但你总觉得手头紧"
+      },
+      {
+        "id": "fm_son",
+        "name": "阿宝",
+        "role": "长子（8岁）",
+        "description": "在镇上私塾念了两年，先生说他脑子活，但学费越来越贵。",
+        "interaction": "放学后帮忙递线头；偶尔带回先生的话或镇上的新鲜事",
+        "story_hook": "供不供他继续读书？读书要银子，但不读书就永远是匠户"
+      },
+      {
+        "id": "fm_daughter",
+        "name": "小妹",
+        "role": "幼女（4岁）",
+        "description": "整天在作坊里跑来跑去，偶尔帮妈妈递桑叶。",
+        "interaction": "叙事中的温情元素，让'家'有重量",
+        "story_hook": "将来嫁妆怎么办？"
+      }
+    ],
+    "player_identities": {
+      "weaving_male": {
+        "id": "weaving_male",
+        "label": "丝织户（男）",
+        "gender": "male",
+        "role": "江南丝织户·丈夫",
+        "social_class": "匠户",
+        "location": "苏州府吴江县盛泽镇",
+        "description": "你是一家小丝织作坊的男主人，'妻络夫织'——你负责织造，妻子沈氏负责缫丝和家务。两台织机，是一家老小的命根子。",
+        "action_boundaries": {
+          "can_access": [
+            "自家作坊",
+            "盛泽市集",
+            "牙行",
+            "茶馆",
+            "镇上商铺",
+            "邻居家",
+            "镇外桑田",
+            "县衙（递状子）"
+          ],
+          "cannot_access": [
+            "府衙以上官署",
+            "皇宫",
+            "军营",
+            "边关",
+            "科举考场"
+          ],
+          "can_interact_with": [
+            "家人",
+            "雇工",
+            "同行织户",
+            "牙行经纪人",
+            "商贩",
+            "里长",
+            "邻人",
+            "镇上读书人",
+            "过往客商"
+          ],
+          "cannot_influence": [
+            "皇帝决策",
+            "朝廷人事",
+            "军事部署",
+            "税法制定",
+            "科举结果"
+          ],
+          "information_access": "市井传闻、牙行行情、里长传达的官府告示、茶馆闲谈、商客带来的远方消息"
+        },
+        "default_family_role": "丈夫",
+        "starting_relationships": {
+          "fm_wife": "妻子（沈氏）",
+          "fm_son": "儿子（阿宝）",
+          "fm_daughter": "女儿（小妹）"
+        },
+        "action_points_max": 3
+      },
+      "weaving_female": {
+        "id": "weaving_female",
+        "label": "丝织户（女）",
+        "gender": "female",
+        "role": "江南丝织户·妻子",
+        "social_class": "匠户",
+        "location": "苏州府吴江县盛泽镇",
+        "description": "你嫁到盛泽镇已经八年，夫家开着一间小丝织作坊。你是'妻络夫织'里的'络'——负责缫丝、染丝、协助织造，是丝织业真正的核心劳动力。丈夫负责外面的接单和粗活。",
+        "action_boundaries": {
+          "can_access": [
+            "自家作坊",
+            "盛泽市集（与丈夫同行）",
+            "牙行（有丈夫或男性亲属在场）",
+            "茶馆（与丈夫同行）",
+            "镇上商铺",
+            "邻居家（同上）",
+            "镇外桑田（同上）",
+            "庙宇",
+            "闺阁（女性客户家）"
+          ],
+          "cannot_access": [
+            "科举考场",
+            "府衙以上官署（不能独立出面）",
+            "皇宫",
+            "军营",
+            "边关",
+            "男性专属娱乐场所（高档酒楼、青楼）"
+          ],
+          "can_interact_with": [
+            "家人",
+            "同行织户女性",
+            "牙婆/卖婆/媒婆",
+            "闺塾师/女伴",
+            "女性客户（富户内眷）",
+            "邻里妇人",
+            "过往客商女性眷属"
+          ],
+          "cannot_influence": [
+            "皇帝决策",
+            "朝廷人事",
+            "军事部署",
+            "税法制定",
+            "科举结果",
+            "独立签署商业契约（需男性亲属代签）"
+          ],
+          "information_access": "市井传闻、牙行行情、女伴间消息、茶馆女眷区闲谈、卖婆走门串户带来的消息、寺庙香客间流传",
+          "special_access": {
+            "闺阁": "可以进入富户内宅与女眷直接交谈——这是男性进不去的空间",
+            "三姑六婆网络": "可以通过卖婆/牙婆/媒婆获取其他家庭内部信息"
+          }
+        },
+        "default_family_role": "妻子",
+        "starting_relationships": {
+          "fm_husband": "丈夫",
+          "fm_son": "儿子（阿宝）",
+          "fm_daughter": "女儿（小妹）",
+          "fm_mother_in_law": "婆婆（可选）"
+        },
+        "special_abilities": {
+          "丝织技术": "缫丝、染丝、辨丝成色——比丈夫更懂行",
+          "闺阁网络": "可以进入男性无法进入的女性社交空间",
+          "三姑六婆": "卖婆/牙婆/媒婆是潜在的信息来源与合作对象"
+        },
+        "action_points_max": 3
+      },
+      "scholar_male": {
+        "id": "scholar_male",
+        "label": "读书人（男）",
+        "gender": "male",
+        "role": "弃织从文的年轻织户",
+        "social_class": "匠户（试图跻身士）",
+        "location": "苏州府吴江县盛泽镇",
+        "description": "你原本是丝织户子弟，但志不在织机。家里省吃俭用供你读书，你已经考中秀才，下一步是考举人。但科举之路荆棘满途——'一衿终老'是常态。",
+        "action_boundaries": {
+          "can_access": [
+            "自家作坊",
+            "盛泽市集",
+            "牙行",
+            "茶馆",
+            "镇上商铺",
+            "文社",
+            "县学（秀才身份）",
+            "县衙（见官不跪）"
+          ],
+          "cannot_access": [
+            "府衙以上官署（无官身）",
+            "皇宫",
+            "军营"
+          ],
+          "can_interact_with": [
+            "家人",
+            "同学秀才",
+            "座师（考官）",
+            "富户（受聘为西席）",
+            "乡绅",
+            "同窗"
+          ],
+          "cannot_influence": [
+            "皇帝决策",
+            "朝廷人事",
+            "军事部署",
+            "税法制定"
+          ],
+          "information_access": "文社议论、座师提点、乡绅闲谈、科举时文选辑"
+        },
+        "default_family_role": "读书的儿子",
+        "starting_relationships": {
+          "fm_father": "父亲（织户）",
+          "fm_mother": "母亲"
+        },
+        "action_points_max": 2
+      },
+      "scholar_female": {
+        "id": "scholar_female",
+        "label": "才女/闺塾师（女）",
+        "gender": "female",
+        "role": "江南才女或闺塾师",
+        "social_class": "匠户（试图跻身上层）",
+        "location": "苏州府吴江县盛泽镇",
+        "description": "你出身丝织户，但自幼聪慧，识文断字。明末江南才女文化繁盛——你或在家中教弟妹读书，或被请去大户人家当闺塾师。但'女子无才便是德'的舆论压力始终存在。",
+        "action_boundaries": {
+          "can_access": [
+            "自家作坊",
+            "盛泽市集",
+            "牙行（与家人同行）",
+            "富户内宅（闺塾师身份）",
+            "女伴圈子",
+            "诗社",
+            "寺庙",
+            "茶馆（女眷区）"
+          ],
+          "cannot_access": [
+            "科举考场",
+            "文社（男性专属）",
+            "府衙以上官署（不能独立出面）",
+            "皇宫",
+            "军营"
+          ],
+          "can_interact_with": [
+            "家人",
+            "女伴（才女圈子）",
+            "富户内眷（雇主）",
+            "闺中弟子",
+            "女塾师前辈",
+            "通过内眷间接影响官府"
+          ],
+          "cannot_influence": [
+            "科举结果（硬约束）",
+            "朝廷人事",
+            "独立签署商业契约"
+          ],
+          "information_access": "女伴间诗酒唱和、闺塾雇主家内宅消息、寺庙香客间流传、女红圈手工艺信息",
+          "special_access": {
+            "闺阁": "可以进入富户内宅与女眷长时间接触——这是男性进不去的",
+            "诗社": "女性诗社是独特的社交网络"
+          }
+        },
+        "default_family_role": "女儿/闺塾师",
+        "starting_relationships": {
+          "fm_father": "父亲（织户）",
+          "fm_mother": "母亲",
+          "fm_patroness": "雇主（富户内眷）"
+        },
+        "special_abilities": {
+          "诗词文赋": "明末江南才女文化的核心能力",
+          "闺塾教学": "教富户女儿读书——稀缺资源",
+          "女性视角的诗文": "进入男性无法进入的闺阁"
+        },
+        "action_points_max": 2
+      },
+      "merchant_male": {
+        "id": "merchant_male",
+        "label": "牙人/中间商（男）",
+        "gender": "male",
+        "role": "丝织品牙人",
+        "social_class": "商人（不入流）",
+        "location": "苏州府吴江县盛泽镇",
+        "description": "你原来是丝织户或雇工，后来攒了点本钱做了牙人——撮合织户和客商，抽取3-5%佣金。商人在明代社会地位不高，但你已经摸到了市井的门道。",
+        "action_boundaries": {
+          "can_access": [
+            "自家牙行",
+            "盛泽市集",
+            "织户家",
+            "茶馆",
+            "酒楼",
+            "县衙（需打点）",
+            "行会"
+          ],
+          "cannot_access": [
+            "科举考场",
+            "皇宫",
+            "军营"
+          ],
+          "can_interact_with": [
+            "织户",
+            "客商",
+            "牙行同行",
+            "行会首事",
+            "胥吏（需打点）",
+            "帮闲"
+          ],
+          "cannot_influence": [
+            "科举结果",
+            "朝廷决策"
+          ],
+          "information_access": "客商带来的远方消息、牙行内部情报、行会消息、茶馆闲谈"
+        },
+        "default_family_role": "牙人",
+        "starting_relationships": {
+          "npc_wang": "王掌柜（行会头目）"
+        },
+        "action_points_max": 4
+      },
+      "merchant_female": {
+        "id": "merchant_female",
+        "label": "卖婆/牙婆（女）",
+        "gender": "female",
+        "role": "女性中间商",
+        "social_class": "三姑六婆（社会评价低）",
+        "location": "苏州府吴江县盛泽镇",
+        "description": "你是'三姑六婆'中的牙婆或卖婆——在闺阁间穿针引线，撮合买卖、说合婚事、传递消息。社会评价低但信息网络发达。",
+        "action_boundaries": {
+          "can_access": [
+            "自家",
+            "盛泽市集",
+            "富户内宅（核心优势）",
+            "牙行（与丈夫/搭档）",
+            "寺庙",
+            "女伴圈子",
+            "媒婆行会"
+          ],
+          "cannot_access": [
+            "科举考场",
+            "男性专属娱乐场所",
+            "府衙（不能独立出面）"
+          ],
+          "can_interact_with": [
+            "女性客户（核心）",
+            "富户内眷",
+            "媒婆同行",
+            "牙婆同行",
+            "师婆/巫婆",
+            "通过内眷间接影响官府"
+          ],
+          "cannot_influence": [
+            "科举结果（硬约束）",
+            "朝廷决策",
+            "独立签署大额契约"
+          ],
+          "information_access": "闺阁内宅消息（核心）、女伴间消息、寺庙香客、媒婆信息网络、牙行行情",
+          "special_access": {
+            "闺阁": "可以频繁进入富户内宅——男性的禁区",
+            "三姑六婆网络": "牙婆/媒婆/卖婆/师婆——信息掮客群"
+          }
+        },
+        "default_family_role": "牙婆",
+        "starting_relationships": {
+          "npc_li": "李秀才有断袖之癖（男性sao类人）",
+          "npc_zhang": "张寡妇（同行）"
+        },
+        "special_abilities": {
+          "闺阁网络": "可进入富户内宅——明代最封闭的空间",
+          "三姑六婆信息": "掌握各家未婚女性、丫鬟、婚姻信息",
+          "成事说合": "撮合买卖、婚事——佣金收入"
+        },
+        "action_points_max": 4
+      }
+    },
+    "default_identity": "weaving_male",
+    "identity_switch_offers": [
+      {
+        "id": "weaving_f_to_scholar_f",
+        "from_identity": "weaving_female",
+        "to_identity": "scholar_female",
+        "trigger_condition": {
+          "min_round": 15,
+          "min_silver_pressure_lt": 7,
+          "required_insights_any": [
+            "ins_silk_trade",
+            "ins_silver_tax",
+            "ins_city_life"
+          ]
+        },
+        "prompt_hint": "DM在以下情况可以提供此选项：\n- 富户内眷请你教女儿识字/写诗\n- 诗社朋友邀你参加\n- 有人夸你'不识可惜'\n- 你在茶馆听到有才女的事迹\n\n但要注意：此路径对女性风险大（'女子无才便是德'舆论、嫁人后可能被迫放弃），DM应自然引入风险提示。",
+        "llm_decides": true,
+        "cost_description": "需要1-2年不事生产，全靠丈夫或积蓄支持；可能面临'女子无才便是德'的舆论压力",
+        "benefit_description": "成为闺塾师，建立女性文人圈子；诗名远播后可编书出版"
+      },
+      {
+        "id": "weaving_f_to_merchant_f",
+        "from_identity": "weaving_female",
+        "to_identity": "merchant_female",
+        "trigger_condition": {
+          "min_round": 10,
+          "min_silver_pressure_lt": 8,
+          "required_insights_any": [
+            "ins_silk_trade"
+          ]
+        },
+        "prompt_hint": "DM在以下情况可以提供此选项：\n- 卖婆上门收购丝绸，看中你的成色经验，邀请你入行\n- 牙婆看中你的丝织经验，邀请你做'掮客'\n- 闺蜜劝你'别只守着织机'\n- 富户内眷请你去帮忙\n- 亡夫后无以为继（特殊场景）\n\n注意：卖婆/牙婆/媒婆是'三姑六婆'，社会评价低但信息网络发达，DM应客观呈现两面性。",
+        "llm_decides": true,
+        "cost_description": "放弃现有织机和人脉，需重新建立客户关系；社会评价低，被污名化风险",
+        "benefit_description": "可以进入富户内宅，建立三姑六婆信息网络；经济独立，不依赖丈夫"
+      },
+      {
+        "id": "weaving_m_to_scholar_m",
+        "from_identity": "weaving_male",
+        "to_identity": "scholar_male",
+        "trigger_condition": {
+          "min_round": 10,
+          "min_silver_pressure_lt": 8,
+          "required_insights_any": [
+            "ins_silk_trade",
+            "ins_silver_tax"
+          ]
+        },
+        "prompt_hint": "DM在以下情况可以提供此选项：\n- 儿子阿宝在私塾表现好，先生夸'可造之材'，家里讨论要不要全力供他读书\n- 行会里有人劝你'让儿子读书吧'\n- 李秀才酒后叹息科举不易\n- 镇上有人考中秀才的喜讯\n\n但注意：科举成功率极低（举人几千分之一），DM应自然引入风险。",
+        "llm_decides": true,
+        "cost_description": "需要3-5年不事生产（家计要靠妻子）；读书失败风险高，可能'一衿终老'",
+        "benefit_description": "见官不跪的特权；可设馆教书；中举后是阶层跃迁"
+      },
+      {
+        "id": "weaving_m_to_merchant_m",
+        "from_identity": "weaving_male",
+        "to_identity": "merchant_male",
+        "trigger_condition": {
+          "min_round": 10,
+          "min_silver_pressure_lt": 7,
+          "min_livelihood_gte": 4,
+          "required_insights_any": [
+            "ins_silk_trade"
+          ]
+        },
+        "prompt_hint": "DM在以下情况可以提供此选项：\n- 王掌柜暗示'你要是做中间商，比织布强'\n- 你帮客商验成色，客商说'你眼力好，自己干这行算了'\n- 老织户说'我当年也是织户，后来改做牙人'\n- 你手里有了本钱，思考下一步\n\n注意：商人社会地位低（'士农工商'末流），但收入高。",
+        "llm_decides": true,
+        "cost_description": "社会地位下降（'商人'在万历朝是末等）；需要启动资金；同行排挤",
+        "benefit_description": "收入提高3-5倍；不用日日操劳织机；可雇佣别人做"
+      }
+    ],
+    "random_events": [
+      {
+        "id": "re_market_encounter",
+        "trigger_condition": {
+          "scene": "盛泽市集",
+          "min_round": 3
+        },
+        "probability": 0.35,
+        "outcomes": [
+          {
+            "type": "npc_encounter",
+            "npc_id": "npc_old_merchant",
+            "weight": 3,
+            "description": "你遇见一位老商人，正向路人打听今年的丝价",
+            "hint": "老商人看起来消息灵通"
+          },
+          {
+            "type": "npc_encounter",
+            "npc_id": "npc_missing_child",
+            "weight": 2,
+            "description": "一个女人抱着孩子在哭，说孩子走失了",
+            "hint": "妇人哭得很伤心"
+          },
+          {
+            "type": "weather",
+            "outcome_id": "rain_starts",
+            "weight": 1,
+            "description": "天空突然阴沉下来，细雨开始飘落",
+            "hint": "雨不算大，但街上的小贩开始收摊"
+          },
+          {
+            "type": "market_news",
+            "outcome_id": "silk_price_rumor",
+            "weight": 2,
+            "description": "你听到牙人在讨论'今年第一批洋船要来了，丝价怕是要涨'",
+            "hint": "这条消息对你很重要"
+          }
+        ]
+      },
+      {
+        "id": "re_teahouse_gossip",
+        "trigger_condition": {
+          "scene": "茶馆",
+          "min_round": 5
+        },
+        "probability": 0.5,
+        "outcomes": [
+          {
+            "type": "rumor",
+            "outcome_id": "fanjin_zhongju",
+            "weight": 2,
+            "description": "有人在聊范进中举的笑话",
+            "hint": "'考了二十多次，五十四岁才中举'"
+          },
+          {
+            "type": "rumor",
+            "outcome_id": "shen_wansan_warning",
+            "weight": 2,
+            "description": "老者在劝年轻人不要做大——'你忘了沈万三？'",
+            "hint": "做大做强不是没有风险"
+          },
+          {
+            "type": "npc_encounter",
+            "npc_id": "npc_lai_li_tou",
+            "weight": 2,
+            "description": "镇上'消息灵通'的癞痢头阿福晃了进来",
+            "hint": "这人整天在市井晃荡，什么都知道一点"
+          },
+          {
+            "type": "rumor",
+            "outcome_id": "yuegang_news",
+            "weight": 1,
+            "description": "有行商在聊月港见闻——'那边一匹湖绫能卖三两'",
+            "hint": "远方来的消息"
+          }
+        ]
+      },
+      {
+        "id": "re_yahang_negotiation",
+        "trigger_condition": {
+          "scene": "牙行"
+        },
+        "probability": 0.4,
+        "outcomes": [
+          {
+            "type": "npc_action",
+            "outcome_id": "yahang_cheat_attempt",
+            "weight": 2,
+            "description": "牙人似乎在成色上压价",
+            "hint": "你隐约觉得他说的价低于市面",
+            "requires_dice": true,
+            "dice": "d20",
+            "dc": 12,
+            "success": "你识破了他的小动作，他反而夸你眼力好",
+            "fail": "他成功压了你一钱银子"
+          },
+          {
+            "type": "npc_encounter",
+            "npc_id": "npc_buyer_outside",
+            "weight": 2,
+            "description": "牙行门口有外地客商在问路",
+            "hint": "听口音像是从北边来的"
+          },
+          {
+            "type": "market_event",
+            "outcome_id": "silk_price_up",
+            "weight": 1,
+            "description": "今天的行情比昨天好——市面缺货",
+            "hint": "这是好消息"
+          }
+        ]
+      },
+      {
+        "id": "re_sangtian_weather",
+        "trigger_condition": {
+          "scene": "镇外桑田"
+        },
+        "probability": 0.3,
+        "outcomes": [
+          {
+            "type": "weather",
+            "outcome_id": "sudden_rain",
+            "weight": 1,
+            "description": "突然下起大雨，你被淋得透湿",
+            "hint": "桑田里躲雨不便",
+            "effect": {
+              "silver_pressure": "+0.5"
+            }
+          },
+          {
+            "type": "npc_encounter",
+            "npc_id": "npc_sangye_farmer",
+            "weight": 2,
+            "description": "一位老桑农在打理桑树",
+            "hint": "他可能知道今年桑叶的行情"
+          },
+          {
+            "type": "discovery",
+            "outcome_id": "wild_mulberry",
+            "weight": 1,
+            "description": "你发现一片野桑林，桑叶很嫩",
+            "hint": "可以省一些桑叶钱",
+            "effect": {
+              "livelihood": "+0.5"
+            }
+          }
+        ]
+      },
+      {
+        "id": "re_sudden_money",
+        "trigger_condition": {
+          "min_round": 8
+        },
+        "probability": 0.1,
+        "outcomes": [
+          {
+            "type": "money_event",
+            "outcome_id": "pick_up_silver",
+            "weight": 1,
+            "description": "你在路上捡到了3钱碎银",
+            "hint": "像是有人不小心掉的",
+            "effect": {
+              "silver": "+0.3"
+            }
+          },
+          {
+            "type": "money_event",
+            "outcome_id": "lose_pocket",
+            "weight": 1,
+            "description": "你发现口袋被划破了，丢了2钱银子",
+            "hint": "有人趁你不备摸了你的口袋",
+            "effect": {
+              "silver": "-0.2"
+            }
+          }
+        ]
+      },
+      {
+        "id": "re_family_event",
+        "trigger_condition": {
+          "scene": "自家作坊"
+        },
+        "probability": 0.25,
+        "outcomes": [
+          {
+            "type": "family_interaction",
+            "outcome_id": "wife_unwell",
+            "weight": 1,
+            "description": "沈氏身体不舒服，还在坚持做活",
+            "hint": "她的脸色有些苍白",
+            "effect": {
+              "livelihood": "-0.3"
+            }
+          },
+          {
+            "type": "family_interaction",
+            "outcome_id": "son_progress",
+            "weight": 2,
+            "description": "阿宝在院子里练字，背诵了一段《千字文》",
+            "hint": "他进步了",
+            "effect": {
+              "livelihood": "+0.2"
+            }
+          },
+          {
+            "type": "family_interaction",
+            "outcome_id": "neighbor_visit",
+            "weight": 2,
+            "description": "邻居周嫂子来串门，带了些自家种的菜",
+            "hint": "人情往来"
+          }
+        ]
+      }
+    ],
+    "pacing_anchors": [
+      {
+        "id": "anchor_spring_tax",
+        "trigger_round": 3,
+        "foreshadow_round": 1,
+        "trigger_date": "1587年2月",
+        "description": "春税征收",
+        "time_mode": "now_time",
+        "foreshadowing_lead": "镇上在传今年春税的数额",
+        "dm_instruction": "用里长上门通知的形式推进；给玩家'该交多少'的取舍"
+      },
+      {
+        "id": "anchor_jap_pirates_news",
+        "trigger_round": 8,
+        "foreshadow_round": 6,
+        "trigger_date": "1587年5月",
+        "description": "月港方向倭寇警报",
+        "time_mode": "sharp_cut",
+        "foreshadowing_lead": "茶馆里有客商说福建那边不太平",
+        "dm_instruction": "锐切：镇外河上飘来一具浮尸，旁边压着倭字木板。立刻把时代危机感推到玩家面前。"
+      },
+      {
+        "id": "anchor_silk_market_collapse",
+        "trigger_round": 15,
+        "foreshadow_round": 12,
+        "trigger_date": "1587年9月",
+        "description": "丝价大跌",
+        "time_mode": "sharp_cut",
+        "foreshadowing_lead": "牙行说外地客商最近少了很多",
+        "dm_instruction": "锐切：王掌柜沉着脸告诉你——昨日杭州客官退了三批货。丝价一夜跌了三成。"
+      },
+      {
+        "id": "anchor_emperor_illness_rumor",
+        "trigger_round": 22,
+        "foreshadow_round": 19,
+        "trigger_date": "1588年4月",
+        "description": "京师传皇帝抱恙",
+        "time_mode": "now_time",
+        "foreshadowing_lead": "县衙贴告示时有人偷偷议论",
+        "dm_instruction": "用谣言方式呈现，给玩家'大人物倒了，下面会怎样'的紧张感"
+      },
+      {
+        "id": "anchor_mining_tax_eunuch",
+        "trigger_round": 30,
+        "foreshadow_round": 27,
+        "trigger_date": "1588年12月",
+        "description": "矿监到苏州",
+        "time_mode": "sharp_cut",
+        "foreshadowing_lead": "苏州城里来了一批生面孔的差役",
+        "dm_instruction": "锐切：矿监的轿子从苏州城方向来盛泽镇了。一时鸡飞狗跳。"
+      },
+      {
+        "id": "anchor_imperial_exam_announcement",
+        "trigger_round": 25,
+        "foreshadow_round": 23,
+        "trigger_date": "1588年7月",
+        "description": "科举乡试报名",
+        "time_mode": "slow_time",
+        "foreshadowing_lead": "镇上李秀才在茶馆里说今年的乡试",
+        "dm_instruction": "慢时间：玩家若有科举意向，深入展开内心挣扎（读书人的本分 vs 现实压力）"
+      }
+    ],
+    "failure_mappings": {
+      "action": "你做不到 A，但发现 B 的可能——比如：织不出花绫，但意外发现桑叶里混了一种能染藕色的野草",
+      "persuasion": "对方没同意，但无意中透露了关键信息——比如：王掌柜不卖丝给你，但告诉你'杭州客官最近全撤了'",
+      "exploration": "找不到目标，但翻到了意料之外的东西——比如：账房没找到，但翻到了一本万历十年的旧户籍册",
+      "choice": "你以为会怎样，实际却更复杂——比如：交了税，但发现邻居没交，催税的反而对你另眼相看",
+      "silk_weaving": "织机突然崩了一根经线——但你由此发现邻家有更便宜的新机",
+      "tax_pay": "交了税却没收到收据——被里长私吞了一钱；下月催税还得再交",
+      "borrowing_money": "借了高利贷，但月利是四分不是三分——债务雪球越滚越大",
+      "journey": "没走到苏州——路上桥断了，绕道多花两天；意外发现一条走私的小路"
+    },
+    "cognitive_frames": {
+      "imperial_exam": {
+        "frame_id": "imperial_exam",
+        "highlight": [
+          "科举消息（乡试/会试/府学动态）",
+          "文人圈动态（李秀才/书肆/经义讨论）",
+          "士绅家宴/书院讲学",
+          "朝廷党争与士人立场",
+          "经史典故引用"
+        ],
+        "suppress": [
+          "丝价行情波动",
+          "织工工资/雇工成本",
+          "桑叶/蚕种价格",
+          "牙行八卦",
+          "市集日常"
+        ]
+      },
+      "business": {
+        "frame_id": "business",
+        "highlight": [
+          "丝价波动",
+          "客商动向（杭州/苏州/福建）",
+          "牙行议价",
+          "高利贷与当铺",
+          "市集行情",
+          "行会与商帮"
+        ],
+        "suppress": [
+          "科举消息",
+          "文人雅集",
+          "经义讨论",
+          "士绅家宴",
+          "朝廷政令细节"
+        ]
+      },
+      "monk": {
+        "frame_id": "monk",
+        "highlight": [
+          "佛寺/僧侣",
+          "因果/轮回说",
+          "简朴生活",
+          "出家仪式",
+          "世事无常的感悟"
+        ],
+        "suppress": [
+          "科举功名",
+          "商场经营",
+          "政治党争"
+        ]
+      },
+      "tax_resist": {
+        "frame_id": "tax_resist",
+        "highlight": [
+          "税吏的压迫",
+          "其他织户的不满",
+          "朝廷加派的传闻",
+          "里长的刁难",
+          "抗税的代价（逃户/抓壮丁）"
+        ],
+        "suppress": [
+          "科举功名",
+          "商业机会"
+        ]
+      },
+      "weaving": {
+        "frame_id": "weaving",
+        "highlight": [
+          "织机/经线/梭子",
+          "丝价行情",
+          "牙行交易",
+          "桑田/蚕事",
+          "水脚银/丝税"
+        ],
+        "suppress": [
+          "科举消息",
+          "经义讨论"
+        ]
+      }
+    },
+    "voices": [
+      {
+        "id": "voice_accountant",
+        "name": "算盘声",
+        "trigger": "always",
+        "prompt_fragment": "一个声音在你脑子里拨算盘：今天收入几分、支出几分，月底还能剩多少。这个声音不会停。"
+      },
+      {
+        "id": "voice_moral",
+        "name": "读书人的本分",
+        "trigger": "moral_anxiety>3",
+        "prompt_fragment": "你想起先生的话：'君子喻于义，小人喻于利'。但先生自己也没饭吃。"
+      },
+      {
+        "id": "voice_road",
+        "name": "远方的路",
+        "trigger": "north_threat>2",
+        "prompt_fragment": "你想起老家听来的话：北边不太平。是不是该想想后路？"
+      },
+      {
+        "id": "voice_safety",
+        "name": "活下去",
+        "trigger": "tax_burden>5 OR silver_pressure>3",
+        "prompt_fragment": "一个声音反复说：先活下去。银子比脸重要，粮食比道理重要。"
+      },
+      {
+        "id": "voice_mother",
+        "name": "老娘的咳喘",
+        "trigger": "livelihood<5",
+        "prompt_fragment": "你想起老娘临走时的话：'娃啊，别让阿宝饿着'。嗓子里又有点发酸。"
+      },
+      {
+        "id": "voice_dignity",
+        "name": "做人要有骨气",
+        "trigger": "moral_anxiety>4",
+        "prompt_fragment": "你想起爹临终前说的：'咱家虽然穷，但不能让人指着脊梁骨'。"
+      }
+    ]
+  },
+  "mechanics": {
+    "variables": [
+      {
+        "id": "silver_pressure",
+        "name": "白银紧缺压力",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 3,
+        "max_shift_per_round": 2,
+        "description": "折银纳税但白银紧缺时的压力。值越高，纳税越困难"
+      },
+      {
+        "id": "tax_burden",
+        "name": "赋税负担",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 4,
+        "max_shift_per_round": 2,
+        "description": "正税加杂派加矿税的总负担"
+      },
+      {
+        "id": "north_threat",
+        "name": "北方边患感知",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 1,
+        "max_shift_per_round": 1,
+        "description": "江南人对北方危机的感知程度。初始极低"
+      },
+      {
+        "id": "social_mobility",
+        "name": "社会流动性",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 5,
+        "max_shift_per_round": 2,
+        "description": "商品经济带来的上升空间"
+      },
+      {
+        "id": "moral_anxiety",
+        "name": "道德焦虑",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 3,
+        "max_shift_per_round": 1,
+        "description": "传统礼法与新生活方式的冲突"
+      },
+      {
+        "id": "court_paralysis",
+        "name": "朝廷失能程度",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 3,
+        "max_shift_per_round": 1,
+        "description": "皇帝怠政、官僚内耗导致的治理真空"
+      },
+      {
+        "id": "livelihood",
+        "name": "生计稳定度",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 6,
+        "max_shift_per_round": 2,
+        "description": "作坊经营和家庭生计的稳定程度"
+      },
+      {
+        "id": "workshop_scale",
+        "name": "作坊规模",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 2,
+        "max_shift_per_round": 1,
+        "description": "2=两台织机小作坊，5=中型需雇工，8=大型有稳定客源，10=镇上数一数二"
+      },
+      {
+        "id": "tribute_pressure",
+        "name": "上供压力",
+        "type": "numeric",
+        "min": 0,
+        "max": 10,
+        "initial": 0,
+        "max_shift_per_round": 2,
+        "description": "被行会、官府、矿监盯上后上供的压力。初始0没人惦记，做大后累积"
+      }
+    ],
+    "triggers": [
+      {
+        "id": "tr_tax_spike",
+        "condition": {
+          "field": "tax_burden",
+          "op": "gte",
+          "value": 7
+        },
+        "effect": {
+          "livelihood": -2,
+          "moral_anxiety": 1
+        },
+        "narrative_hint": "税单上的数字让你倒吸一口凉气——今年又要多交这么多？",
+        "once": false
+      },
+      {
+        "id": "tr_silver_crunch",
+        "condition": {
+          "field": "silver_pressure",
+          "op": "gte",
+          "value": 7
+        },
+        "effect": {
+          "livelihood": -2
+        },
+        "narrative_hint": "今年丝价贱得离谱，可税银一文不能少。你不得不把好丝贱卖换银。",
+        "once": false
+      },
+      {
+        "id": "tr_north_rumor",
+        "condition": {
+          "field": "north_threat",
+          "op": "gte",
+          "value": 5
+        },
+        "effect": {
+          "moral_anxiety": 1
+        },
+        "narrative_hint": "茶馆里有人说辽东那边不太平，好像又打了败仗……",
+        "once": false
+      },
+      {
+        "id": "tr_livelihood_crisis",
+        "condition": {
+          "field": "livelihood",
+          "op": "lte",
+          "value": 2
+        },
+        "effect": {
+          "moral_anxiety": 2,
+          "social_mobility": -1
+        },
+        "narrative_hint": "织机已经停了好几天了，米缸也快见底。你得想办法。",
+        "once": false
+      },
+      {
+        "id": "tr_court_paralysis",
+        "condition": {
+          "field": "court_paralysis",
+          "op": "gte",
+          "value": 7
+        },
+        "effect": {
+          "tax_burden": 1,
+          "social_mobility": -1
+        },
+        "narrative_hint": "知县已经好几个月没升堂了，衙门里的人都在混日子。",
+        "once": false
+      },
+      {
+        "id": "tr_scale_up",
+        "condition": {
+          "field": "workshop_scale",
+          "op": "gte",
+          "value": 5
+        },
+        "effect": {
+          "livelihood": 1,
+          "social_mobility": 1,
+          "tribute_pressure": 1
+        },
+        "narrative_hint": "作坊终于有了起色，你添了新织机，雇了帮工。但王掌柜看你的眼神也不一样了。",
+        "once": true
+      },
+      {
+        "id": "tr_tribute_spiral",
+        "condition": {
+          "field": "tribute_pressure",
+          "op": "gte",
+          "value": 5
+        },
+        "effect": {
+          "livelihood": -1,
+          "tax_burden": 1,
+          "moral_anxiety": 1
+        },
+        "narrative_hint": "这个月的'打点'又多了一笔——行会的摊派、陈税吏的'冰敬'、矿监那边的'意思'……你算算账，赚的银子大半都给了别人。",
+        "once": false
+      },
+      {
+        "id": "tr_tribute_crush",
+        "condition": {
+          "field": "tribute_pressure",
+          "op": "gte",
+          "value": 8
+        },
+        "effect": {
+          "livelihood": -2,
+          "workshop_scale": -1
+        },
+        "narrative_hint": "你不得不卖掉一台织机来凑上供的银子。做大做强？你现在是给别人做嫁衣。",
+        "once": false
+      },
+      {
+        "id": "tr_big_target",
+        "condition": {
+          "and": [
+            {
+              "field": "workshop_scale",
+              "op": "gte",
+              "value": 7
+            },
+            {
+              "field": "round_number",
+              "op": "gte",
+              "value": 32
+            }
+          ]
+        },
+        "effect": {
+          "tribute_pressure": 2,
+          "tax_burden": 1
+        },
+        "narrative_hint": "矿监的人来了盛泽，第一个就找上了你——'听说你是镇上生意做得最大的？'",
+        "once": true
+      },
+      {
+        "id": "tr_refuse_tribute",
+        "condition": {
+          "field": "tribute_pressure",
+          "op": "lte",
+          "value": 2
+        },
+        "effect": {
+          "workshop_scale": -1
+        },
+        "narrative_hint": "你拒绝了上供，但很快发现——没有行会的单子，没有官府的方便，生意越来越难做。",
+        "once": true
+      }
+    ],
+    "round_settlement": [
+      {
+        "condition": {
+          "field": "round_number",
+          "op": "gte",
+          "value": 20
+        },
+        "effect": {
+          "court_paralysis": 1
+        },
+        "description": "万历后期怠政加深"
+      },
+      {
+        "condition": {
+          "field": "round_number",
+          "op": "gte",
+          "value": 30
+        },
+        "effect": {
+          "tax_burden": 1
+        },
+        "description": "三大征军费传导至地方"
+      },
+      {
+        "condition": {
+          "and": [
+            {
+              "field": "workshop_scale",
+              "op": "gte",
+              "value": 5
+            },
+            {
+              "field": "tribute_pressure",
+              "op": "gte",
+              "value": 3
+            }
+          ]
+        },
+        "effect": {
+          "tribute_pressure": 1
+        },
+        "description": "做大后上供自然累积"
+      }
+    ],
+    "historical_events": [
+      {
+        "round": 1,
+        "date": "1587年正月",
+        "event_id": "he_01",
+        "event_name": "万历十五年开年",
+        "description": "表面四海升平，实则帝国已走到尽头。你在盛泽镇照常开工织丝。",
+        "scope": "national",
+        "player_visibility": "direct",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      },
+      {
+        "round": 5,
+        "date": "1587年三月",
+        "event_id": "he_02",
+        "event_name": "京师误传午朝",
+        "description": "京中误传万历帝要午朝，百官齐集却无事可议，帝大怒训斥京官。传到江南成了茶馆笑谈。",
+        "scope": "national",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": false
+      },
+      {
+        "round": 8,
+        "date": "1587年六月",
+        "event_id": "he_03",
+        "event_name": "京师暴雨黄河决口",
+        "description": "京师暴雨如注，黄河再度于开封决口，黎民溺死者甚众。江南虽未受灾，但赈灾加派的消息传来了。",
+        "scope": "national",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      },
+      {
+        "round": 11,
+        "date": "1587年十一月",
+        "event_id": "he_04",
+        "event_name": "海瑞死于南京",
+        "description": "南京都察院右佥都御史海瑞死于任上，家无余财。消息传到江南，有人叹息，有人摇头。",
+        "scope": "regional",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      },
+      {
+        "round": 12,
+        "date": "1587年十二月",
+        "event_id": "he_05",
+        "event_name": "戚继光去世",
+        "description": "一代名将戚继光在贫病中去世，朝廷无正式记录。消息几乎无人知晓。",
+        "scope": "national",
+        "player_visibility": "hidden",
+        "force_trigger": true,
+        "narrative_mandatory": false
+      },
+      {
+        "round": 15,
+        "date": "1588年",
+        "event_id": "he_06",
+        "event_name": "努尔哈赤统一建州",
+        "description": "东北方向，努尔哈赤正在统一建州女真。江南无人知晓此事。",
+        "scope": "northeast",
+        "player_visibility": "hidden",
+        "force_trigger": true,
+        "narrative_mandatory": false
+      },
+      {
+        "round": 20,
+        "date": "1590年",
+        "event_id": "he_07",
+        "event_name": "各地灾荒频发",
+        "description": "连年灾荒，北方尤甚。朝廷赈灾不力，民间怨声渐起。盛泽虽好，但粮价开始波动。",
+        "scope": "national",
+        "player_visibility": "indirect",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      },
+      {
+        "round": 25,
+        "date": "1592年",
+        "event_id": "he_08",
+        "event_name": "宁夏哱拜叛乱",
+        "description": "西北宁夏哱拜叛乱，朝廷调兵平叛。军费加派的消息传到江南。",
+        "scope": "national",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      },
+      {
+        "round": 26,
+        "date": "1592年",
+        "event_id": "he_09",
+        "event_name": "壬辰倭乱·援朝抗倭",
+        "description": "日本丰臣秀吉入侵朝鲜，明朝出兵援朝。三大征之二开始，军费剧增，辽饷加派。",
+        "scope": "international",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      },
+      {
+        "round": 32,
+        "date": "1596年",
+        "event_id": "he_10",
+        "event_name": "矿监税监派出",
+        "description": "万历帝派遣太监到各地任矿监税监搜刮民间。江南是重灾区，丝织业首当其冲。",
+        "scope": "regional",
+        "player_visibility": "direct",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      },
+      {
+        "round": 38,
+        "date": "1598年",
+        "event_id": "he_11",
+        "event_name": "援朝战争结束",
+        "description": "历时七年的援朝战争结束，明朝惨胜。但军费已掏空国库，加派未减。",
+        "scope": "national",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": false
+      },
+      {
+        "round": 40,
+        "date": "1600年",
+        "event_id": "he_12",
+        "event_name": "播州杨应龙叛乱平定",
+        "description": "西南播州杨应龙叛乱被平定，三大征结束。但国库空虚，民间已被搜刮殆尽。",
+        "scope": "national",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": false
+      },
+      {
+        "round": 45,
+        "date": "1601年",
+        "event_id": "he_13",
+        "event_name": "国本之争结束",
+        "description": "皇长子朱常洛终于被立为太子，持续十五年的国本之争落幕。万历帝彻底躺平，再不理政。",
+        "scope": "national",
+        "player_visibility": "rumor",
+        "force_trigger": true,
+        "narrative_mandatory": true
+      }
+    ],
+    "pacing_rules": [
+      {
+        "id": "pr_idle",
+        "condition": {
+          "field": "player_idle_rounds",
+          "op": "gte",
+          "value": 2
+        },
+        "direction": "npc_initiate",
+        "hint": "让与玩家关系最近的NPC主动找玩家谈话",
+        "constraint": "NPC的话题不能透露玩家身份无法获取的信息"
+      },
+      {
+        "id": "pr_tension",
+        "condition": {
+          "field": "round_number",
+          "op": "gte",
+          "value": 25
+        },
+        "direction": "event_push",
+        "hint": "时代张力变量自动+1，模拟历史加速",
+        "constraint": "不要一次性加太多，让玩家有喘息空间"
+      }
+    ]
+  },
+  "growth": {
+    "insight_tree": [
+      {
+        "id": "ins_silk_trade",
+        "topic": "丝路生意经",
+        "prerequisites": [],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "丝",
+          "丝绸",
+          "买卖",
+          "机户",
+          "机织",
+          "梭子",
+          "湖绫",
+          "牙行",
+          "盛泽",
+          "织",
+          "织机",
+          "织造",
+          "经线",
+          "络丝",
+          "绸",
+          "缫丝",
+          "行情"
+        ],
+        "semantic_hints": [
+          "玩家参与任何丝织交易或询问行情"
+        ],
+        "unlock_knowledge": [
+          "sc_silk_workshop",
+          "sc_market_town"
+        ],
+        "narrative_hint": "DM在叙事中自然带出丝织行业的运作方式"
+      },
+      {
+        "id": "ins_silver_tax",
+        "topic": "折银之苦",
+        "prerequisites": [],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "一条鞭",
+          "上供",
+          "交税",
+          "加派",
+          "加税",
+          "差役",
+          "摊派",
+          "税",
+          "税单",
+          "纳税",
+          "赋",
+          "赋税",
+          "银",
+          "银子"
+        ],
+        "semantic_hints": [
+          "玩家经历纳税困难或询问赋税制度"
+        ],
+        "unlock_knowledge": [
+          "en_yitiao_bian",
+          "pr_silver_flow"
+        ],
+        "narrative_hint": "DM在纳税场景中展现折银的实际困境"
+      },
+      {
+        "id": "ins_li_jia",
+        "topic": "里甲编户",
+        "prerequisites": [],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "人丁",
+          "催",
+          "催税",
+          "差",
+          "徭役",
+          "户籍",
+          "田亩",
+          "甲",
+          "编户",
+          "里",
+          "里甲",
+          "里长"
+        ],
+        "semantic_hints": [
+          "玩家被催征赋税或与里长互动"
+        ],
+        "unlock_knowledge": [
+          "sc_village_li_jia",
+          "en_li_jia"
+        ],
+        "narrative_hint": "DM在里长催税场景中展现里甲制度的运作"
+      },
+      {
+        "id": "ins_city_life",
+        "topic": "市井百态",
+        "prerequisites": [],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "会",
+          "听说",
+          "城",
+          "巷",
+          "市",
+          "庙",
+          "苏州",
+          "茶馆",
+          "街",
+          "镇",
+          "镇上",
+          "闲聊",
+          "集市"
+        ],
+        "semantic_hints": [
+          "玩家进入城镇集市或茶馆"
+        ],
+        "unlock_knowledge": [
+          "sc_teahouse",
+          "sc_market_town"
+        ],
+        "narrative_hint": "DM在市集场景中展现万历朝江南的市井生活"
+      },
+      {
+        "id": "ins_expand_ambition",
+        "topic": "做大做强的诱惑",
+        "prerequisites": [
+          "ins_silk_trade"
+        ],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "做大",
+          "兴业",
+          "发家",
+          "多接单",
+          "扩大",
+          "扩展",
+          "扩张",
+          "添机",
+          "添织机",
+          "规模",
+          "雇人",
+          "雇工"
+        ],
+        "semantic_hints": [
+          "玩家主动表达扩大作坊的意愿"
+        ],
+        "unlock_knowledge": [
+          "sc_large_workshop",
+          "pr_labor_system"
+        ],
+        "narrative_hint": "DM在玩家攒够银子时，让王掌柜或牙行经纪人主动提议扩大规模"
+      },
+      {
+        "id": "ins_north_south",
+        "topic": "南北撕裂",
+        "prerequisites": [
+          "ins_silver_tax",
+          "ins_li_jia"
+        ],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "九边",
+          "京城",
+          "京师",
+          "军",
+          "军饷",
+          "加派",
+          "北",
+          "北方",
+          "边",
+          "边关",
+          "辽",
+          "辽东"
+        ],
+        "semantic_hints": [
+          "玩家听闻边关消息并感受到南方繁荣的矛盾"
+        ],
+        "unlock_knowledge": [
+          "bg_north_south",
+          "pr_civil_military"
+        ],
+        "narrative_hint": "DM通过加税和传闻的对比，让玩家意识到南北两重天"
+      },
+      {
+        "id": "ins_bureaucracy",
+        "topic": "官场困局",
+        "prerequisites": [
+          "ins_li_jia"
+        ],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "书吏",
+          "县",
+          "吏",
+          "告状",
+          "官",
+          "官差",
+          "官府",
+          "巡抚",
+          "师爷",
+          "府",
+          "知县",
+          "知府",
+          "胥吏",
+          "衙",
+          "衙门"
+        ],
+        "semantic_hints": [
+          "玩家与官府打交道或观察官场运作"
+        ],
+        "unlock_knowledge": [
+          "sc_county_yamen",
+          "pr_moral_governance"
+        ],
+        "narrative_hint": "DM在官民互动中展现官僚体系的僵化和无奈"
+      },
+      {
+        "id": "ins_silver_economy",
+        "topic": "白银帝国",
+        "prerequisites": [
+          "ins_silk_trade",
+          "ins_silver_tax"
+        ],
+        "trigger_type": "narrative_guided",
+        "trigger_keywords": [
+          "流通",
+          "海外",
+          "番银",
+          "白银",
+          "进口",
+          "银子",
+          "银矿"
+        ],
+        "semantic_hints": [
+          "DM植入海外白银流入线索后玩家追问"
+        ],
+        "unlock_knowledge": [
+          "bg_silver_age",
+          "pr_silver_flow"
+        ],
+        "narrative_hint": "DM通过客商之口提到'番银'，引导玩家理解全球白银流通"
+      },
+      {
+        "id": "ins_moral_vs_reality",
+        "topic": "道德与现实",
+        "prerequisites": [
+          "ins_city_life"
+        ],
+        "trigger_type": "narrative_guided",
+        "trigger_keywords": [
+          "偷税",
+          "吃亏",
+          "本分",
+          "灰色",
+          "礼法",
+          "规矩",
+          "违规",
+          "逃税",
+          "道德"
+        ],
+        "semantic_hints": [
+          "DM安排礼法与生计冲突的场景后玩家做出选择"
+        ],
+        "unlock_knowledge": [
+          "bg_moral_system"
+        ],
+        "narrative_hint": "DM安排一个'守规矩就吃亏'的场景"
+      },
+      {
+        "id": "ins_tribute_trap",
+        "topic": "上供的陷阱",
+        "prerequisites": [
+          "ins_expand_ambition",
+          "ins_bureaucracy"
+        ],
+        "trigger_type": "narrative_guided",
+        "trigger_keywords": [
+          "上供",
+          "丝绸",
+          "利润",
+          "成本",
+          "朝廷",
+          "算账",
+          "给朝廷",
+          "进贡"
+        ],
+        "semantic_hints": [
+          "DM安排一次上供场景后玩家反思"
+        ],
+        "unlock_knowledge": [
+          "pr_tribute_economy"
+        ],
+        "narrative_hint": "DM让玩家算一笔账——赚的银子有多少是给自己的，有多少是给别人的"
+      },
+      {
+        "id": "ins_decline_signal",
+        "topic": "衰落信号",
+        "prerequisites": [
+          "ins_north_south",
+          "ins_bureaucracy"
+        ],
+        "trigger_type": "player_explore",
+        "trigger_keywords": [
+          "下滑",
+          "不行了",
+          "乱",
+          "乱世",
+          "亡",
+          "亡国",
+          "亡天下",
+          "凋敝",
+          "大明朝",
+          "扣边",
+          "末世",
+          "礼崩乐坏",
+          "萧条",
+          "行人稀少",
+          "衰",
+          "衰落",
+          "衰败",
+          "贴出告示",
+          "闹事"
+        ],
+        "semantic_hints": [
+          "玩家主动思考时代走向"
+        ],
+        "unlock_knowledge": [
+          "bg_wanli_era"
+        ],
+        "narrative_hint": "DM让多个线索汇聚，玩家开始看到全貌"
+      },
+      {
+        "id": "ins_no_escape",
+        "topic": "无处可逃",
+        "prerequisites": [
+          "ins_silver_economy",
+          "ins_moral_vs_reality"
+        ],
+        "trigger_type": "narrative_guided",
+        "trigger_keywords": [
+          "出路",
+          "困局",
+          "无处可逃",
+          "无路",
+          "走投无路",
+          "躲",
+          "逃",
+          "难"
+        ],
+        "semantic_hints": [
+          "DM安排一个'怎么选都不对'的困境"
+        ],
+        "unlock_knowledge": [
+          "pr_number_management"
+        ],
+        "narrative_hint": "DM让玩家意识到：不是个人选择的问题，是整个系统的问题"
+      },
+      {
+        "id": "ins_bigger_not_better",
+        "topic": "越大越不自由",
+        "prerequisites": [
+          "ins_tribute_trap",
+          "ins_moral_vs_reality"
+        ],
+        "trigger_type": "narrative_guided",
+        "trigger_keywords": [
+          "下场",
+          "亏",
+          "代价",
+          "做大",
+          "得不偿失",
+          "扩张",
+          "机户",
+          "雇工"
+        ],
+        "semantic_hints": [
+          "玩家经历上供压垮生意的场景后产生领悟"
+        ],
+        "unlock_knowledge": [
+          "pr_tribute_economy"
+        ],
+        "narrative_hint": "DM让玩家回想起两台织机时的日子——虽然赚得少，但至少赚的都是自己的"
+      },
+      {
+        "id": "ins_grand_failure",
+        "topic": "大失败",
+        "prerequisites": [
+          "ins_decline_signal",
+          "ins_no_escape"
+        ],
+        "trigger_type": "narrative_guided",
+        "trigger_keywords": [
+          "一片衰败",
+          "亡国",
+          "回天乏术",
+          "大势已去",
+          "失败",
+          "完了",
+          "完了完了",
+          "末世",
+          "衰落",
+          "衰败"
+        ],
+        "semantic_hints": [
+          "玩家经历关键历史事件后产生终极领悟"
+        ],
+        "unlock_knowledge": [
+          "pr_number_management"
+        ],
+        "narrative_hint": "DM在终局叙事中让玩家理解——这不是一个人的失败，是一个时代的失败"
+      }
+    ],
+    "npc_relationships": [
+      {
+        "npc_id": "npc_wang",
+        "name": "王掌柜",
+        "role": "丝织行会头目",
+        "levels": [
+          "陌生",
+          "相识",
+          "合作",
+          "利益绑定"
+        ],
+        "description": "盛泽镇丝织行会的头面人物，手握客商资源。帮你接单子，但抽成越来越重。你做大之后，他是第一个来分蛋糕的人。",
+        "key_moments": [
+          {
+            "trigger": "tr_scale_up",
+            "description": "你扩大作坊后，王掌柜主动上门——'生意做大了，行会的规矩你该懂'",
+            "choices": [
+              "加入行会接受抽成",
+              "不加入自己找客商"
+            ]
+          },
+          {
+            "trigger": "he_10",
+            "description": "矿监到来后，王掌柜提议行会凑钱打点",
+            "choices": [
+              "出钱保平安",
+              "不出钱自己扛"
+            ]
+          },
+          {
+            "trigger": "tr_tribute_spiral",
+            "description": "王掌柜又来收行会摊派——'这次是给知县夫人的寿礼，你出三十两'",
+            "choices": [
+              "给",
+              "不给"
+            ]
+          },
+          {
+            "trigger": "round_ge_35",
+            "description": "王掌柜私下透露：他想把行会做大，跟矿监合作垄断盛泽丝市",
+            "choices": [
+              "支持他（绑定更深）",
+              "反对他（被排挤）"
+            ]
+          }
+        ],
+        "relationship_effects": {
+          "合作": "行会抽成10%，但能接到稳定单子",
+          "利益绑定": "行会抽成20%，优先接好单子，但你已经离不开行会了"
+        }
+      },
+      {
+        "npc_id": "npc_li",
+        "name": "李秀才",
+        "role": "屡试不中的邻人",
+        "levels": [
+          "点头之交",
+          "酒友",
+          "知交",
+          "患难"
+        ],
+        "description": "考了三次乡试没中的秀才，靠替人写信算账糊口。满腹牢骚，但确实有学问。",
+        "key_moments": [
+          {
+            "trigger": "ins_bureaucracy",
+            "description": "李秀才酒后吐露对科举的绝望",
+            "choices": [
+              "劝他再考",
+              "劝他别考了"
+            ]
+          },
+          {
+            "trigger": "round_ge_15",
+            "description": "有人请李秀才去给大户人家当西席先生，但得离开盛泽",
+            "choices": [
+              "劝他留下",
+              "祝他前程"
+            ]
+          },
+          {
+            "trigger": "round_ge_30",
+            "description": "李秀才写了一本讽刺时政的小册子，问你敢不敢帮他抄一份",
+            "choices": [
+              "帮他抄",
+              "不碰这烫手山芋"
+            ]
+          },
+          {
+            "trigger": "round_ge_40",
+            "description": "李秀才决定去南京找机会，临行前来道别",
+            "choices": [
+              "送他盘缠",
+              "只是道别"
+            ]
+          }
+        ],
+        "relationship_effects": {
+          "知交": "可免费帮忙写信算账",
+          "患难": "关键时刻会出手相助"
+        }
+      },
+      {
+        "npc_id": "npc_zhao",
+        "name": "赵里长",
+        "role": "本里里长",
+        "levels": [
+          "公事",
+          "熟络",
+          "通融",
+          "庇护"
+        ],
+        "description": "负责催征赋税的里长，上面压下面怨，夹在中间不好做人。收了好处能通融期限。",
+        "key_moments": [
+          {
+            "trigger": "tr_tax_spike",
+            "description": "赋税加重，赵里长来催税",
+            "choices": [
+              "按时交",
+              "求通融",
+              "拖延"
+            ]
+          },
+          {
+            "trigger": "round_ge_20",
+            "description": "赵里长私下说：他也不想催这么紧，但上面压得死",
+            "choices": [
+              "安慰他",
+              "请他帮忙隐瞒几亩地"
+            ]
+          },
+          {
+            "trigger": "round_ge_35",
+            "description": "赵里长被上面追责，问你能不能帮忙作证他催过税了",
+            "choices": [
+              "帮他作证（说谎）",
+              "不帮（他可能被罚）"
+            ]
+          }
+        ],
+        "relationship_effects": {
+          "通融": "可延期交税但要多交一成",
+          "庇护": "可帮忙隐瞒部分田亩"
+        }
+      },
+      {
+        "npc_id": "npc_chen",
+        "name": "陈税吏",
+        "role": "县衙户房书吏",
+        "levels": [
+          "陌生",
+          "打过交道",
+          "能办事",
+          "自己人"
+        ],
+        "description": "县衙户房的书吏，手里卡着税单。明面上公事公办，暗地里收了好处能少报几亩地。",
+        "key_moments": [
+          {
+            "trigger": "he_10",
+            "description": "矿监到来后，陈税吏暗示可以帮忙做手脚",
+            "choices": [
+              "花钱买方便",
+              "老老实实交"
+            ]
+          },
+          {
+            "trigger": "round_ge_25",
+            "description": "陈税吏说三大征加派下来了，但他可以帮你把几亩桑田报成荒地",
+            "choices": [
+              "接受（省税但违法）",
+              "拒绝"
+            ]
+          },
+          {
+            "trigger": "round_ge_40",
+            "description": "陈税吏被查了，问你能不能帮他藏几本账",
+            "choices": [
+              "帮他藏（风险极大）",
+              "不帮（他可能咬出你）"
+            ]
+          }
+        ],
+        "relationship_effects": {
+          "能办事": "可帮忙调整税额但需打点",
+          "自己人": "可提前获知加税消息"
+        }
+      },
+      {
+        "npc_id": "npc_zhang",
+        "name": "张寡妇",
+        "role": "亡夫留下一台织机的邻人",
+        "levels": [
+          "邻里",
+          "互助",
+          "依赖",
+          "非议"
+        ],
+        "description": "丈夫去世后独自操持一台织机，和你换工互助。但一个寡妇抛头露面做生意，流言蜚语不断。",
+        "key_moments": [
+          {
+            "trigger": "ins_moral_vs_reality",
+            "description": "镇上有人议论张寡妇不守妇道",
+            "choices": [
+              "帮她说话",
+              "保持距离",
+              "随他们去说"
+            ]
+          },
+          {
+            "trigger": "round_ge_15",
+            "description": "张寡妇的织机坏了，问你能不能帮忙修",
+            "choices": [
+              "帮她修（引人闲话）",
+              "让她自己想办法"
+            ]
+          },
+          {
+            "trigger": "round_ge_30",
+            "description": "有人给张寡妇说媒，她来问你意见",
+            "choices": [
+              "劝她嫁（安稳但失去帮手）",
+              "劝她别嫁（继续互助但流言更多）"
+            ]
+          }
+        ],
+        "relationship_effects": {
+          "互助": "可换工但引人闲话",
+          "依赖": "织工互补但流言更多",
+          "非议": "你的名声也受影响"
+        }
+      }
+    ],
+    "value_dimensions": [
+      {
+        "id": "tradition_vs_change",
+        "name": "守旧vs趋新",
+        "description": "面对新事物，你是坚持老规矩还是拥抱变化",
+        "examples": [
+          "坚持种桑养蚕的老法子 → shift -1",
+          "改用新式织法或新品种 → shift +1"
+        ],
+        "max_shift_per_round": 2
+      },
+      {
+        "id": "duty_vs_freedom",
+        "name": "尽责vs逃逸",
+        "description": "面对赋役，你是老老实实承担还是想方设法逃避",
+        "examples": [
+          "按时纳税服徭役 → shift -1",
+          "找门路少交税或逃避徭役 → shift +1"
+        ],
+        "max_shift_per_round": 2
+      },
+      {
+        "id": "honesty_vs_survival",
+        "name": "本分vs取巧",
+        "description": "在规则面前，你是守规矩还是钻空子",
+        "examples": [
+          "如实申报田亩 → shift -1",
+          "贿赂书吏少报田亩 → shift +1"
+        ],
+        "max_shift_per_round": 2
+      },
+      {
+        "id": "local_vs_empire",
+        "name": "身边vs天下",
+        "description": "你关心的是眼前日子还是天下大势",
+        "examples": [
+          "只关心今年收成和税单 → shift -1",
+          "追问北方战事和朝廷动向 → shift +1"
+        ],
+        "max_shift_per_round": 1
+      },
+      {
+        "id": "independence_vs_network",
+        "name": "独立vs依附",
+        "description": "你是靠自己还是靠关系网。做大必须入网，入网就失去自主",
+        "examples": [
+          "自己找客商卖丝不走行会 → shift -1",
+          "通过行会接单子接受抽成 → shift +1"
+        ],
+        "max_shift_per_round": 2
+      }
+    ],
+    "finale_rules": [
+      {
+        "id": "fr_grand_failure",
+        "priority": 0,
+        "condition": {
+          "field": "unlocked_insight",
+          "op": "in",
+          "value": "ins_grand_failure"
+        },
+        "template": "insight_grand_failure"
+      },
+      {
+        "id": "fr_career_big",
+        "priority": 1,
+        "condition": {
+          "and": [
+            {
+              "field": "workshop_scale",
+              "op": "gte",
+              "value": 7
+            },
+            {
+              "field": "tribute_pressure",
+              "op": "gte",
+              "value": 5
+            }
+          ]
+        },
+        "template": "career_big_tribute_crushed"
+      },
+      {
+        "id": "fr_career_refuse",
+        "priority": 1,
+        "condition": {
+          "and": [
+            {
+              "field": "tribute_pressure",
+              "op": "lte",
+              "value": 1
+            },
+            {
+              "field": "workshop_scale",
+              "op": "lte",
+              "value": 4
+            }
+          ]
+        },
+        "template": "career_refused_tribute"
+      },
+      {
+        "id": "fr_career_small",
+        "priority": 2,
+        "condition": {
+          "and": [
+            {
+              "field": "workshop_scale",
+              "op": "lte",
+              "value": 3
+            },
+            {
+              "field": "tribute_pressure",
+              "op": "lte",
+              "value": 2
+            }
+          ]
+        },
+        "template": "career_small_independent"
+      },
+      {
+        "id": "fr_tradition_duty",
+        "priority": 3,
+        "condition": {
+          "and": [
+            {
+              "field": "tradition_vs_change",
+              "op": "lte",
+              "value": -3
+            },
+            {
+              "field": "duty_vs_freedom",
+              "op": "lte",
+              "value": -3
+            }
+          ]
+        },
+        "template": "high_tradition_high_duty"
+      },
+      {
+        "id": "fr_change_freedom",
+        "priority": 3,
+        "condition": {
+          "and": [
+            {
+              "field": "tradition_vs_change",
+              "op": "gte",
+              "value": 3
+            },
+            {
+              "field": "duty_vs_freedom",
+              "op": "gte",
+              "value": 3
+            }
+          ]
+        },
+        "template": "high_change_high_freedom"
+      },
+      {
+        "id": "fr_change_nofreedom",
+        "priority": 3,
+        "condition": {
+          "and": [
+            {
+              "field": "tradition_vs_change",
+              "op": "gte",
+              "value": 3
+            },
+            {
+              "field": "duty_vs_freedom",
+              "op": "lte",
+              "value": -3
+            }
+          ]
+        },
+        "template": "high_change_low_freedom"
+      },
+      {
+        "id": "fr_local",
+        "priority": 4,
+        "condition": {
+          "field": "local_vs_empire",
+          "op": "lte",
+          "value": -3
+        },
+        "template": "high_local_low_empire"
+      }
+    ],
+    "finale_templates": {
+      "insight_grand_failure": "你终于明白了：不是哪个人做错了什么，是整个系统走不下去了。皇帝怠政、文官内耗、武将受限、百姓受苦——所有人都在这个系统里挣扎，没有人能独自改变什么。万历十五年，一个无关紧要的年份，却是一部大失败的总记录。而你，只是这部记录里的一个注脚。",
+      "career_big_tribute_crushed": "你把作坊做到了盛泽镇数一数二的规模，十台织机日夜不停。但你算算账——行会抽三成，官府打点两成，矿监'孝敬'一成，雇工工钱两成……你手里只剩两成。你比两台织机的时候赚得多吗？好像差不多。但你比那时候累多了。你终于明白了：做大做强，不过是让自己成了更好的韭菜。",
+      "career_small_independent": "你守着两台织机，没做大，也没入行会。日子紧巴巴的，但赚的每一分银子都是自己的。邻居说你没出息，你笑笑不说话。你知道那些做大的人，日子不一定比你好过。",
+      "career_refused_tribute": "你做大之后拒绝了上供，结果被行会排挤、被官府刁难、被矿监盯上。生意一落千丈，你不得不缩回小作坊。但你不后悔——至少你试过。",
+      "high_tradition_high_duty": "你守了一辈子的规矩，交了一辈子的税。日子不好也不坏，就像盛泽镇上千千万万的手艺人。大明朝怎么样，你不知道，你只知道织机还在转。",
+      "high_tradition_low_duty": "你嘴上说着老规矩好，背地里却学会了钻空子。不是你不想本分，是这世道不让人本分。",
+      "high_change_high_freedom": "你试过新路子，也逃过赋税，日子比旁人好过些。但你知道，这不是你能改变的世界，你只是在缝隙里多挤了一点空间。",
+      "high_change_low_freedom": "你拥抱了变化，却没能逃出牢笼。新法子让你赚了银子，但银子越多，税也越多。你终于明白了——不是你不够努力，是这艘船在下沉。",
+      "high_local_low_empire": "你从没关心过北方发生了什么，直到加派的税单压得你喘不过气。你不知道是谁在打仗，你只知道你的织机停了。",
+      "high_empire_high_local": "你既关心天下，也放不下身边。你知道大明朝在下沉，你也知道你的邻居还在挣扎。你看清了全貌，却什么都做不了——这才是最深的绝望。"
+    }
+  },
+  "knowledge": {
+    "entries": [
+      {
+        "id": "bg_wanli_era",
+        "layer": "background",
+        "title": "万历时代概貌",
+        "content": "万历皇帝朱翊钧，十岁即位，在位四十八年，是明朝在位最长的皇帝。前十年由张居正执政，推行改革，国库充盈。张居正死后遭清算，改革人亡政息。万历帝因立太子之事与文官集团决裂，长期怠政，三十年不出宫门。表面'四海升平'，实则帝国已走到尽头。南方经济繁荣、文化兴盛；北方边患日深、民不聊生。'明亡于万历'——不是亡于战乱，而是亡于失能。",
+        "trigger_keywords": [
+          "万历",
+          "朝廷",
+          "当朝",
+          "皇帝",
+          "圣上"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_north_south",
+          "bg_moral_system"
+        ]
+      },
+      {
+        "id": "bg_silver_age",
+        "layer": "background",
+        "title": "白银时代",
+        "content": "16-17世纪，全球白银产量近一半流入中国。美洲白银经马尼拉大帆船运至菲律宾，再以丝银贸易流入中国东南沿海。日本银矿产出也大量流入。明朝从禁止白银到被迫接受，一条鞭法将赋役折银，白银成为经济命脉。但白银流通受国际市场影响——丰年银多则丝贱，海外贸易中断则银荒。江南百姓的生计，系于一条看不见的全球白银之链。",
+        "trigger_keywords": [
+          "白银",
+          "银子",
+          "番银",
+          "洋银",
+          "海外"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "en_yitiao_bian",
+          "pr_silver_flow"
+        ]
+      },
+      {
+        "id": "bg_north_south",
+        "layer": "background",
+        "title": "南北两重天",
+        "content": "万历朝的南北差异到了触目惊心的程度。江南、福建、广东等地经济繁荣、文化兴盛，百姓感受到的是欣欣向荣。北方九边重镇承担着阻挡蒙古和女真的压力，军费沉重，民不聊生。'苏湖熟天下足'变成了'湖广熟天下足'——江南已从产粮区转为棉纺丝织工业区，依赖湖广粮食供应。南方人几乎感受不到北方危机，直到加税的账单递到面前。",
+        "trigger_keywords": [
+          "北方",
+          "边关",
+          "辽东",
+          "江南",
+          "南方"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_wanli_era",
+          "pr_civil_military"
+        ]
+      },
+      {
+        "id": "bg_moral_system",
+        "layer": "background",
+        "title": "道德治国",
+        "content": "明朝以道德为最高话语权。'忠''孝''敬天''法祖'等抽象原则是治国根基，而非明确的法律制度。文官集团掌握道德制高点，连皇帝都被压制——万历想立喜欢的儿子为太子，文官集团坚持立长，皇帝竟无可奈何。道德标准超出一般社会水平，游离于道德之外的事物不被接受。官员不能与民争利，但实际运作中潜规则横行。嘴上讲道德，手上做交易，是万历朝的日常。",
+        "trigger_keywords": [
+          "礼法",
+          "道德",
+          "规矩",
+          "纲常",
+          "礼教"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "pr_moral_governance",
+          "bg_wanli_era"
+        ]
+      },
+      {
+        "id": "sc_silk_workshop",
+        "layer": "scene",
+        "title": "丝织作坊",
+        "content": "盛泽镇的丝织作坊多为家庭作坊，一两台织机，全家上阵。从养蚕、缫丝到织造，工序繁复。好丝卖得出好价，但行情受季节和海外贸易影响大。行会控制客商资源，小作坊必须通过行会接单子。织机声从早到晚不停，是盛泽镇最寻常的声音。",
+        "trigger_keywords": [
+          "织机",
+          "丝绸",
+          "作坊",
+          "织造",
+          "缫丝"
+        ],
+        "trigger_scene": [
+          "自家作坊"
+        ],
+        "related_entries": [
+          "sc_market_town",
+          "en_yitiao_bian"
+        ]
+      },
+      {
+        "id": "sc_large_workshop",
+        "layer": "scene",
+        "title": "大型丝织作坊",
+        "content": "当作坊扩张到五台以上织机，需要雇佣帮工，分工明确——络丝、牵经、织造各有专人。但雇工的工钱是固定成本，淡季也得照付。更大的作坊意味着更大的现金流需求，也意味着你更需要行会的单子和牙行的渠道。你不再是为自己织布的手艺人，你是在为整个链条运转的齿轮。",
+        "trigger_keywords": [
+          "雇工",
+          "扩大",
+          "添织机",
+          "大作坊"
+        ],
+        "trigger_scene": [
+          "自家作坊"
+        ],
+        "related_entries": [
+          "sc_silk_workshop",
+          "pr_labor_system"
+        ]
+      },
+      {
+        "id": "sc_silk_guild",
+        "layer": "scene",
+        "title": "丝织行会",
+        "content": "盛泽镇丝织行会由王掌柜等头面人物掌控，表面是协调秩序——统一丝价、分配订单、应对官府摊派。实际是利益分配机制——行会抽成、头目吃大头、小织户喝汤。加入行会才能接到稳定单子，但加入就意味着接受抽成和规矩。矿监到来后，行会又多了一层功能——替矿监收钱，顺便自己也多收一点。",
+        "trigger_keywords": [
+          "行会",
+          "王掌柜",
+          "会费",
+          "抽成"
+        ],
+        "trigger_scene": [
+          "盛泽市集",
+          "牙行"
+        ],
+        "related_entries": [
+          "sc_market_town",
+          "pr_tribute_economy"
+        ]
+      },
+      {
+        "id": "sc_county_yamen",
+        "layer": "scene",
+        "title": "县衙",
+        "content": "县衙是最低一级行政单位，设吏、户、礼、兵、刑、工六房。户房管赋税，书吏文化水平不高但专业技能极强，是实际运转县衙的人。知县是'亲民官'，但万历后期很多知县长期不升堂。百姓办事需通过书吏，而书吏收了好处才能办事。'衙门口朝南开，有理无钱莫进来'——这话在万历朝尤其真切。",
+        "trigger_keywords": [
+          "县衙",
+          "官府",
+          "告状",
+          "知县",
+          "衙门"
+        ],
+        "trigger_scene": [
+          "县衙"
+        ],
+        "related_entries": [
+          "en_li_jia",
+          "pr_moral_governance"
+        ]
+      },
+      {
+        "id": "sc_market_town",
+        "layer": "scene",
+        "title": "盛泽市镇",
+        "content": "盛泽镇是万历朝新兴的丝绸市镇，《醒世恒言》中描述其'锦绣万匹，天下衣被多出此间'。镇上牙行林立，客商云集，丝价随行就市。市镇是信息集散地，远方消息、官府告示、行会规矩都在这里流通。市镇也是消费场所——茶馆、酒肆、书铺，甚至有些不太体面的消遣。女性在市镇上抛头露面做生意，让老夫子们直摇头。",
+        "trigger_keywords": [
+          "集市",
+          "市镇",
+          "买卖",
+          "盛泽",
+          "牙行"
+        ],
+        "trigger_scene": [
+          "盛泽市集",
+          "牙行"
+        ],
+        "related_entries": [
+          "sc_teahouse",
+          "bg_silver_age"
+        ]
+      },
+      {
+        "id": "sc_teahouse",
+        "layer": "scene",
+        "title": "茶馆",
+        "content": "茶馆是盛泽镇的信息枢纽。说书先生讲古、客商带来远方消息、闲人议论时政——都在茶馆里。万历朝的茶馆里，你能听到京城的八卦、边关的传闻、海外的新奇。但消息真假难辨，有些是客商亲眼所见，有些是添油加醋的传言。茶馆也是消遣之地，花几个铜板就能坐一下午。",
+        "trigger_keywords": [
+          "茶馆",
+          "听说",
+          "闲聊",
+          "说书",
+          "消息"
+        ],
+        "trigger_scene": [
+          "茶馆"
+        ],
+        "related_entries": [
+          "sc_market_town",
+          "bg_wanli_era"
+        ]
+      },
+      {
+        "id": "sc_village_li_jia",
+        "layer": "scene",
+        "title": "里甲村落",
+        "content": "十户为一甲，一百一十户为一里。里长负责催征赋税、摊派徭役、上报户口。里甲制度将人口和田地直接挂钩统计入册，是朝廷控制基层的基本单元。但到了万历朝，里甲制度已严重松动——百姓为少交税少报人数，里长为少交赋税少报户数，上下都在做手脚。赋税越重，做手脚的人越多，制度越失灵。",
+        "trigger_keywords": [
+          "里甲",
+          "村里",
+          "催税",
+          "里长",
+          "编户"
+        ],
+        "trigger_scene": [
+          "镇外桑田"
+        ],
+        "related_entries": [
+          "en_li_jia",
+          "sc_county_yamen"
+        ]
+      },
+      {
+        "id": "en_wanli_emperor",
+        "layer": "entity",
+        "title": "万历皇帝",
+        "content": "朱翊钧，明朝第十三位皇帝，十岁即位，年号万历，在位四十八年。幼年被张居正严格管教，天不亮就要起来读书，各种典礼繁复参加。张居正死后亲政，因立太子之事与文官集团决裂，以三十年不上朝的方式消极对抗。并非昏君——援朝抗倭时展现了军事决断力——但被文官集团压制，成为政治象征而非实际统治者。",
+        "trigger_keywords": [
+          "皇帝",
+          "万岁爷",
+          "圣上",
+          "万历",
+          "皇上"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_wanli_era",
+          "en_zhang_juzheng"
+        ]
+      },
+      {
+        "id": "en_zhang_juzheng",
+        "layer": "entity",
+        "title": "张居正",
+        "content": "万历朝前十年内阁首辅，推行考成法、清丈土地、一条鞭法等改革，国库由亏转盈。但改革需专断独权、培植党羽，不符合传统道德体系。万历十年（1582）去世，死后遭清算——抄家、家属流放，改革成果被否定。张居正的悲剧是改革与传统国家逻辑冲突的缩影。",
+        "trigger_keywords": [
+          "张居正",
+          "首辅",
+          "太岳",
+          "改革"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "en_yitiao_bian",
+          "bg_wanli_era"
+        ]
+      },
+      {
+        "id": "en_hai_rui",
+        "layer": "entity",
+        "title": "海瑞",
+        "content": "南京都察院右佥都御史，一生清廉，是道德楷模。但道德标准太高，反而被文官集团排斥——他让所有人都不舒服。万历十五年（1587）死于南京官邸，家无余财。海瑞的悲剧说明：在一个潜规则横行的系统里，真正的道德楷模反而无处容身。",
+        "trigger_keywords": [
+          "海瑞",
+          "海青天",
+          "清官"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_moral_system"
+        ]
+      },
+      {
+        "id": "en_qi_jiguang",
+        "layer": "entity",
+        "title": "戚继光",
+        "content": "明朝名将，南征北战立下战功。因重文轻武，武将处处受文官限制，无法大规模组建火器军，只能以'鸳鸯阵'应对倭寇。需张居正支持才能行事，张居正倒台后被罢官。万历十五年（1587）在贫病中去世，朝廷无正式记录。一代名将的陨落，无人关注。",
+        "trigger_keywords": [
+          "戚继光",
+          "戚将军",
+          "鸳鸯阵",
+          "倭寇"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "pr_civil_military",
+          "en_zhang_juzheng"
+        ]
+      },
+      {
+        "id": "en_nurhaci",
+        "layer": "entity",
+        "title": "努尔哈赤",
+        "content": "建州女真首领，1583年起开始统一建州女真各部。此时他只是东北一隅的部落首领，江南无人知晓其名。但数十年后，他将建立后金，成为明朝最可怕的对手。万历朝的南方人感受不到这个威胁——直到为时已晚。",
+        "trigger_keywords": [
+          "建州",
+          "女真",
+          "努尔哈赤",
+          "辽东"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_north_south"
+        ]
+      },
+      {
+        "id": "en_li_jia",
+        "layer": "entity",
+        "title": "里甲制",
+        "content": "明朝基层组织形式，十户为一甲、一百一十户为一里。将人口和田地直接挂钩统计入册，用于征收赋税、徭役摊派。朱元璋推行此制的用意是精确掌控人口，但统计与征税直接挂钩导致上下都在做手脚。到了万历朝，里甲制度已严重松动，但仍是朝廷汲取基层资源的主要管道。",
+        "trigger_keywords": [
+          "里甲",
+          "编户",
+          "保甲",
+          "里长"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "sc_village_li_jia",
+          "en_yitiao_bian"
+        ]
+      },
+      {
+        "id": "en_yitiao_bian",
+        "layer": "entity",
+        "title": "一条鞭法",
+        "content": "张居正推行的赋税改革：将田赋、徭役、杂税合并为一条，按亩征银。简化了征收流程，减少了中间环节贪腐，适应了商品经济发展。但对基层百姓是双刃剑——丰年银贱粮贱，卖丝换银尚可；灾年银贵粮贵，卖丝换银就亏大了。白银紧缺时，百姓被迫低价出售农产品换银纳税，变相增加了实际支出。",
+        "trigger_keywords": [
+          "一条鞭",
+          "税法",
+          "折银",
+          "征银"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_silver_age",
+          "en_zhang_juzheng",
+          "pr_silver_flow"
+        ]
+      },
+      {
+        "id": "en_kuang_jian",
+        "layer": "entity",
+        "title": "矿监税监",
+        "content": "万历二十四年（1596）起，万历帝派遣太监到各地任矿监税监，以'收奢侈税'为名搜刮民间。不走正常税收流程，直接向商户和手工业者征收额外税项。江南是重灾区，丝织业首当其冲。矿监税监的到来打破了原有的利益平衡，连地方官都无可奈何——太监是皇帝的人，谁敢拦？",
+        "trigger_keywords": [
+          "矿监",
+          "税监",
+          "太监",
+          "加税",
+          "搜刮"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_wanli_era",
+          "sc_county_yamen"
+        ]
+      },
+      {
+        "id": "pr_number_management",
+        "layer": "principle",
+        "title": "数目字管理困境",
+        "content": "黄仁宇提出的核心概念：传统中国作为大体量农业国家，为维持稳定追求'大约'（差不多即可），而精细工商业社会要求精细明确。明朝缺乏'数目字管理'的技术条件——无法精确统计土地、人口、税收，改革难以有效推行。这不是某个人的问题，是整个系统的问题。即便有张居正这样的天才，也无法在'大约'的系统里推行'精确'的改革。",
+        "trigger_keywords": [
+          "账目",
+          "数目",
+          "管理",
+          "统计",
+          "数目字"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_wanli_era",
+          "en_yitiao_bian"
+        ]
+      },
+      {
+        "id": "pr_silver_flow",
+        "layer": "principle",
+        "title": "白银流通链",
+        "content": "全球白银流通链：美洲银矿→西班牙大帆船→马尼拉→中国丝绸茶叶出口换银→白银流入江南。日本银矿产出也经宁波、泉州流入。一条鞭法后白银成为纳税货币，江南百姓的生计系于这条全球之链。链断则银荒，银荒则纳税困难，纳税困难则卖丝换银，卖丝换银则丝价暴跌——一个全球化的恶性循环。",
+        "trigger_keywords": [
+          "洋银",
+          "番银",
+          "海外",
+          "马尼拉",
+          "贸易"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_silver_age",
+          "en_yitiao_bian"
+        ]
+      },
+      {
+        "id": "pr_civil_military",
+        "layer": "principle",
+        "title": "重文轻武",
+        "content": "明朝重文轻武到了极端程度。武将处处受文官限制：后勤不交给武将管理，不懂军事的文官对将领指指点点。1555年不到七十个倭寇在南京附近杀四千多人，十二万明军未有效抵抗。戚继光想组建火器军，超出文官理解范围，只能用更原始的'鸳鸯阵'。军事改革受制度制约，无法实现现代化。",
+        "trigger_keywords": [
+          "当兵",
+          "武将",
+          "军务",
+          "兵制",
+          "倭寇"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "en_qi_jiguang",
+          "bg_north_south"
+        ]
+      },
+      {
+        "id": "pr_moral_governance",
+        "layer": "principle",
+        "title": "道德代替法律",
+        "content": "明朝以抽象道德原则治国，而非明确的法律制度。中央对地方处于半失控状态，实际治理依赖官员个人素质和潜规则。文官集团掌握道德话语权，连皇帝都被压制。道德标准超出一般社会水平，结果就是——嘴上讲道德，手上做交易。'清官'海瑞一生不得志，'能臣'张居正死后被清算，而那些深谙潜规则的人活得最好。",
+        "trigger_keywords": [
+          "礼教",
+          "纲常",
+          "规矩",
+          "潜规则",
+          "官场"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_moral_system",
+          "en_hai_rui"
+        ]
+      },
+      {
+        "id": "pr_labor_system",
+        "layer": "principle",
+        "title": "明代雇工制度",
+        "content": "万历朝江南已出现早期雇佣劳动。雇工与雇主是雇佣关系而非人身依附，工钱按年或按月结算。但雇工制度也意味着固定成本——淡季没单子也得付工钱，否则好手艺人就去了别家。做大之后，你不再只操心织机，还得操心人。",
+        "trigger_keywords": [
+          "雇工",
+          "工钱",
+          "帮工",
+          "雇佣"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "sc_large_workshop",
+          "bg_silver_age"
+        ]
+      },
+      {
+        "id": "pr_tribute_economy",
+        "layer": "principle",
+        "title": "上供经济",
+        "content": "万历朝的商业运作有一条看不见的规则：做大必须上供。行会要抽成，官府要打点，矿监要'孝敬'，连牙行经纪人都得给'茶钱'。每一层经手人都要分一杯羹，而且给了一次就有第二次——你越给，他们越觉得你给得起；你越给得起，他们要得越多。这不是某个人的贪婪，是整个系统的运转方式。你做大做强，只是让自己成了更肥的羊。",
+        "trigger_keywords": [
+          "上供",
+          "打点",
+          "孝敬",
+          "抽成",
+          "摊派"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "sc_silk_guild",
+          "en_kuang_jian",
+          "pr_moral_governance"
+        ]
+      },
+      {
+        "id": "bg_1587_key_dates",
+        "layer": "background",
+        "title": "1587年关键时间节点",
+        "content": "1587年（万历十五年，丁亥，属猪），黄仁宇称'表面上四海升平，全年并无大事可叙'，但实际是帝国走向衰亡的契机。前序：1572万历即位、张居正辅政；1573-1582张居正新政（考成法、清丈田亩、一条鞭法试点）；1582张居正去世、改革势头衰减；1587皇帝开始消极怠政，朝政空转。后续：1589雒于仁上《四箴疏》直斥皇帝；1592-1598万历三大征（宁夏、朝鲜、播州）军费激增；1600前后矿税太监横行。1586-1588明经历第一次大天灾——黄河洪水接大旱，江南疫灾频度约36%。1587年（丁亥）无闰月，1588年（戊子）闰六月。",
+        "trigger_keywords": [
+          "万历十五年",
+          "张居正",
+          "三大征",
+          "时间",
+          "怠政",
+          "丁亥"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_wanli_era",
+          "pr_civil_military"
+        ],
+        "source_refs": "黄仁宇《万历十五年》；明代江南疫灾地理研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "bg_lunar_calendar",
+        "layer": "background",
+        "title": "历法与节气",
+        "content": "明代使用大统历，以阴历（太阴历）为基础，二十四节气按阳历太阳在黄道上的位置划分。朔望月约29.5天，12个月约354天，与阳历年差11天需置闰。对丝织户：节气决定农事节奏——清明前后桑树发芽→谷雨养蚕→小满蚕茧收获→芒种缫丝。市集日期与节气绑定，蚕丝市在立夏后最旺。赋税缴纳有固定期限与节气收成挂钩。",
+        "trigger_keywords": [
+          "节气",
+          "阴历",
+          "阳历",
+          "二十四节气",
+          "农事",
+          "立夏",
+          "清明",
+          "谷雨",
+          "小满",
+          "芒种"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_1587_key_dates"
+        ],
+        "source_refs": "吴军《答读者问14：二十四节气是怎么划分的呢？》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_shengze_geo",
+        "layer": "scene",
+        "title": "盛泽镇地理",
+        "content": "盛泽镇位于江苏省最南端，属苏州府吴江县，地处江苏、浙江、上海'两省一市'交汇的金三角地区。东、南与浙江嘉兴秀洲区王江泾镇接壤，西南与桃源镇相连，西与震泽镇交界，北与平望镇毗邻。地形为湖荡平原，全境无山，湖荡密布。北亚热带季风区，气候温和湿润。明弘治元年（1488）形成村落；明代中期，丝织家庭手工业以盛泽、黄家溪、新杭等地最为兴盛。享有'日出万绸，衣被天下'美称。万历年间尚未设镇建置（清顺治四年始设镇），但已是丝织业兴盛的市集聚落。",
+        "trigger_keywords": [
+          "盛泽",
+          "地理",
+          "位置",
+          "江苏",
+          "苏州",
+          "湖荡",
+          "吴江"
+        ],
+        "trigger_scene": [
+          "盛泽市集",
+          "自家作坊"
+        ],
+        "related_entries": [
+          "sc_market_town",
+          "sc_waterways"
+        ],
+        "source_refs": "苏州地方志办'古镇古村系列——吴江区盛泽镇'",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_waterways",
+        "layer": "scene",
+        "title": "江南水路交通",
+        "content": "江南交通以舟船为主，王士性记载万历中期江南'用舟船，无马'。盛泽周边水路：盛泽→平望镇半日（约15-20里）→吴江县城一日（约40里）→苏州府城一日半至两日（约80里，经平望、吴江）→嘉兴府一日（约50里，南下经王江泾）→震泽镇半日至一日（约30里）。出行：十里内步行、中长途航船（清晨出发傍晚到达，夜间不行船）、紧急雇快船。女性不单独远行需家人陪同。水路受天气影响——大风、暴雨、大雾均停航。",
+        "trigger_keywords": [
+          "水路",
+          "船",
+          "出行",
+          "苏州",
+          "嘉兴",
+          "平望",
+          "震泽",
+          "王江泾"
+        ],
+        "trigger_scene": [
+          "盛泽市集",
+          "镇外桑田"
+        ],
+        "related_entries": [
+          "sc_shengze_geo",
+          "sc_jiangnan_six_prefectures"
+        ],
+        "source_refs": "安徽省水利厅'水是江南经济发展的自然动力'；航运江南展览资料",
+        "confidence": "medium",
+        "needs_review": true
+      },
+      {
+        "id": "sc_jiangnan_six_prefectures",
+        "layer": "scene",
+        "title": "江南六府格局",
+        "content": "狭义江南指苏州、松江、常州、杭州、嘉兴、湖州六府，环太湖流域，是明清最繁荣富庶之地。苏州府为行政中心，丝织品最大集散地，官营织染局所在地；嘉兴府盛泽南邻，蚕桑产区，王江泾为丝织重镇；湖州府蚕丝原料产地，丝价风向标；松江府棉布业中心，与丝绸互补；杭州府丝织品高端市场，文人消费中心。行政层级：盛泽→吴江县→苏州府→南直隶。",
+        "trigger_keywords": [
+          "苏州府",
+          "杭州",
+          "嘉兴",
+          "湖州",
+          "松江",
+          "江南六府",
+          "南直隶"
+        ],
+        "trigger_scene": [
+          "盛泽市集",
+          "牙行"
+        ],
+        "related_entries": [
+          "sc_shengze_geo",
+          "sc_waterways"
+        ],
+        "source_refs": "中国通史第85集'江南市镇'",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_shenming_ting",
+        "layer": "scene",
+        "title": "申明亭与三层调解",
+        "content": "申明亭制度由洪武五年（1372）朱元璋始创。省、府、州、县、乡里都设申明亭，百姓违反国法的情况记载于榜上以示警告。里老人主持调解当地普通民事纠纷及轻微刑事案件。三层纠纷解决机制：第一层里老人调解（普通民事纠纷、不伤和气），第二层族老/乡绅（家族内部、宗祧继承、情理优先），第三层官府县衙（命案、重案、跨里甲纠纷、成本高耗时长）。实际运作：民众发生纠纷首先找'本都老人'，里老查看契约、实地勘查后调解，调解不成才上报县衙。官府批文有法律效力但执行依赖乡绅和宗族配合。对丝织户：丝价纠纷、织工工钱争议先找里老调解；行会内部纠纷行会首事先行处理；与外地客商的纠纷可能要到县衙诉讼；女性涉诉需男性亲属代为出面。",
+        "trigger_keywords": [
+          "申明亭",
+          "调解",
+          "里老",
+          "纠纷",
+          "县衙",
+          "里甲"
+        ],
+        "trigger_scene": [
+          "县衙",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "sc_zongzu",
+          "en_li_jia"
+        ],
+        "source_refs": "申明亭制度研究；徽州契约文书研究；明代宗祧继承纠纷研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_zongzu",
+        "layer": "scene",
+        "title": "宗族体系",
+        "content": "江南宗族以祠堂为核心，族田为经济基础，族谱为血缘纽带。强房富族设有祭产专供祭祀之用。宗族功能：祭祀祖先（合族祭祖团拜，多在正月初一）、调解族内纠纷（族老主持优先于官府）、救济族内贫困（族田收入用于赈济）、教育族内子弟（义学、族塾）。对丝织户：小户丝织家庭可能依附大族获取保护；宗族网络是商业信用的重要基础；族内通婚巩固经济联盟；'上供'机会往往通过宗族关系获得。",
+        "trigger_keywords": [
+          "宗族",
+          "祠堂",
+          "族田",
+          "族谱",
+          "祭祖",
+          "族老"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "sc_shenming_ting"
+        ],
+        "source_refs": "闽侯县民俗风情；徽州契约文书研究",
+        "confidence": "medium",
+        "needs_review": true
+      },
+      {
+        "id": "sc_women_status",
+        "layer": "scene",
+        "title": "女性法律地位",
+        "content": "明代女性法律地位低下，不能独立诉讼、不能继承宗祧、不能拥有田产（寡妇例外可暂管）。但实际存在弹性空间。万历年间江南特殊情况：南京刑部档案显示，隆庆三年至万历十年间江南八府有37份由女性署名的验尸单与证词笔录；《明会典》载'遇案情紧要，可酌用谙晓事理之妇人协查闺闱、验伤问供'。女性在家庭经济中有实际影响力，尤其是丝织户家庭——妻子常参与缫丝、织造。沈氏（玩家妻子）的处境：可参与家庭丝织劳动、掌握缫丝技术；不能独立到市集交易，需丈夫或男性亲属在场；遇纠纷需男性亲属代为出面；但在家庭内部决策中有话语权，尤其是织造技术方面。",
+        "trigger_keywords": [
+          "女性",
+          "沈氏",
+          "寡妇",
+          "诉讼",
+          "验尸",
+          "缫丝"
+        ],
+        "trigger_scene": [
+          "自家作坊",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "sc_shenming_ting"
+        ],
+        "source_refs": "《锦囊妙录》研究；南京刑部档案；《明会典》",
+        "confidence": "medium",
+        "needs_review": true
+      },
+      {
+        "id": "pr_late_ming_governance",
+        "layer": "principle",
+        "title": "晚明治理能力下降",
+        "content": "专制集权软化：内阁职能增强，会议制度逐渐完善，大臣言谏风气张扬，党社活动活跃。但同时治理能力下降：政府权威衰落，政治分裂极端化，吏治腐败。社会控制松懈：明初里甲制编制监控网格加强对百姓管理，到万历年间里甲制已松弛，社会矛盾激化。对丝织户影响：官府执行力下降→商业纠纷解决变慢；矿税太监横行→额外盘剥；里甲制松弛→基层秩序依赖宗族和行会维持；党争→地方官员更替频繁，政策不稳定。",
+        "trigger_keywords": [
+          "晚明",
+          "治理",
+          "党争",
+          "矿税",
+          "内阁",
+          "吏治"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_wanli_era",
+          "en_kuang_jian",
+          "en_li_jia"
+        ],
+        "source_refs": "故宫学术讲坛'变与乱：正反两面看晚明'",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "pr_prices",
+        "layer": "principle",
+        "title": "万历物价体系与银钱兑换",
+        "content": "货币：1两=10钱=100分=1000厘；白银形态有大元宝50两/锭、小元宝5两/锭、日常碎银（剪凿称重）；铜钱1两银≈700-1000文（万历年间波动大，金背钱约400文换1两）；纸钞（大明宝钞）已基本废用。1分银购买力：果蔬约1斤多、葱姜约5斤（0.2分/斤）、酒约1斤、肉/鱼约0.5斤（标准价2分/斤）。1钱银（10分）：米约2-3斗、肉约5斤、鸡约1-2只、中等布匹约1尺、雇工约3-5天工钱。1两银：米约2石（1石≈94.4公斤）、猪约1头、雇工约1个月工钱、普通衣裳约1件、书约1册。万历1两银≈540-750元人民币（米价折算）。丝织品：绫0.8-1.2两/匹、罗0.6-0.9两/匹、绸0.4-0.7两/匹、缎1.0-1.5两/匹、绢0.3-0.5两/匹。",
+        "trigger_keywords": [
+          "物价",
+          "一两",
+          "一钱",
+          "银",
+          "米价",
+          "铜钱",
+          "工钱",
+          "折合"
+        ],
+        "trigger_scene": [
+          "牙行",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "sc_diet",
+          "sc_clothing",
+          "bg_silver_age"
+        ],
+        "source_refs": "卜正民《崩盘》；第一财经节选；《烟花春梦》；《金瓶梅》物价研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_diet",
+        "layer": "scene",
+        "title": "饮食与社会层级",
+        "content": "雇工食物消费（王家范据沈氏《农书》整理）：长工一年口粮每日一升五合（偏高标准）。一般江南农家'二稀一乾'即为佳境——早晚稀饭中午干饭；困苦时两稀度日，农忙才吃干饭。饮食结构：雇工/贫户以二稀一乾蔬菜为主少肉、过年有肉；小户丝织家庭稀饭+蔬菜+偶尔鱼虾、节庆有荤菜；机户/作坊主干饭为主常有鱼虾肉、宴客有酒有肉；富商/乡绅精米白面荤素搭配、山珍海味。江南特色：主食大米（粳米）、蔬菜青菜萝卜黄瓜菱芡藕、荤菜猪肉（2分/斤）鱼虾鸡鸭、调味葱姜酱醋、酒米酒（1分/斤到20分/瓶）。丝织户特殊：缫丝季（谷雨至小满）劳动强度大需加餐（干饭+咸鱼/咸肉）；织造时久坐常饮茶提神；市集日可能在茶馆/食摊用餐。",
+        "trigger_keywords": [
+          "饮食",
+          "雇工",
+          "沈氏",
+          "二稀一干",
+          "缫丝",
+          "农书",
+          "米酒"
+        ],
+        "trigger_scene": [
+          "自家作坊",
+          "盛泽市集",
+          "茶馆"
+        ],
+        "related_entries": [
+          "pr_prices"
+        ],
+        "source_refs": "王家范《明清江南消费风气与消费结构描述》；卜正民《崩盘》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_clothing",
+        "layer": "scene",
+        "title": "服饰与等级",
+        "content": "晚明江南形成'时尚'之风，'唱自一人'而'群起而随之'，形成区域性甚至全国性冲击波。'时样'：浅面矮跟鞋、笔管水袜等。服饰按层级：雇工/贫户穿粗布短衣草鞋（棉布麻布），小户丝织家庭穿自织绢布衣裳（绢棉布），机户/作坊主穿绸缎衣裳（绸绫），富商/乡绅穿精致绸缎（缎罗绫）。价格（《金瓶梅》物价）：普通衣裳约1两/件、绸缎衣裳约12两/套、貂鼠皮袄60两（奢侈品）。丝织户特殊：自家织造，穿着比同等收入家庭体面，但好料子要卖钱，自穿多用次等品或余料。",
+        "trigger_keywords": [
+          "服饰",
+          "时样",
+          "绸缎",
+          "衣裳",
+          "皮袄",
+          "矮跟"
+        ],
+        "trigger_scene": [
+          "自家作坊",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "pr_prices"
+        ],
+        "source_refs": "《风物闲美：晚明江南生活》；《金瓶梅》物价研究；明代中后期江南庶民服饰研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_housing",
+        "layer": "scene",
+        "title": "江南住房格局",
+        "content": "江南民居临水而建，前街后河，砖木结构白墙灰瓦，一般两进（前进客厅+后进卧室），楼上储物/织造楼下起居。丝织户住房：织机占空间大（一台织机约需2×3米），住房需专门辟出织造间；缫丝需靠近水源（热水缫丝），厨房与缫丝间常相邻；染丝需通风晾晒，院落或天井不可少；小户可能只有一间半房（半间织造+一间起居）。住房成本暂缺具体数据，参考《金瓶梅》夏提刑住宅1200两，普通民房估计在5-20两之间。",
+        "trigger_keywords": [
+          "住房",
+          "临水",
+          "织机",
+          "缫丝",
+          "院落",
+          "白墙"
+        ],
+        "trigger_scene": [
+          "自家作坊"
+        ],
+        "related_entries": [
+          "pr_prices",
+          "sc_silk_workshop"
+        ],
+        "source_refs": "综合推断",
+        "confidence": "low",
+        "needs_review": true
+      },
+      {
+        "id": "sc_festivals",
+        "layer": "scene",
+        "title": "节庆与年历",
+        "content": "主要节庆：元旦（正月初一，祭祖团拜走亲，年终结算收欠款）；元宵（正月十五赏灯猜谜，丝绸灯面需求）；清明（三月扫墓踏青，桑树发芽养蚕准备）；立夏（四月进新麦，蚕茧将熟缫丝准备）；端午（五月初五赛龙舟吃粽子，丝市旺季开始）；七夕（七月初七乞巧，织女崇拜织工节日）；中元（七月十五祭祖城隍出巡，厉坛祭典）；中秋（八月十五赏月吃月饼，秋丝上市）；重阳（九九登高，秋季丝市尾声）；冬至（十一月祭祖，年终账目清理）；腊八（十二月初八吃腊八粥准备年货）。城隍三巡会：清明、中元、下元城隍神像出巡至厉坛，'必极巡游之盛'，'致一国若狂'，市集拥挤热闹。",
+        "trigger_keywords": [
+          "节庆",
+          "七夕",
+          "城隍",
+          "元宵",
+          "端午",
+          "中秋",
+          "清明",
+          "冬至",
+          "三巡会"
+        ],
+        "trigger_scene": [
+          "盛泽市集",
+          "茶馆"
+        ],
+        "related_entries": [
+          "sc_folk_belief",
+          "bg_lunar_calendar"
+        ],
+        "source_refs": "城隍信仰研究；江南民俗综合",
+        "confidence": "medium",
+        "needs_review": true
+      },
+      {
+        "id": "pr_land_conflict",
+        "layer": "principle",
+        "title": "人地矛盾与种植业转型",
+        "content": "核心矛盾：江南'苏湖熟，天下足'→人口增多→耕地变少→人地矛盾凸显→被迫转向经济作物。转型路径：耕地少→蚕桑地增多→粮食依赖湖广地区→'人多地少，赋税重，逼迫种植业转型，转向经济型'。对丝织户影响：桑田挤占粮田→本地米价受外部影响大；丝织业回报高于种粮→更多农户转向丝织；但丝织完全依赖市场→丝价波动直接影响生计；粮食不能自给→一旦外地粮运受阻立即面临饥荒风险。",
+        "trigger_keywords": [
+          "人地矛盾",
+          "桑田",
+          "粮田",
+          "湖广",
+          "苏湖熟",
+          "种植业"
+        ],
+        "trigger_scene": [
+          "镇外桑田"
+        ],
+        "related_entries": [
+          "bg_north_south",
+          "pr_silver_inflow"
+        ],
+        "source_refs": "中国通史第85集'江南市镇'",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "pr_silver_inflow",
+        "layer": "principle",
+        "title": "白银内流与物价变动",
+        "content": "隆庆开关：1567年明廷解除海禁，月港成为唯一合法民间贸易港。中国深度参与全球贸易网络，通过丝绸、瓷器换回大量白银。白银对物价的影响：白银内流→银价购买力缓慢下降；万历年间1两银≈540元（嘉靖九年约745元）；但正常年景物价相对稳定，灾荒年景米价可暴涨数倍。卜正民发现：明朝前两百年物价出奇稳定，最后的粮价飙升完全由小冰期驱动。对丝织户影响：丝绸出口需求旺盛→丝价有支撑；但白银贬值→实际收入可能缩水；赋税折银→银贵时吃亏银贱时略好；灾荒年景米价暴涨但丝价不一定跟涨→'有丝无粮'的困境。",
+        "trigger_keywords": [
+          "白银",
+          "隆庆开关",
+          "银价",
+          "折银",
+          "月港",
+          "小冰期",
+          "海禁"
+        ],
+        "trigger_scene": [
+          "牙行",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "bg_silver_age",
+          "pr_land_conflict",
+          "en_yitiao_bian"
+        ],
+        "source_refs": "卜正民《崩盘》；隆庆开关研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_consumption",
+        "layer": "scene",
+        "title": "消费风气与贫富差距",
+        "content": "明中叶后江南消费风气趋向奢靡。苏州府'唯马首是瞻'影响全国。松江府'吾松素称奢侈，今黠傲之俗，已无还淳挽朴之机'。消费结构畸形：上层饮食肴馔、园林建筑、古董艺玩、服饰竞奢；底层食物消费占收入绝大部分几乎没有余力消费其他。雇工年食物消费约5两银，而最低日工资仅2-3分银。对丝织户影响：奢靡风气→高端丝织品需求旺盛→做高端有利润；但底层消费力弱→中低端丝织品市场有限；'做大做强准备上供'→进入官府采购体系是关键跃升；消费风气变化快→'时样'更替→库存风险。",
+        "trigger_keywords": [
+          "奢靡",
+          "消费",
+          "时尚",
+          "时样",
+          "上供",
+          "马首是瞻"
+        ],
+        "trigger_scene": [
+          "牙行",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "pr_tribute_economy",
+          "pr_silver_inflow"
+        ],
+        "source_refs": "王家范《明清江南消费风气历史探测'",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "pr_vocabulary",
+        "layer": "principle",
+        "title": "丝织户话语体系",
+        "content": "命运观词汇：命（先天注定的人生轨迹，'命里该当''命不好'），运（后天变化的际遇，'时运''运气''走运'），天意（超越人力的意志，旱灾瘟疫时感叹），造化（际遇运气偏正面，'造化弄人''好造化'），报应（善恶因果，警告解释灾祸），时运（当下的运气，'时运不济''时来运转'），命数（寿命定数，生死关头）。江南吴语中的运气表达：'额角头高'（运气好）、'触霉头'（倒霉）、'额角头碰着天花板'（最幸运）、'老虫跌勒米缸里'（谋到好工作）、'瞎猫碰着死老虫'（误打误撞成功）、'痴人有痴福'（傻人有傻福）、'拾着皮夹子'（意外之财）。赋税相关用语：'上供'（向官府供应丝织品）、'加派'（额外征收）、'折银'（实物税折算白银）、'一条鞭法'（赋役合并折银征收）。丝织行话：'经'（经线）、'纬'（纬线）、'提花'（织造花纹）、'缫丝'（从蚕茧抽丝）、'练丝'（脱胶处理）、'染坊'（染色作坊）、'牙人'（中间商）、'行面'（行会评估的丝织品等级）。",
+        "trigger_keywords": [
+          "行话",
+          "命运",
+          "运气",
+          "时运",
+          "造化",
+          "额角头",
+          "触霉头",
+          "经",
+          "纬",
+          "提花"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "盛泽市集",
+          "自家作坊"
+        ],
+        "related_entries": [
+          "sc_proverbs",
+          "sc_folk_belief"
+        ],
+        "source_refs": "无锡地方俗语；陈江'明代江南俗语所见之社会情态'；综合推断",
+        "confidence": "medium",
+        "needs_review": true
+      },
+      {
+        "id": "sc_proverbs",
+        "layer": "scene",
+        "title": "江南俗语与社会情态",
+        "content": "人际关系变化（陈江研究）：明代中后期江南传统三纲五常受到空前冲击。南京地区流行的俗语反映的行为——'趋''卤''淡''拿''捏''熏''冷''吊''灸''撩'——已全然看不出仁义礼智信。顾起元诠释：'趋'/'呵'（阿承显富），'卤'（以言诳人而沁入之），'淡'（示若不置人于意中），'拿'/'捏'（持人之阴事使不敢肆），'齅'（风而使其从我），'熏'（以语渐渍之俾其从）。价值观念变化：传统'重义轻利'→'义利并重'甚至'重利轻义'；'有柴有米是夫妻，无柴无米各东西'——物质基础决定关系；'金乡邻，银亲眷'——邻里关系比亲戚更实际。对丝织户的意义：商业社会人际关系更功利化；'趋'富避贫是常态——做大做强才有话语权；'拿''捏'——知道别人的秘密是权力来源；传统道德约束力下降→契约和行规更重要。",
+        "trigger_keywords": [
+          "俗语",
+          "趋",
+          "卤",
+          "拿",
+          "捏",
+          "重义轻利",
+          "金乡邻"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "pr_vocabulary",
+          "bg_moral_system"
+        ],
+        "source_refs": "陈江'明代江南俗语所见之社会情态'",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_folk_belief",
+        "layer": "scene",
+        "title": "民间信仰与禁忌",
+        "content": "万历年间江南民间信仰体系：城隍信仰（清明、中元、下元三巡会，护城佑民赏善罚恶）；祖先崇拜（元旦、清明、中元、冬至、忌日，家族凝聚祈求庇佑）；行业神（织女/嫘祖，七夕，丝织业保护神）；自然神（土地、龙王，旱涝时祈雨祈晴）；风水（建房修坟选址择吉）；占卜（日常决策卜吉凶）。《留青日札》记载：田艺蘅（嘉靖至万历年间浙江钱塘人）撰有《留青日札》，'凡经史子集、典章制度、音韵训诂、社会风尚、民生疾苦、艺林传闻、掌故逸事等，无所不涉'，记录了万历年间江南民间信仰实态。丝织户的信仰实践：七夕乞巧——织工最重要的节日，祈求织技精进；开工前祭织女——新织机启用、新花色开织；蚕神信仰——养蚕前祭蚕神，祈求蚕茧丰收；城隍庙——纠纷调解、许愿还愿；祖先牌位——厅堂设龛，日常上香。禁忌：缫丝时不能说'断'（怕丝断）；织造时不能说'破'（怕布破）；养蚕时不能大声喧哗（怕惊蚕）；卖丝不能在城隍庙前（怕神明看见争利）。",
+        "trigger_keywords": [
+          "城隍",
+          "织女",
+          "蚕神",
+          "禁忌",
+          "风水",
+          "占卜",
+          "留青日札",
+          "嫘祖"
+        ],
+        "trigger_scene": [
+          "盛泽市集",
+          "自家作坊",
+          "茶馆"
+        ],
+        "related_entries": [
+          "pr_vocabulary",
+          "sc_festivals"
+        ],
+        "source_refs": "《留青日札》研究；城隍信仰研究；江南民俗综合",
+        "confidence": "medium",
+        "needs_review": true
+      },
+      {
+        "id": "pr_knowledge_boundary",
+        "layer": "principle",
+        "title": "丝织户的知识边界",
+        "content": "丝织户知道什么/不知道什么：本地——知道丝价米价行会规矩本地官吏邻里关系，不知道县衙内部运作细节；行业——知道织造技术品种行情客商偏好染料来源，不知道全国丝绸总产量出口量；天下——知道万历皇帝在位张居正已死辽东有战事，不知道朝廷决策过程具体战况财政数据；自然——知道节气与农事天气征兆蚕病识别，不知道气候变化原因疫病机理；信仰——知道城隍织女祖先风水，不知道佛道经典神学体系。信息来源：市集上的口口相传、行会内部消息、茶馆里的闲谈、官府告示、走商带来的外地消息。信息传播速度：盛泽本地当天、吴江县内1-2天、苏州府内3-5天、外省消息1-3个月、朝廷消息视距离和重要性1-6个月。",
+        "trigger_keywords": [
+          "知道",
+          "不知道",
+          "信息",
+          "传闻",
+          "走商",
+          "市集",
+          "茶馆",
+          "告示"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "bg_wanli_era",
+          "pr_vocabulary"
+        ],
+        "source_refs": "综合推断",
+        "confidence": "low",
+        "needs_review": true
+      },
+      {
+        "id": "sc_imperial_exam_path",
+        "layer": "scene",
+        "title": "科举阶梯与时间",
+        "content": "完整路径：童生→秀才→举人→进士→授官。录取率：童生→秀才约10%（苏州府3000童生争120名额），秀才→举人约3-5%（多数人终老秀才），举人→进士约10%。科举必由学校，至少3-5年不事生产。",
+        "trigger_keywords": [
+          "科举",
+          "秀才",
+          "举人",
+          "进士",
+          "童生",
+          "乡试",
+          "会试",
+          "院试"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "县衙"
+        ],
+        "related_entries": [
+          "sc_women_status"
+        ],
+        "source_refs": "陈宝良《明代秀才的生活世界》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "pr_xiucai_privileges",
+        "layer": "principle",
+        "title": "秀才的特权与生路",
+        "content": "秀才特权：见官不跪（不受笞捶）、免役、'四民之首'、可穿特定衣服、可开私塾。经济来源：廪膳微薄；教书处馆月2-3两（温秀才西门庆家月3两）；代写书信；包揽钱粮（灰色）；充当干证（灰色）。'一衿终老'是常态。",
+        "trigger_keywords": [
+          "秀才",
+          "免役",
+          "西席",
+          "处馆",
+          "包揽",
+          "生员",
+          "读书"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "县衙"
+        ],
+        "related_entries": [
+          "sc_imperial_exam_path"
+        ],
+        "source_refs": "陈宝良《明代秀才的生活世界》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_jiangnan_underworld",
+        "layer": "scene",
+        "title": "江南市井灰色生态",
+        "content": "五种灰色势力：牙人/牙郎（中间商，抽成3-5%）、讼师（代写诉状）、帮闲（依附权贵跑腿）、打行（职业打手）、胥吏（衙门跑腿操控基层）。与丝织户关系：卖绸必经牙人；纠纷需要讼师；可能被帮闲骚扰；胥吏卡赋税和诉讼。",
+        "trigger_keywords": [
+          "牙人",
+          "讼师",
+          "帮闲",
+          "打行",
+          "胥吏",
+          "牙行",
+          "中间商",
+          "市井"
+        ],
+        "trigger_scene": [
+          "牙行",
+          "县衙",
+          "茶馆"
+        ],
+        "related_entries": [
+          "pr_silver_inflow"
+        ],
+        "source_refs": "《金瓶梅》市井研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_dahang",
+        "layer": "scene",
+        "title": "打行：万历江南黑社会",
+        "content": "起源嘉靖、万历年间苏州一带，后蔓延松江及整个江南。成员'皆系无家恶少'，后期富豪和衙役胥吏也加入，歃血为盟。独特打人方法：打胸、肋、下腹、腰背，可做到'定期死亡'——三个月或五个月后死，超出期限不用抵命。嘉靖三十八年朝廷曾调兵打击，但屡禁不止。",
+        "trigger_keywords": [
+          "打行",
+          "恶少",
+          "打人",
+          "嘉靖",
+          "万历",
+          "苏州",
+          "黑社会"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "牙行"
+        ],
+        "related_entries": [
+          "sc_jiangnan_underworld"
+        ],
+        "source_refs": "明代江南'打行'研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_ximen_qing_path",
+        "layer": "scene",
+        "title": "西门庆的发迹路径",
+        "content": "西门庆路径：继承生药铺（起点）→娶富妾获嫁妆数千两→开缎子铺、放高利贷、包揽诉讼→行贿蔡太师获授提刑千户→家当约10万两。商业版图：生药铺/缎子铺/放贷/包揽/盐引。关键手段：娶妻敛财/行贿买官/结交权贵/信息垄断。",
+        "trigger_keywords": [
+          "西门庆",
+          "缎子铺",
+          "高利贷",
+          "包揽",
+          "盐引",
+          "生药铺",
+          "蔡太师"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "牙行"
+        ],
+        "related_entries": [
+          "sc_jiangnan_underworld"
+        ],
+        "source_refs": "《金瓶梅》第74回",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_fujian_wind",
+        "layer": "scene",
+        "title": "妇健之风：江南女性真实处境",
+        "content": "明代中后期江南出现'妇健'风气：劳动妇女很少缠足；'妻络夫织'是常态；妇女走出家庭参与经济；'友贾''卖婆''牙婆'是真实职业。江南丝织业中女性是核心劳动力。卜正民：随商业经济发展，女性从家庭附庸中获得部分解放。",
+        "trigger_keywords": [
+          "妇健",
+          "友贾",
+          "卖婆",
+          "牙婆",
+          "女贾",
+          "明代女性",
+          "缠足",
+          "妻络夫织"
+        ],
+        "trigger_scene": [
+          "自家作坊",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "sc_women_status",
+          "sc_silk_workshop"
+        ],
+        "source_refs": "卜正民《纵乐的困惑》；陈宝良《明代妇女》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_talented_women",
+        "layer": "scene",
+        "title": "才女/闺塾师路线",
+        "content": "女性不可考科举（硬约束），但可走才女/闺塾师路线：高彦颐《闺塾师》指出明末江南女性有机会读书识字。阶段：识字→读书→写诗（加入女性诗社）→闺塾师（教富户女儿，月1-2两）→编书出版。优势：无科举独木桥、不需脱产、闺塾师稀缺。风险：'女子无才便是德'舆论、嫁人后可能被迫放弃。",
+        "trigger_keywords": [
+          "才女",
+          "闺塾师",
+          "叶家",
+          "女性诗社",
+          "女塾师",
+          "才女文化"
+        ],
+        "trigger_scene": [
+          "自家作坊",
+          "闺阁"
+        ],
+        "related_entries": [
+          "sc_fujian_wind",
+          "sc_women_status"
+        ],
+        "source_refs": "高彦颐《闺塾师》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_three_goddesses",
+        "layer": "scene",
+        "title": "三姑六婆：女性灰色势力",
+        "content": "'三姑六婆'贬义但实际是明代市井**信息网络最发达群体**：牙婆进出各家各户，掌握人事/婚姻信息；媒婆了解未婚男女；卖婆在女性客户间穿针引线，比男牙人更容易进入闺阁；师婆/巫婆是女性求助的第一站。女性版'西门庆'路径：织户→卖婆→牙婆→女贾→控制丝织品流通→与官府内眷搭关系。",
+        "trigger_keywords": [
+          "三姑六婆",
+          "牙婆",
+          "媒婆",
+          "卖婆",
+          "师婆",
+          "巫婆",
+          "女贾",
+          "王婆",
+          "薛嫂"
+        ],
+        "trigger_scene": [
+          "自家作坊",
+          "闺阁",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "sc_fujian_wind",
+          "sc_jiangnan_underworld"
+        ],
+        "source_refs": "《金瓶梅》王婆/薛嫂/刘婆；《明代妇女》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "bg_population_mobility",
+        "layer": "background",
+        "title": "万历年间人口流动",
+        "content": "明中叶后朝廷放弃迫使流民返回原籍。一条鞭法后赋役折银，人身控制松弛。江南人外出经商/游学/谋生已是常态。关津制（路引）执行松懈。离乡硬约束：路引（松弛执行）/户籍（仍要交税）/路费/人脉。",
+        "trigger_keywords": [
+          "离乡",
+          "路引",
+          "户籍",
+          "流动",
+          "关津",
+          "出远门"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "pr_silver_inflow"
+        ],
+        "source_refs": "明代人口流动研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "bg_longqing_kaihai",
+        "layer": "background",
+        "title": "隆庆开关与月港",
+        "content": "1567年明廷解除海禁，月港（福建漳州海澄）成为唯一合法民间海外贸易港。到万历十五年（1587）月港已繁荣20年，被称为'天子之南库'，通商47国，18条航线，1公里江岸7座渡口。开关规定不得到日本贸易。",
+        "trigger_keywords": [
+          "隆庆开关",
+          "月港",
+          "海澄",
+          "海禁",
+          "海商",
+          "丝客"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "bg_population_mobility",
+          "pr_silver_inflow"
+        ],
+        "source_refs": "袁灿兴《朝贡贸易与战争》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_yue_gang_life",
+        "layer": "scene",
+        "title": "月港海商生活",
+        "content": "盛泽→月港：8-12天，6-10两（船资3-5/食宿2-3/税1-2）。月港商机：盛泽丝绸是硬通货；可做'丝客'收丝到月港卖；也可搭船出海。风险：闽南商人抱团、官府税重（督饷馆）、海上风浪海盗。",
+        "trigger_keywords": [
+          "月港",
+          "海澄",
+          "丝客",
+          "海商",
+          "海上",
+          "渡口"
+        ],
+        "trigger_scene": [
+          "牙行",
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "bg_longqing_kaihai"
+        ],
+        "source_refs": "漳州月港研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_nanyang_sea_route",
+        "layer": "scene",
+        "title": "下南洋航线",
+        "content": "盛泽→马尼拉：30-50天/单程，25-45两（不含货本）。吕宋（马尼拉）有西班牙大帆船贸易，一匹丝绸在马尼拉售价是进价3-5倍。风险：海上风浪高/海盗中/西班牙重税高/疾病高/回不来中。月港季风：5-7月南风去，10-12月北风回。",
+        "trigger_keywords": [
+          "南洋",
+          "马尼拉",
+          "吕宋",
+          "大帆船",
+          "西班牙",
+          "下海"
+        ],
+        "trigger_scene": [
+          "牙行",
+          "茶馆"
+        ],
+        "related_entries": [
+          "bg_longqing_kaihai",
+          "pr_silver_inflow"
+        ],
+        "source_refs": "贡德·弗兰克《白银资本》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_grand_canal",
+        "layer": "scene",
+        "title": "京杭大运河",
+        "content": "盛泽→北京：20-25天/顺利，12-20两。最常规远行路线。分段：盛泽→苏州→镇江→扬州→淮安→徐州→济宁→临清→天津→北京。黄河段最险（徐州段），济宁闸门多要等。京城：万历十五年北京人口百万，丝绸好货但江南商人已有行会，可投奔苏州会馆。",
+        "trigger_keywords": [
+          "运河",
+          "京城",
+          "北京",
+          "南下",
+          "北上",
+          "会通河",
+          "黄河段"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "牙行"
+        ],
+        "related_entries": [
+          "sc_waterways"
+        ],
+        "source_refs": "京杭大运河研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_ming_army_recruit",
+        "layer": "scene",
+        "title": "万历募兵制",
+        "content": "卫所制名存实亡，募兵成为主流。月粮：九边1-1.5两/京营1两/地方营兵0.8-1两/水师1两。万历十五年无大战，但九边常年需兵。1587年辽东局势紧张（努尔哈赤1583起兵），5年后1592朝鲜之役。风险：军官克扣（极高）、被当苦力、将领私人化（募兵只认将不认国）。女性不能正式参军（硬约束）。",
+        "trigger_keywords": [
+          "募兵",
+          "九边",
+          "参军",
+          "卫所",
+          "辽东",
+          "月粮",
+          "投军"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "县衙"
+        ],
+        "related_entries": [],
+        "source_refs": "明代募兵制研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_weaver_fall",
+        "layer": "scene",
+        "title": "织工路线：从机户到机工",
+        "content": "经营失败→卖掉织机→变成机工。阶段：挣扎期（借高利贷）→卖机期（最后5-10两）→机工期（丝市等活日薪3-4分）→觉醒期（接触集体行动）。机工'朝不谋夕，得业则生，失业则死'。约60%挣扎期机户最终滑落。",
+        "trigger_keywords": [
+          "织工",
+          "机工",
+          "丝市",
+          "卖机",
+          "失业",
+          "雇工"
+        ],
+        "trigger_scene": [
+          "盛泽市集"
+        ],
+        "related_entries": [
+          "sc_tax_card"
+        ],
+        "source_refs": "曹时聘奏报；葛成传",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_taxes_keen",
+        "layer": "scene",
+        "title": "万历矿税之祸",
+        "content": "万历二十四年（1596）起派出宦官任矿监税使，绕过官僚系统直接搜刮。孙隆在苏州设20多个税卡：每台织机三钱，每匹布五分。对3台织机小户，加税后约1.2-1.4两/月（占月收入40-47%）。葛成起义：万历二十九年（1601），机工聚众打死税棍，迫使税卡撤销。",
+        "trigger_keywords": [
+          "税监",
+          "矿税",
+          "孙隆",
+          "税卡",
+          "黄建节",
+          "葛成"
+        ],
+        "trigger_scene": [
+          "县衙",
+          "自家作坊"
+        ],
+        "related_entries": [
+          "pr_silver_inflow"
+        ],
+        "source_refs": "曹时聘奏报；陈继儒《吴葛将军墓碑》",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_monks_laymen",
+        "layer": "scene",
+        "title": "出家/山人路线",
+        "content": "出家硬约束：度牒（需数两）+寺院接收+1年考察+戒律。女性几乎不可能（建文三年法令：59岁以下不许为尼，违者杖一百还俗入官为奴；万历三十三年按猪肉价卖给光棍）。替代路径：居士/带发修行/山人。陈继儒1587年'取儒衣冠焚弃之'，隐居东佘山。",
+        "trigger_keywords": [
+          "出家",
+          "度牒",
+          "山人",
+          "陈继儒",
+          "寺庙",
+          "灵岩寺",
+          "居士"
+        ],
+        "trigger_scene": [
+          "自家作坊"
+        ],
+        "related_entries": [
+          "sc_imperial_exam_path"
+        ],
+        "source_refs": "明代佛教研究；陈继儒传记",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_craft_pivot",
+        "layer": "scene",
+        "title": "手艺转行路线",
+        "content": "织户可转：染色（入门3-5两，月入1.5-2两）、刺绣（1-2两，月入1-3两，'顾绣'有品牌溢价）、踹布（几乎零成本，月入0.8-1两，体力活）、开染坊（15-25两投入，月入3-5两）。女性优势方向是刺绣（顾名世之妾韩希孟创'顾绣'）。",
+        "trigger_keywords": [
+          "染色",
+          "刺绣",
+          "踹布",
+          "顾绣",
+          "转行",
+          "染坊"
+        ],
+        "trigger_scene": [
+          "自家作坊"
+        ],
+        "related_entries": [
+          "sc_weaver_fall"
+        ],
+        "source_refs": "明代丝织业研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_muye_shiye",
+        "layer": "scene",
+        "title": "入幕/师爷路线",
+        "content": "入幕：当官员私人幕僚，处理刑名/钱谷/文书。月入2-5两。师爷：替人写诉状/打官司，按件收费。要求：识字+懂律法+会处事。常见路径：科举落榜秀才/告老官员幕僚/被大官赏识。入幕风险：被当替罪羊、卷入党争、名声受损（'幕僚'社会地位低）。",
+        "trigger_keywords": [
+          "入幕",
+          "幕僚",
+          "师爷",
+          "幕友",
+          "刑名",
+          "钱谷"
+        ],
+        "trigger_scene": [
+          "县衙"
+        ],
+        "related_entries": [
+          "sc_imperial_exam_path"
+        ],
+        "source_refs": "明代幕僚研究",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_jiang_guan",
+        "layer": "scene",
+        "title": "匠官路线：手艺入仕",
+        "content": "明代设'工部'，有少量'匠官'名额（营缮所/文思院等）。匠人可凭技术入仕：从'匠籍'经考核升迁。现实：名额极少、晋升慢、社会地位低。万历年间'匠户'实际地位：介于民户与军户之间。多数匠人终身为匠，子孙承袭。",
+        "trigger_keywords": [
+          "匠官",
+          "工部",
+          "匠籍",
+          "营缮所",
+          "文思院"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "sc_craft_pivot"
+        ],
+        "source_refs": "明代匠户制度研究",
+        "confidence": "medium",
+        "needs_review": true
+      },
+      {
+        "id": "sc_beggars",
+        "layer": "scene",
+        "title": "流民/乞丐路线",
+        "content": "万历年间流民已是常态：失去土地/破产/灾荒逃荒者。乞丐群体有'丐帮'雏形，分地盘（盛泽/苏州各有势力）。求生方式：乞讨/拾荒/偷盗/卖艺/给寺庙做苦力。女性沦为'乞丐婆'或被卖入青楼。风险：被收容所抓去服苦役、饥寒致死。",
+        "trigger_keywords": [
+          "乞丐",
+          "流民",
+          "乞讨",
+          "丐帮",
+          "逃荒"
+        ],
+        "trigger_scene": [],
+        "related_entries": [
+          "sc_weaver_fall"
+        ],
+        "source_refs": "明代流民研究",
+        "confidence": "medium",
+        "needs_review": false
+      },
+      {
+        "id": "sc_medicine",
+        "layer": "scene",
+        "title": "医药/悬壶济世",
+        "content": "明代医生分：太医院（御医）/ 官医（惠民药局）/ 坐堂医（药铺）/ 走方医（铃医）/ 女医（稳婆/治女科）。铃医走街串巷摇铃招客，卖药兼看病。名医如李时珍《本草纲目》1578年成书。学习途径：家传/拜师/自学医书。女医主要看女科和接生。",
+        "trigger_keywords": [
+          "医药",
+          "医生",
+          "铃医",
+          "走方医",
+          "本草纲目",
+          "惠民药局"
+        ],
+        "trigger_scene": [
+          "盛泽市集"
+        ],
+        "related_entries": [],
+        "source_refs": "明代医学史",
+        "confidence": "high",
+        "needs_review": false
+      },
+      {
+        "id": "sc_opera_storyteller",
+        "layer": "scene",
+        "title": "戏曲/说书路线",
+        "content": "万历年间昆曲兴起（魏良辅改良昆山腔），苏州/盛泽有戏班。说书人活跃于茶馆/庙会/私宅。收入：戏班演员月入1-3两（名角可达5两+）；说书按场收费，每场50-200文。女性艺人罕见但存在（如女伶/歌妓）。社会地位：'戏子'社会评价低，但收入可观。",
+        "trigger_keywords": [
+          "昆曲",
+          "戏班",
+          "说书",
+          "魏良辅",
+          "戏子",
+          "女伶"
+        ],
+        "trigger_scene": [
+          "茶馆",
+          "自家作坊"
+        ],
+        "related_entries": [],
+        "source_refs": "明代戏曲史",
+        "confidence": "medium",
+        "needs_review": false
+      }
+    ],
+    "narrative_snippets": [
+      {
+        "id": "sn_shishi_shifu_market",
+        "source": "《醒世恒言》第十八卷'施润泽滩阙遇友'",
+        "applies_to_scenes": [
+          "盛泽市集",
+          "牙行",
+          "自家作坊"
+        ],
+        "trigger_keywords": [
+          "盛泽",
+          "市集",
+          "牙行",
+          "绸丝",
+          "热闹"
+        ],
+        "npc_use_case": "DM描写市集热闹时引用，或让NPC感叹'这盛泽镇啊'",
+        "snippet_text": "镇上居民稠广，土俗淳朴，俱以蚕桑为生。男女勤谨，络纬机杼之声，通宵彻夜。那岸上两岸绸丝牙行，约有千百余家，远近村坊织成绸匹，俱到此上市。四方商贾来收买的，蜂攒蚁集，挨挤不开，路途无伫足之隙，乃出产锦锈之乡，积聚绫罗之地。"
+      },
+      {
+        "id": "sn_shishi_capital",
+        "source": "《醒世恒言》第十八卷",
+        "applies_to_scenes": [
+          "自家作坊",
+          "牙行"
+        ],
+        "trigger_keywords": [
+          "织机",
+          "添置",
+          "扩大",
+          "本钱",
+          "利息"
+        ],
+        "npc_use_case": "老织工传授经验——'你看施家，当年就是从一张机起家'",
+        "snippet_text": "今日好造化！拾得这些银子，正好将去凑做本钱。有了这银子，再添上一张机，一月出得多少绸，有许多利息。积上一年，共该若干，到来年再添上一张，一年又有多少利息。算到十年之外，便有千金之富。"
+      },
+      {
+        "id": "sn_shishi_sell",
+        "source": "《醒世恒言》第十八卷",
+        "applies_to_scenes": [
+          "牙行",
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "卖绸",
+          "牙行",
+          "客商",
+          "成色"
+        ],
+        "npc_use_case": "DM描述卖绸场景，牙行交易流程",
+        "snippet_text": "施复来到市上，只听人语喧嚷，十分热闹。他也不管这些，直接到熟悉的绸布店去。只见门口拥着好多卖绸的，屋里坐着三四个客商。店主人站在柜台里，把那些绸子一匹匹展开，看成色，叫喊着价钱。"
+      },
+      {
+        "id": "sn_shishi_silver",
+        "source": "《醒世恒言》第十八卷",
+        "applies_to_scenes": [
+          "茶馆",
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "拾金",
+          "还银",
+          "道德",
+          "施家"
+        ],
+        "npc_use_case": "NPC讲'施家还银'的故事作为道德参照",
+        "snippet_text": "这钱如果是富人丢的，就像牛身上掉了一根毛，没什么损失；如果是客商的，这是他离妻别子、风餐露宿，辛勤挣来的钱，丢了一定非常难过。有本钱的还能承受这种损失，倘然做的是小生意……"
+      },
+      {
+        "id": "sn_shishi_treasure",
+        "source": "《醒世恒言》第十八卷",
+        "applies_to_scenes": [
+          "自家作坊",
+          "盛泽市集",
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "买房",
+          "挖",
+          "藏银",
+          "旧宅"
+        ],
+        "npc_use_case": "邻居闲聊——'听说施家买那旧宅子，翻地时挖出一坛银子来'",
+        "snippet_text": "施复买邻家旧房，挖掘时竟得千金藏银。后又盖房再得千金。小说归因为还银善报，但实际反映的是明代江南房产交易中'地下藏银'的普遍现象。"
+      },
+      {
+        "id": "sn_shishi_chicken",
+        "source": "《醒世恒言》第十八卷",
+        "applies_to_scenes": [
+          "镇外桑田"
+        ],
+        "trigger_keywords": [
+          "借宿",
+          "农家",
+          "鸡",
+          "禁忌"
+        ],
+        "npc_use_case": "NPC讲古——'鸡是有灵性的，施家那回要不是鸡叫，人早没了'",
+        "snippet_text": "施复在朱恩家借宿，朱恩要杀鸡款待，施复劝阻。当夜鸡群乱叫，施复起身查看，刚离开床铺，一根车轴砸在铺上——若非鸡叫，必死无疑。"
+      },
+      {
+        "id": "sn_jpm_gift",
+        "source": "《金瓶梅词话》",
+        "applies_to_scenes": [
+          "茶馆",
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "上供",
+          "送礼",
+          "寿礼",
+          "官府"
+        ],
+        "npc_use_case": "NPC感叹——'你知道上供要送什么吗？'",
+        "snippet_text": "西门庆送给蔡太师的寿礼包括：两副玉桃杯，两套杭州织造的大红五彩罗缎丝蟒衣，至少两匹玄色焦布和大红纱蟒。"
+      },
+      {
+        "id": "sn_jpm_wage",
+        "source": "《金瓶梅词话》",
+        "applies_to_scenes": [
+          "牙行",
+          "盛泽市集",
+          "自家作坊"
+        ],
+        "trigger_keywords": [
+          "工钱",
+          "雇工",
+          "丫头",
+          "伙计"
+        ],
+        "npc_use_case": "牙人报价——'一个丫头五六两，你那织工一个月工钱也得一两起步吧'",
+        "snippet_text": "一个10岁左右的普通丫头身价约五两至六两银子；生药铺伙计傅铭每月工钱二两银子；温秀才每月三两；乐工李铭每月五两。"
+      },
+      {
+        "id": "sn_jpm_clothes",
+        "source": "《金瓶梅词话》",
+        "applies_to_scenes": [
+          "盛泽市集",
+          "自家作坊"
+        ],
+        "trigger_keywords": [
+          "衣裳",
+          "绸缎",
+          "皮袄",
+          "服饰"
+        ],
+        "npc_use_case": "妻子沈氏感叹——'你看城里那些太太，一件衣裳就十二两'",
+        "snippet_text": "常时节为妻子买5件衣裳、自己2件，共六两五钱银子，每件约一两。西门庆为李桂姐置四套绸缎衣裳需五十两，每套约十二两。李瓶儿一件貂鼠皮袄需六十两。"
+      },
+      {
+        "id": "sn_jpm_official",
+        "source": "《金瓶梅词话》",
+        "applies_to_scenes": [
+          "茶馆",
+          "县衙"
+        ],
+        "trigger_keywords": [
+          "官场",
+          "上供",
+          "鼎",
+          "识趣"
+        ],
+        "npc_use_case": "老机户传授——'当官的看上你什么，你可得识趣'",
+        "snippet_text": "宋御史多看了几眼西门庆家的镏金鼎，西门庆心领神会，立刻派人送去。宋御史假意推辞：'学生还当奉价。'西门庆道：'早知我正要奉送公祖，犹恐见却，岂敢云价。'"
+      },
+      {
+        "id": "sn_sanyan_pearl",
+        "source": "《喻世明言》第一卷'蒋兴哥重会珍珠衫'",
+        "applies_to_scenes": [
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "远行",
+          "做买卖",
+          "夫妻",
+          "珍珠衫"
+        ],
+        "npc_use_case": "茶馆闲谈——'你听说了吗？蒋家那事'",
+        "snippet_text": "蒋兴哥是湖广襄阳商人，世代到广东做买卖。妻子在家独守，因一件珍珠衫与客商陈商发生感情。后蒋兴哥发现真相，并未声张，而是以'休书'方式体面分手。最终二人在异地重逢，破镜重圆。"
+      },
+      {
+        "id": "sn_sanyan_orange",
+        "source": "《初刻拍案惊奇》第一卷'转运汉巧遇洞庭红'",
+        "applies_to_scenes": [
+          "茶馆",
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "运气",
+          "海外",
+          "意外",
+          "赚钱"
+        ],
+        "npc_use_case": "织工闲聊——'运气来了挡都挡不住'",
+        "snippet_text": "文若虚本是落魄文人，随商船出海，以一两银子买了洞庭红橘子。到了海外，橘子被抢购一空，赚了大钱。后又在一具龟壳中发现珍珠，暴富。"
+      },
+      {
+        "id": "sn_sanyan_oil",
+        "source": "《醒世恒言》第三卷'卖油郎独占花魁'",
+        "applies_to_scenes": [
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "小人物",
+          "逆袭",
+          "攒钱",
+          "真情"
+        ],
+        "npc_use_case": "市井闲谈——'你看那卖油的秦重'",
+        "snippet_text": "卖油小贩秦重，省吃俭用攒了一年银子，只为见花魁娘子一面。最终以真情打动花魁，成就姻缘。"
+      },
+      {
+        "id": "sn_shen_wansan",
+        "source": "中国通史第85集+民间传说",
+        "applies_to_scenes": [
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "做大",
+          "富商",
+          "沈万三",
+          "风险"
+        ],
+        "npc_use_case": "老织工警告——'做大了也不是好事'",
+        "snippet_text": "明初，周庄商人沈万三富可敌国，捐资帮助朱元璋修筑南京城墙。朱元璋怒曰：'匹夫犒天子军，乱民也！'最终在马皇后劝解下，沈万三被发配云南，洪武二十六年卷入蓝玉党案，从此萧条没落。"
+      },
+      {
+        "id": "sn_canshen_temple",
+        "source": "盛泽先蚕祠实地记载",
+        "applies_to_scenes": [
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "小满",
+          "蚕神",
+          "先蚕祠",
+          "庙会"
+        ],
+        "npc_use_case": "DM描述小满节庆——'先蚕祠前人山人海'",
+        "snippet_text": "盛泽先蚕祠供奉嫘祖、轩辕、神农三位先祖。嫘祖被尊为'蚕花娘娘''蚕神''先蚕'。小满那天是蚕神生日，先蚕祠人头攒动，锣鼓喧天，古戏台上好戏连演三天。蚕农饮水思源，以恭敬诚恳的心情感谢神灵庆贺丰收。"
+      },
+      {
+        "id": "sn_suzhou_tax",
+        "source": "综合史料",
+        "applies_to_scenes": [
+          "茶馆",
+          "县衙"
+        ],
+        "trigger_keywords": [
+          "苏州",
+          "税负",
+          "重税",
+          "赋税"
+        ],
+        "npc_use_case": "里老叹气——'咱苏州府的税，全国最重'",
+        "snippet_text": "朱元璋对苏州实施严厉惩罚——将苏州居民大量强制迁徙到江北，还制定全国最重的税负标准。苏州府田地只占全国百分之一左右，却要负担全国近十分之一的田亩税。此外还要为皇宫提供大量丝绸锦缎，基本属于半买半上贡。"
+      },
+      {
+        "id": "sn_fanjin_zhongju",
+        "source": "《儒林外史》范进中举",
+        "applies_to_scenes": [
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "科举",
+          "中举",
+          "秀才",
+          "考试"
+        ],
+        "npc_use_case": "DM描述科举不易时引用——'你看范进，考了二十多次才中举'",
+        "snippet_text": "秀才范进考了二十余次，54岁才中举。中举后喜极而疯，老丈人胡屠户一巴掌打醒。中举后'众人来奉承他：有送田产的，有送店房的'——一夜间从穷酸变富贵。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_xu_wei_life",
+        "source": "历史人物徐渭",
+        "applies_to_scenes": [
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "秀才",
+          "屡试不第",
+          "杀妻",
+          "生员"
+        ],
+        "npc_use_case": "老秀才叹气时——'我当年跟徐渭一样，考到杀妻下狱'",
+        "snippet_text": "绍兴秀才徐渭，八试不第。以卖文、入幕为生。后因杀妻下狱，被革去生员身份。一生在'读书人'和'谋生者'之间挣扎。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_wen_xiucai",
+        "source": "《金瓶梅》温秀才",
+        "applies_to_scenes": [
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "西席",
+          "教书",
+          "包揽",
+          "偷窥"
+        ],
+        "npc_use_case": "NPC讲秀才两面——'你看西门庆家的温先生，读书人不一定是好人'",
+        "snippet_text": "西门庆的代笔先生温秀才，月3两银子。表面儒雅，实则偷窥东家隐私、泄露书信、有断袖之癖。最终被赶走。'读书人'不等于'好人'。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_wang_po",
+        "source": "《金瓶梅》王婆",
+        "applies_to_scenes": [
+          "茶馆",
+          "闺阁"
+        ],
+        "trigger_keywords": [
+          "茶馆",
+          "牙婆",
+          "撮合",
+          "三姑六婆"
+        ],
+        "npc_use_case": "NPC讲古——'你看王婆，靠撮合人和买卖丫鬟就发了家'",
+        "snippet_text": "王婆是茶馆老板娘，实为牙婆/媒婆。撮合西门庆与潘金莲，是整个故事的关键推手。'十面埋伏'计策（潘驴邓小闲）展示了牙婆对人心的精准把握。",
+        "target_gender": "female"
+      },
+      {
+        "id": "sn_xue_sao",
+        "source": "《金瓶梅》薛嫂",
+        "applies_to_scenes": [
+          "闺阁",
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "媒婆",
+          "说合",
+          "信息掮客"
+        ],
+        "npc_use_case": "DM描述媒婆嘴脸——'她对各家情况了如指掌'",
+        "snippet_text": "薛嫂是专业媒婆，给西门庆说合了孟玉楼。能说会道，对各家情况了如指掌——'信息掮客'的女性版。",
+        "target_gender": "female"
+      },
+      {
+        "id": "sn_ye_family",
+        "source": "历史人物叶绍袁家族",
+        "applies_to_scenes": [
+          "闺阁",
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "才女",
+          "吴江",
+          "叶家",
+          "诗社"
+        ],
+        "npc_use_case": "NPC羡慕——'吴江叶家，一门才女'",
+        "snippet_text": "吴江叶氏一门才女。叶绍袁之妻沈宜修、女叶小鸾、叶纨纨皆能诗。叶小鸾十七岁早逝，留下诗稿，成为江南才女传奇。盛泽镇距吴江不远，玩家可能听说过叶家。",
+        "target_gender": "female"
+      },
+      {
+        "id": "sn_yuegang_silk",
+        "source": "万历海商口述",
+        "applies_to_scenes": [
+          "牙行",
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "月港",
+          "海澄",
+          "丝绸换白银",
+          "丝客"
+        ],
+        "npc_use_case": "NPC聊出海——'月港那边一匹湖绫能卖三两'",
+        "snippet_text": "月港那边，一匹湖绫能卖到三两银子，是这边的好几倍……盛泽的丝绸在月港是硬通货。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_lvson_silver",
+        "source": "万历海商口述",
+        "applies_to_scenes": [
+          "茶馆",
+          "牙行"
+        ],
+        "trigger_keywords": [
+          "南洋",
+          "马尼拉",
+          "吕宋",
+          "白银",
+          "大帆船"
+        ],
+        "npc_use_case": "NPC讲南洋暴利——'一匹下去，三倍回来'",
+        "snippet_text": "你要是带十匹湖绫下去，到马尼拉至少翻三倍。西班牙人在那头大帆船等着呢，把丝绸运到美洲换白银。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_japan_prohibited",
+        "source": "明代私商口述",
+        "applies_to_scenes": [
+          "茶馆"
+        ],
+        "trigger_keywords": [
+          "东洋",
+          "日本",
+          "平户",
+          "走私",
+          "违禁"
+        ],
+        "npc_use_case": "神秘商人低声——'你要是敢走一趟东洋……'",
+        "snippet_text": "你要是敢走一趟东洋，十匹绸子换回来的银子够你买一栋楼……但上个月刚抓了三个，杀头的买卖。",
+        "target_gender": "male"
+      },
+      {
+        "id": "sn_canal_danger",
+        "source": "运河船夫口述",
+        "applies_to_scenes": [
+          "茶馆",
+          "牙行"
+        ],
+        "trigger_keywords": [
+          "运河",
+          "黄河",
+          "翻船",
+          "北上"
+        ],
+        "npc_use_case": "老人回忆——'我年轻时走过一趟运河，黄河段差点翻船'",
+        "snippet_text": "我年轻时走过一趟运河，黄河段差点翻船。徐州那一段水急浪大，闸门又多，等了三天。再也不敢走了。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_army_koukou",
+        "source": "明代老兵口述",
+        "applies_to_scenes": [
+          "茶馆",
+          "县衙"
+        ],
+        "trigger_keywords": [
+          "投军",
+          "募兵",
+          "月粮",
+          "克扣",
+          "九边"
+        ],
+        "npc_use_case": "老兵警告——'别信那月粮，到手能有八钱就不错了'",
+        "snippet_text": "别信那月粮一两五钱，到手能有八钱就不错了。军官吃空饷是天经地义的。但好歹有口饭吃，比饿死强。",
+        "target_gender": "male"
+      },
+      {
+        "id": "sn_cao_shit聘",
+        "source": "曹时聘奏报（明实录）",
+        "applies_to_scenes": [
+          "自家作坊",
+          "盛泽市集"
+        ],
+        "trigger_keywords": [
+          "机工",
+          "失业",
+          "卖机",
+          "织工"
+        ],
+        "npc_use_case": "DM描述机工处境时引用",
+        "snippet_text": "吴民生齿最繁，恒产绝少……浮食寄民，朝不谋夕，得业则生，失业则死。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_ge_cheng_story",
+        "source": "陈继儒《吴葛将军墓碑》",
+        "applies_to_scenes": [
+          "自家作坊",
+          "县衙"
+        ],
+        "trigger_keywords": [
+          "葛成",
+          "反抗",
+          "税监",
+          "起义"
+        ],
+        "npc_use_case": "NPC讲反抗故事——'葛成是真汉子'",
+        "snippet_text": "葛成在玄妙观聚众，万余织工响应，'不伤无辜，不取金银'，只针对税吏。事后主动投案，被判死刑后改判，狱中13年。苏州人称他为'葛贤''葛将军'。",
+        "target_gender": "male"
+      },
+      {
+        "id": "sn_chen_jiru_1587",
+        "source": "陈继儒传记（1587年）",
+        "applies_to_scenes": [
+          "茶馆",
+          "自家作坊"
+        ],
+        "trigger_keywords": [
+          "山人",
+          "陈继儒",
+          "隐居",
+          "眉公"
+        ],
+        "npc_use_case": "NPC羡慕山人生活——'看人家眉公先生'",
+        "snippet_text": "二十九岁，陈继儒'取儒衣冠焚弃之'，隐居东佘山，以编书写画自娱。靠卖字画（一幅0.5-2两）、编书刻书为生，活得比当官的还自在。",
+        "target_gender": "all"
+      },
+      {
+        "id": "sn_nun_59_law",
+        "source": "《大明律》及万历三十三年法令",
+        "applies_to_scenes": [
+          "自家作坊"
+        ],
+        "trigger_keywords": [
+          "出家",
+          "尼姑",
+          "女尼",
+          "度牒"
+        ],
+        "npc_use_case": "女性玩家想出家时DM提示",
+        "snippet_text": "建文三年令：未满59岁不许为尼，违者杖一百还俗入官为奴。万历三十三年更严：按猪肉价卖给光棍。女性出家是硬约束——只能做居士或山人。",
+        "target_gender": "female"
+      }
+    ],
+    "story_segments": {
+      "盛泽市集": [
+        {
+          "id": "seg_market_atmos_01",
+          "type": "atmosphere",
+          "text": "盛泽镇丝绸业繁盛，镇上绸丝牙行，约有千百余家，远近村坊织成绸匹，俱到此上市。四方商贾来收买的，蜂攒蚁集，挨挤不开。",
+          "keywords": [
+            "市集",
+            "丝市",
+            "牙行",
+            "盛泽"
+          ]
+        },
+        {
+          "id": "seg_market_atmos_02",
+          "type": "atmosphere",
+          "text": "镇上居民稠广，土俗淳朴，俱以蚕桑为生。男女勤谨，络纬机杼之声，通宵彻夜。那岸上两岸绸丝牙行，约有千百余家。",
+          "keywords": [
+            "市集",
+            "桑蚕",
+            "织机"
+          ]
+        },
+        {
+          "id": "seg_market_atmos_03",
+          "type": "atmosphere",
+          "text": "市集上人来人往，小贩的叫卖声、驴马的嘶鸣、秤砣的叮当声交织在一起。空气里弥漫着染料和酒糟的味道。",
+          "keywords": [
+            "市集",
+            "小贩",
+            "叫卖"
+          ]
+        },
+        {
+          "id": "seg_market_npc_01",
+          "type": "npc_dialog",
+          "npc_role": "牙人",
+          "text": "客官，今年的丝价比去年涨了一成，您这批货成色不错，我给您个公道价——三两五钱银子，怎么样？",
+          "keywords": [
+            "牙人",
+            "丝价",
+            "议价"
+          ]
+        },
+        {
+          "id": "seg_market_npc_02",
+          "type": "npc_dialog",
+          "npc_role": "老织户",
+          "text": "哎，今年丝是不错，可这税也重啊。我那小儿子天天念叨着去月港——你说，他一个织户，去了能干啥？",
+          "keywords": [
+            "老织户",
+            "税",
+            "月港"
+          ]
+        },
+        {
+          "id": "seg_market_npc_03",
+          "type": "npc_dialog",
+          "npc_role": "卖货郎",
+          "text": "苏州来的胭脂水粉，要不要看看？还有上好的针线——给娘子买一盒吧！",
+          "keywords": [
+            "卖货郎",
+            "胭脂",
+            "针线"
+          ]
+        },
+        {
+          "id": "seg_market_transaction_01",
+          "type": "transaction",
+          "text": "你从怀里掏出上个月织的三匹湖绫，交给牙行验成色。牙人拿着对着光翻来覆去看了半天，最后捻了捻丝线。",
+          "keywords": [
+            "卖绸",
+            "验成色",
+            "湖绫"
+          ]
+        },
+        {
+          "id": "seg_market_rumor_01",
+          "type": "rumor",
+          "text": "你听人说，今年第一批洋船要来了，洋船一来，丝价怕是要涨——但谁知道呢，去年的洋船也说过这话。",
+          "keywords": [
+            "洋船",
+            "丝价",
+            "传言"
+          ]
+        }
+      ],
+      "茶馆": [
+        {
+          "id": "seg_teahouse_atmos_01",
+          "type": "atmosphere",
+          "text": "茶馆里人声鼎沸，几张八仙桌坐满了人。有人在高谈阔论，有人在低声密谈，茶博士端着铜壶来回穿梭。",
+          "keywords": [
+            "茶馆",
+            "茶博士",
+            "人声"
+          ]
+        },
+        {
+          "id": "seg_teahouse_atmos_02",
+          "type": "atmosphere",
+          "text": "吴老板的茶馆是盛泽镇上消息最灵通的地方。三教九流都在这里出现——商人、秀才、牙人、甚至偶尔有外地来的僧道。",
+          "keywords": [
+            "茶馆",
+            "吴老板",
+            "三教九流"
+          ]
+        },
+        {
+          "id": "seg_teahouse_rumor_01",
+          "type": "rumor",
+          "text": "有人说，松江那边的华亭县，董其昌家的仆人砸了生员陆兆芳的门，强行搜走了一个婢女。这事闹得满城风雨。",
+          "keywords": [
+            "董其昌",
+            "陆兆芳",
+            "生员"
+          ]
+        },
+        {
+          "id": "seg_teahouse_rumor_02",
+          "type": "rumor",
+          "text": "癞痢头阿福晃了进来，被几个人拉住问这问那，嘻嘻哈哈地应付着——他什么都知道一点，但什么都不肯说全。",
+          "keywords": [
+            "阿福",
+            "消息灵通"
+          ]
+        },
+        {
+          "id": "seg_teahouse_rumor_03",
+          "type": "rumor",
+          "text": "你听见隔壁桌在议论：'我听说月港那边，一匹湖绫能卖到三两银子，是这边的好几倍……'",
+          "keywords": [
+            "月港",
+            "湖绫",
+            "丝价"
+          ]
+        },
+        {
+          "id": "seg_teahouse_npc_01",
+          "type": "npc_dialog",
+          "npc_role": "老秀才",
+          "text": "我当年也是织户出身，读了二十年书，如今……唉。一衿终老，那是常态。",
+          "keywords": [
+            "秀才",
+            "科举",
+            "读书"
+          ]
+        },
+        {
+          "id": "seg_teahouse_npc_02",
+          "type": "npc_dialog",
+          "npc_role": "客商",
+          "text": "客官，从哪里来的？我做的是苏杭丝绸生意，往来京城、临清都有门路。",
+          "keywords": [
+            "客商",
+            "丝绸",
+            "京城"
+          ]
+        }
+      ],
+      "牙行": [
+        {
+          "id": "seg_yahang_atmos_01",
+          "type": "atmosphere",
+          "text": "牙行里光线昏暗，空气中弥漫着染料和霉味。墙上挂着一张张丝绸样品，五颜六色，从素白到朱红。",
+          "keywords": [
+            "牙行",
+            "丝绸样品"
+          ]
+        },
+        {
+          "id": "seg_yahang_npc_01",
+          "type": "npc_dialog",
+          "npc_role": "牙行老板",
+          "text": "你的这批货成色不算顶好——市面上这种货色多的是。不过老主顾了，三两二钱，不能再多了。",
+          "keywords": [
+            "牙行老板",
+            "压价",
+            "成色"
+          ]
+        },
+        {
+          "id": "seg_yahang_npc_02",
+          "type": "npc_dialog",
+          "npc_role": "牙行学徒",
+          "text": "老板，外面有个外地面孔的客商，说是要找五百匹细绢……",
+          "keywords": [
+            "学徒",
+            "客商",
+            "细绢"
+          ]
+        },
+        {
+          "id": "seg_yahang_rumor_01",
+          "type": "rumor",
+          "text": "你隐约听见牙人在背后嘀咕：'这批货转手到月港至少翻一倍……可惜咱们没那路子'",
+          "keywords": [
+            "牙人",
+            "月港",
+            "转手"
+          ]
+        }
+      ],
+      "自家作坊": [
+        {
+          "id": "seg_home_atmos_01",
+          "type": "atmosphere",
+          "text": "灶房里传来沈氏生火的声音。阿宝从后院跑出来，喊着'爹，娘说粥好了'。织机静静地靠在墙边，经线还剩一半没理。",
+          "keywords": [
+            "自家",
+            "沈氏",
+            "阿宝",
+            "织机"
+          ]
+        },
+        {
+          "id": "seg_home_atmos_02",
+          "type": "atmosphere",
+          "text": "早晨的盛泽镇还笼着一层薄雾。巷子里传来挑水的吱呀声，还有远处牙行方向隐约的吆喝。",
+          "keywords": [
+            "盛泽",
+            "早晨",
+            "薄雾"
+          ]
+        },
+        {
+          "id": "seg_home_npc_01",
+          "type": "npc_dialog",
+          "npc_role": "沈氏（妻）",
+          "text": "相公，邻家周嫂子说镇上有人家嫁女儿，要赶做几匹绸缎压箱底，问咱家有没有好湖绫……",
+          "keywords": [
+            "沈氏",
+            "嫁妆",
+            "湖绫"
+          ]
+        },
+        {
+          "id": "seg_home_npc_02",
+          "type": "npc_dialog",
+          "npc_role": "阿宝（子）",
+          "text": "爹！今天先生教我写了个'人'字！你看！",
+          "keywords": [
+            "阿宝",
+            "私塾",
+            "写字"
+          ]
+        }
+      ],
+      "镇外桑田": [
+        {
+          "id": "seg_sangtian_atmos_01",
+          "type": "atmosphere",
+          "text": "出镇不到二里，就是一片片桑田。时值春末，桑叶长得正好，绿油油的，远处有几户农家在采叶。",
+          "keywords": [
+            "桑田",
+            "春末",
+            "采叶"
+          ]
+        },
+        {
+          "id": "seg_sangtian_atmos_02",
+          "type": "atmosphere",
+          "text": "桑树林里静悄悄的，只有风吹过桑叶的沙沙声。阳光透过叶缝洒下来，斑斑点点。",
+          "keywords": [
+            "桑田",
+            "桑叶"
+          ]
+        },
+        {
+          "id": "seg_sangtian_npc_01",
+          "type": "npc_dialog",
+          "npc_role": "老桑农",
+          "text": "客官也是来收桑叶的？今年雨水足，叶子好，但价钱也涨了些——要不您看看我这片？",
+          "keywords": [
+            "桑农",
+            "桑叶",
+            "价钱"
+          ]
+        },
+        {
+          "id": "seg_sangtian_rumor_01",
+          "type": "rumor",
+          "text": "听说隔壁村里有人家养蚕失败，一家人今年只能喝西北风——蚕这玩意儿，比养孩子还娇贵。",
+          "keywords": [
+            "养蚕",
+            "失败"
+          ]
+        }
+      ],
+      "县衙": [
+        {
+          "id": "seg_yamen_atmos_01",
+          "type": "atmosphere",
+          "text": "县衙门前立着两块石碑——'戒石亭'、'诬告加三等'。几个衙役懒洋洋地靠在门柱上，看见人来就伸手要'门包'。",
+          "keywords": [
+            "县衙",
+            "戒石亭",
+            "门包"
+          ]
+        },
+        {
+          "id": "seg_yamen_npc_01",
+          "type": "npc_dialog",
+          "npc_role": "胥吏",
+          "text": "您这事啊，得从长计议——我们这儿衙门口的规矩您也懂，'规礼'是少不了的。",
+          "keywords": [
+            "胥吏",
+            "规礼",
+            "办事"
+          ]
+        },
+        {
+          "id": "seg_yamen_rumor_01",
+          "type": "rumor",
+          "text": "你听见旁边的老乡在低声议论：'今年的税单比去年又重了两成——这日子没法过了'",
+          "keywords": [
+            "税",
+            "税单",
+            "议论"
+          ]
+        }
+      ],
+      "闺阁": [
+        {
+          "id": "seg_guige_atmos_01",
+          "type": "atmosphere",
+          "text": "内宅里挂着一幅绣着牡丹的中堂，绣工精细，颜色还是鲜亮的。女眷们围坐在八仙桌旁，手里做着针线。",
+          "keywords": [
+            "内宅",
+            "绣品",
+            "女眷"
+          ]
+        },
+        {
+          "id": "seg_guige_npc_01",
+          "type": "npc_dialog",
+          "npc_role": "卖婆",
+          "text": "太太，这是从杭州新进的湖绸，您摸摸这手感——比去年那批还细密。给小姐做嫁衣正合适。",
+          "keywords": [
+            "卖婆",
+            "湖绸",
+            "嫁衣"
+          ]
+        }
+      ]
+    }
+  }
+}
