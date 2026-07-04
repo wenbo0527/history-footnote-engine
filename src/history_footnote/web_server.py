@@ -1090,6 +1090,57 @@ INDEX_HTML = """<!DOCTYPE html>
     border-radius: 4px;
     text-align: center;
   }
+
+  /* ============================================================ */
+  /* 🆕 v1.7.0 结构化叙事 blocks（视觉区分）                       */
+  /* ============================================================ */
+  .narrative-body {
+    line-height: 1.8;
+    margin-top: 8px;
+  }
+  .narrative-body .block-scene {
+    margin: 8px 0;
+    color: #2c2416;
+  }
+  .narrative-body .block-dialogue {
+    margin: 6px 0 6px 8px;
+    padding: 6px 12px;
+    border-left: 3px solid #8b6f47;
+    background: rgba(196, 168, 120, 0.08);
+    border-radius: 0 4px 4px 0;
+  }
+  .narrative-body .block-dialogue .speaker {
+    color: #5a3e1f;
+    font-weight: bold;
+    margin-right: 4px;
+  }
+  .narrative-body .block-dialogue .content {
+    color: #2c2416;
+    font-style: italic;
+  }
+  .narrative-body .block-monologue {
+    margin: 6px 0 6px 24px;
+    padding: 4px 10px;
+    color: #5a4a30;
+    font-style: italic;
+    background: rgba(140, 111, 71, 0.06);
+    border-radius: 4px;
+  }
+  .narrative-body .block-transition {
+    margin: 12px 0 4px 0;
+    padding: 4px 0;
+    text-align: center;
+    color: #8b6f47;
+    font-size: 13px;
+    font-style: italic;
+    border-top: 1px dashed rgba(139, 111, 71, 0.3);
+    border-bottom: 1px dashed rgba(139, 111, 71, 0.3);
+  }
+  /* 旧格式兼容（plain text 渲染） */
+  .narrative-body.plain {
+    white-space: pre-wrap;
+    color: #2c2416;
+  }
 </style>
 </head>
 <body>
@@ -1098,9 +1149,9 @@ INDEX_HTML = """<!DOCTYPE html>
   <div class="sidebar" id="sidebar"></div>
 </div>
 
-<!-- 🆕 v1.6.9 版本号常驻显示（内测标识） -->
+<!-- 🆕 v1.7.0 版本号常驻显示（内测标识） -->
 <div id="version-badge" class="version-badge" onclick="openFeedback()">
-  <span class="version-text">v1.6.9 - 内测版</span>
+  <span class="version-text">v1.7.0 - 内测版</span>
   <span class="version-hint">🐛 反馈</span>
 </div>
 
@@ -2049,26 +2100,45 @@ function appendNarrative(n, lastMeta) {
     const cleanedNarrative = (sanitizeData && !sanitizeData.error)
       ? sanitizeData.cleaned
       : rawNarrative;
-    const narrativeText = escapeHtml(cleanedNarrative);
-    div.innerHTML = tag + `<div class="narrative-body" data-round="${n.round}">${narrativeText}</div>`;
-    $main.insertBefore(div, $main.lastElementChild);
-    // 异步请求后端提取名词（标记未读词）
-    if (state.session_id) {
-      api("/api/extract_terms", "POST", {
-        session_id: state.session_id,
-        text: cleanedNarrative,
-      }).then(data => {
-        if (data.error || !data.new_terms || data.new_terms.length === 0) return;
-        const $body = div.querySelector(".narrative-body");
-        if ($body) {
-          $body.innerHTML = data.marked_text;
-          attachTermTooltips();
-        }
-      }).catch(() => {});
-    }
+    // 🆕 v1.7.0：调用 /api/render_narrative 做结构化渲染
+    api("/api/render_narrative", "POST", {
+      structured_blocks: n.narrative_blocks || [],
+      narrative_text: cleanedNarrative,
+    }).then(renderData => {
+      let bodyHtml;
+      if (renderData && !renderData.error && renderData.html) {
+        // 结构化 blocks → CSS 渲染
+        bodyHtml = `<div class="narrative-body" data-round="${n.round}">${renderData.html}</div>`;
+      } else {
+        // fallback：纯文本
+        bodyHtml = `<div class="narrative-body plain" data-round="${n.round}">${escapeHtml(cleanedNarrative)}</div>`;
+      }
+      div.innerHTML = tag + bodyHtml;
+      $main.insertBefore(div, $main.lastElementChild);
+      // 异步请求后端提取名词（标记未读词）
+      if (state.session_id) {
+        api("/api/extract_terms", "POST", {
+          session_id: state.session_id,
+          text: cleanedNarrative,
+        }).then(data => {
+          if (data.error || !data.new_terms || data.new_terms.length === 0) return;
+          const $body = div.querySelector(".narrative-body");
+          if ($body) {
+            $body.innerHTML = data.marked_text;
+            attachTermTooltips();
+          }
+        }).catch(() => {});
+      }
+    }).catch(() => {
+      // render API 失败 → 纯文本 fallback
+      const bodyHtml = `<div class="narrative-body plain" data-round="${n.round}">${escapeHtml(cleanedNarrative)}</div>`;
+      div.innerHTML = tag + bodyHtml;
+      $main.insertBefore(div, $main.lastElementChild);
+    });
   }).catch(() => {
     // 兜底：sanitize API 失败时直接显示原文
-    div.innerHTML = tag + `<div class="narrative-body" data-round="${n.round}">${escapeHtml(rawNarrative)}</div>`;
+    const bodyHtml = `<div class="narrative-body plain" data-round="${n.round}">${escapeHtml(rawNarrative)}</div>`;
+    div.innerHTML = tag + bodyHtml;
     $main.insertBefore(div, $main.lastElementChild);
   });
 }
@@ -2831,6 +2901,27 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.exception(f"[merge_voice_options] failed: {e}")
                     self._json(500, {"error": "merge failed"})
+                return
+
+            if path == "/api/render_narrative":
+                # 🆕 v1.7.0 结构化叙事渲染（前端 async 用）
+                try:
+                    from history_footnote.narrative_renderer import (
+                        ensure_blocks, render_blocks_to_html,
+                    )
+                    structured = data.get("structured_blocks", [])
+                    narrative = data.get("narrative_text", "")
+                    blocks = ensure_blocks(structured, narrative)
+                    html = render_blocks_to_html(blocks)
+                    self._json(200, {
+                        "blocks": blocks,
+                        "html": html,
+                        "block_count": len(blocks),
+                        "block_types": list(set(b.get("type", "scene") for b in blocks)),
+                    })
+                except Exception as e:
+                    logger.exception(f"[render_narrative] failed: {e}")
+                    self._json(500, {"error": "render failed"})
                 return
 
             if path == "/api/input":

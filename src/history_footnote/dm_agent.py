@@ -948,6 +948,12 @@ class DMAgent:
 ```json
 {{
   "narrative": "具体场景描写（半文半白，至少300字）",
+  "narrative_blocks": [   // 🆕 v1.7.0 可选：结构化分段
+    {{"type": "scene",      "text": "环境描写..."}},
+    {{"type": "dialogue",   "speaker": "张顺", "text": "三两三"}},
+    {{"type": "monologue",  "text": "他出价低..."}},
+    {{"type": "transition", "text": "片刻后"}}
+  ],
   "is_action": true,
   "time_cost": 2,
   "intent_type": "action",  // action | inquire | describe | voice
@@ -963,6 +969,22 @@ class DMAgent:
   "updates": {{"insight:xxx": "unlocked"}}
 }}
 ```
+
+### 🆕 v1.7.0 连贯性约束（必须遵守）
+
+1. **承接上文**：本次叙事必须承接"最近 3 回合"中的地点、NPC、玩家状态。
+   除非玩家主动离开/被转移，否则**不切换场景**。
+
+2. **选项永远存在**（固定模块）：`voice_options` 必须有 2-4 个选项，**永远不能为空**。
+   即使场景简单也要给 1-2 个延伸方向。如果想不到，用"其他（自由输入）"作为兜底。
+
+3. **narrative_blocks 优先**（可选但鼓励）：
+   - 玩家要看到"剧情 / 对话 / 内心独白" 视觉区分
+   - 4 种类型：scene / dialogue / monologue / transition
+   - 如果你输出 narrative_blocks，前端会按类型渲染（对话加引号，独白斜体，场景切换有分割线）
+   - 不强制用，纯 narrative 字符串前端会自动启发式分段
+
+4. **对话格式**：用 `"张顺说：'三两三'"` 或 `"张顺道：\"三两三\""` 这种**标准中文格式**，便于前端识别 speaker。
 
 ### 字段说明
 
