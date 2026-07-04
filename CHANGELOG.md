@@ -5,13 +5,104 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+详细问题记录见 [ISSUES.md](file:///Users/mac/Documents/trae_projects/history_footnote/ISSUES.md)。
+
+---
+
+## [v1.6.7] - 2026-07-04
+
+### 🐛 修复：SKILL 元数据泄漏到玩家界面
+
+玩家看到 `=== COMPILED SKILLS ===` 等 DM 后台配置信息，而不是故事情节。
+
+**架构重构亮点**：
+- 新增 `narrative_sanitizer.py` 单一权威模块（267 行）
+- 4 个文件（dm_agent / game_loop / dm_skills / web_server）改用此模块
+- 删除 11 个 JS 正则重复实现
+- 删除后端 2 次重复清洗
+
+**修改文件**：
+- ➕ `src/history_footnote/narrative_sanitizer.py`（新增）
+- ➕ `scripts/test_skill_leak_fix.py`（新增，8 个测试）
+- 🔧 `src/history_footnote/dm_agent.py`（-52 行）
+- 🔧 `src/history_footnote/web_server.py`（-38 行）
+- 🔧 `src/history_footnote/game_loop.py`（-6 行）
+
+---
+
+## [v1.6.6] - 2026-07-04
+
+### ✨ 新增：明朝名词字典 tooltip
+
+- `term_glossary.py`：41 个核心名词 + 63 个同义词
+- 10 个分类（经济/科举/制度/地理/物产/货币/身份/习俗/教育/官职）
+- 自动高亮未读名词 + 鼠标悬停 tooltip
+- 侧边栏 `📚 名词表` 弹层（带搜索）
+- **开发中修复 XSS 漏洞**（get_term_html 未 escape 用户/字典值）
+
+---
+
+## [v1.6.5] - 2026-07-04
+
+### 🐛 修复：家庭信息格式 + Enter 快捷键
+
+**两个用户反馈**：
+1. 家庭信息显示原始程序格式（如 `spouse：周氏`、`children：["大毛","二丫"]`）
+2. 移动端 Enter 键无法提交（必须点"提交"按钮）
+
+**修复**：
+- ✅ 翻译 8 个英文 key 为中文（spouse→妻子 等）
+- ✅ 数组用「、」分隔（不是 JSON）
+- ✅ 裸 Enter 提交（移动端友好）
+- ✅ Shift+Enter / Alt+Enter 换行（多行支持）
+
+---
+
+## [v1.6.4] - 2026-07-04
+
+### 🐛 修复：NPC 混淆（上下文断裂）
+
+**用户报告**：
+> "我正和'张寡妇'谈租织机，下一回合 DM 突然让我和'陈三'说话。"
+
+**根因**：system prompt 只注入场景标签（如"织机前"），没有上回合的完整叙事。
+
+**修复**：
+- ✅ 新增 `_build_recent_context_for_prompt()` 方法
+- ✅ 注入最近 3 回合：玩家行动 + 摘要 + 叙事前 400 字
+- ✅ 加"重要提示"指令禁止 LLM 切换 NPC/场景
+- ✅ state_ref 增加 `recent_narratives` 字段（供 Mock LLM）
+
+---
+
+## [v1.6.3] - 2026-07-04
+
+### ✨ 新增：剧情回顾功能
+
+**用户需求**：
+> "玩到第 30 回合就忘了前面发生了什么。"
+
+**双层叙事保留架构**：
+- `narrative_recent`：最近 20 回合完整叙事
+- `narrative_archive`：早期最多 100 回合 200 字摘要
+- 玩家可回忆 120+ 回合
+- 存档增加 ~9KB（可控）
+
 ---
 
 ## [v1.6.2] - 2026-07-04
 
-### 🎉 重大更新：全面性能优化
+### 🎉 重大更新：移动端适配 + 全面性能优化
 
 本版本完成所有 P0 + P1 + P2 性能 + Token 优化，新增 4 个模块。
+
+**移动端适配**：
+- ✅ viewport meta + 3 个 @media 断点（1024 / 768 / 480）
+- ✅ 用 `100dvh` 替代 `100vh`（解决 iOS URL 栏问题）
+- ✅ visualViewport API 处理 iOS 键盘
+- ✅ 字号 16px+（防 iOS 缩放）、按钮 44px+（Apple HIG）
+
+**性能优化**：见 4 个新增模块。
 
 ### ✨ 新增 (Added)
 
