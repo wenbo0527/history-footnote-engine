@@ -204,12 +204,24 @@ def make_tools(
             scene: 场景名
             entry_ids: 直接指定条目ID
         """
+        # 🆕 v1.6.2 P2 D1：Tool 结果缓存（key 包含 keywords + scene + entry_ids）
+        from history_footnote.web_enhancements import TOOL_RESULT_CACHE
+        cache_key_parts = ["query_knowledge"]
+        cache_key_parts.extend(sorted(keywords or []))
+        cache_key_parts.append(f"scene={scene}")
+        cache_key_parts.extend(sorted(entry_ids or []))
+        cache_key = "|".join(cache_key_parts)
+
+        cached = TOOL_RESULT_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+
         results = knowledge_base.query(
             keywords=keywords or [],
             scene=scene,
             entry_ids=entry_ids or [],
         )
-        return [
+        result_list = [
             {
                 "id": r["id"],
                 "title": r.get("title", ""),
@@ -218,6 +230,8 @@ def make_tools(
             }
             for r in results
         ]
+        TOOL_RESULT_CACHE.set(cache_key, result_list)
+        return result_list
 
     @tool
     def query_narrative_snippets(
@@ -531,6 +545,21 @@ def make_dm_nodes(llm_with_tools, state_ref):
             print(f"[WARN] run_all_skills failed: {e}, fallback to v1.3")
             skills_result = run_dm_skills(player_input, skill_state, era_config, recent_scenes)
 
+        # 🆕 v1.6.2 P1 B1 优化：SKILL 选择性注入（按 intent_type 预检测）
+        # 简化预检测（详细检测在 narrative_fusion 之后）
+        intent_type_pre = "action"
+        if any(kw in player_input for kw in ["我叫", "我是", "我在", "我家", "描述", "其实", "我是从", "我从"]):
+            intent_type_pre = "describe"
+        elif player_input.strip().endswith(("？", "?", "吗")):
+            intent_type_pre = "inquire"
+
+        from history_footnote.skill_selector import select_skills, filter_skill_directive
+        selected_skills = select_skills(intent_type_pre, state=skill_state)
+        full_directive = skills_result["skill_directive"]
+        filtered_directive = filter_skill_directive(full_directive, selected_skills)
+        # 用过滤后的 directive（节省 60-75% tokens）
+        skills_result["skill_directive"] = filtered_directive
+
         # 注入到 state_ref 供 LLM 使用
         state_ref["skill_directive"] = skills_result["skill_directive"]
         state_ref["skill_pacing"] = skills_result["pacing"]
@@ -538,6 +567,8 @@ def make_dm_nodes(llm_with_tools, state_ref):
         state_ref["skill_scene"] = skills_result["scene"]
         state_ref["active_voices"] = skills_result["active_voices"]
         state_ref["current_scene"] = skills_result["scene"]["scene"]
+        state_ref["_selected_skills"] = selected_skills
+        state_ref["_intent_type_pre"] = intent_type_pre
         recent_scenes.append(skills_result["scene"]["scene"])
         state_ref["recent_scenes"] = recent_scenes[-10:]
 
@@ -783,8 +814,10 @@ class DMAgent:
             new_llm = self.llm.bind_tools(self.tools)
             self._llm_with_tools = new_llm
 
-        # 构建StateGraph
+        # 构建StateGraph（一次性创建，复用）
         self.graph = self._build_graph()
+        # 🆕 v1.6.2 P0 A4 优化：缓存 graph 引用，永久复用
+        self._graph_compiled = self.graph
 
     def _build_graph(self, state_ref: dict | None = None):
         """构建DM Agent的StateGraph
@@ -1072,7 +1105,21 @@ class DMAgent:
         }
 
         # 每次run重新构建graph（带最新的state_ref绑定）
-        self.graph = self._build_graph(state_ref=state_ref)
+        # 🆕 v1.6.2 P0 A4 优化：graph 复用 + 只更新 state_ref slot
+        if hasattr(self, '_graph_compiled') and self._graph_compiled is not None:
+            # 复用已有 graph（LangGraph compile 后的对象）
+            # 关键：通过 _state_ref_slot_ref 更新 state_ref（让闭包看到新数据）
+            llm_with_tools = getattr(self, '_llm_with_tools', None)
+            if llm_with_tools and hasattr(llm_with_tools, '_state_ref_slot_ref'):
+                if isinstance(llm_with_tools._state_ref_slot_ref, list):
+                    llm_with_tools._state_ref_slot_ref[0] = state_ref
+                else:
+                    llm_with_tools._state_ref_slot_ref = [state_ref]
+            self.graph = self._graph_compiled
+        else:
+            # 首次：build + cache
+            self.graph = self._build_graph(state_ref=state_ref)
+            self._graph_compiled = self.graph
 
         # 🐛 Issue #9 修复：保存 state_ref 供 game_loop 同步用
         self._last_state_ref = state_ref
@@ -1198,7 +1245,18 @@ class DMAgent:
             "validation_passed": False,
         }
 
-        self.graph = self._build_graph(state_ref=state_ref)
+        # 🆕 v1.6.2 P0 A4 优化：regenerate 也复用 graph
+        if hasattr(self, '_graph_compiled') and self._graph_compiled is not None:
+            llm_with_tools = getattr(self, '_llm_with_tools', None)
+            if llm_with_tools and hasattr(llm_with_tools, '_state_ref_slot_ref'):
+                if isinstance(llm_with_tools._state_ref_slot_ref, list):
+                    llm_with_tools._state_ref_slot_ref[0] = state_ref
+                else:
+                    llm_with_tools._state_ref_slot_ref = [state_ref]
+            self.graph = self._graph_compiled
+        else:
+            self.graph = self._build_graph(state_ref=state_ref)
+            self._graph_compiled = self.graph
         self._last_state_ref = state_ref
 
         try:

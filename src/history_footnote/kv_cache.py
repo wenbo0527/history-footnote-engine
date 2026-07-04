@@ -77,7 +77,7 @@ class SystemPromptCache:
     CACHE_TTL_EPHEMERAL = "ephemeral"  # 5 分钟
     CACHE_TTL_1H = "1h"                # 1 小时（额外收费）
 
-    def __init__(self, ttl: str = "ephemeral"):
+    def __init__(self, ttl: str = "1h"):  # 🆕 v1.6.2 默认 1h（适合长会话）
         self.ttl = ttl
         self._prompt_hash: str = ""
         self._last_used_at: float = 0.0
@@ -123,7 +123,7 @@ class SystemPromptCache:
 
 
 # 全局单例
-SYSTEM_PROMPT_CACHE = SystemPromptCache(ttl="ephemeral")
+SYSTEM_PROMPT_CACHE = SystemPromptCache(ttl="1h")  # 🆕 v1.6.2：默认 1h TTL
 
 
 def get_cache_control_for_system() -> dict:

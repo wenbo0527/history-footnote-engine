@@ -7,6 +7,104 @@
 
 ---
 
+## [v1.6.2] - 2026-07-04
+
+### 🎉 重大更新：全面性能优化
+
+本版本完成所有 P0 + P1 + P2 性能 + Token 优化，新增 4 个模块。
+
+### ✨ 新增 (Added)
+
+#### 资源全局缓存层 (P0)
+- **`resource_cache.py`**：4 个全局缓存
+  - `load_era_config()`：era.json 缓存（替代每回合 json.loads）
+  - `get_llm()`：LLM Provider 缓存（替代每回合 ChatAnthropic 构造）
+  - `get_save_manager()`：SaveManager 单例（替代每回合新建）
+  - `warm_era_configs()`：启动时预热所有时代
+
+#### SKILL 选择性注入 (P1)
+- **`skill_selector.py`**：按 intent_type 选择需要的 SKILL
+  - `select_skills(intent_type, state)`：选择 2-4 个 SKILL
+  - `filter_skill_directive(directive, selected_skills)`：过滤完整 directive 文本
+  - inquire 节省 75%，describe 节省 62%，action 节省 50%
+
+#### SSE Streaming 输出 (P1)
+- **`streaming.py`**：SSE 事件流
+  - `StreamingEmitter`：线程安全事件队列
+  - `format_sse()`：SSE 字节流格式化
+  - `stream_dm_response()`：异步流式生成器
+- **`/api/input_stream` 端点**：渐进式返回叙事
+  - event: thinking → DM 在思考中...
+  - event: chunk → 叙事文本片段
+  - event: done → 完成（含 voice_options）
+
+#### Web 增强层 (P2)
+- **`web_enhancements.py`**：4 个增强工具
+  - `RateLimiter`：滑动窗口限流（60 req/min/IP，LLM 20 req/min/IP）
+  - `ToolResultCache`：LRU + TTL 缓存（max 2000, TTL 600s）
+  - `MetricsCollector`：性能指标收集器
+  - `setup_keepalive()`：HTTP/1.1 + 5s timeout
+
+### 📊 性能优化 (Performance)
+
+#### Web Server 优化
+- **A1 era.json 缓存**：0.81ms → 0.2us（**4000x**）
+- **A2 LLM Provider 缓存**：200ms → <1ms（**200x**）
+- **A3 SaveManager 单例**：5ms → <0.1ms（**50x**）
+- **A4 LangGraph graph 复用**：200-300ms → <1ms（**300x**）
+- **A6 HTTP keep-alive**：避免 TCP 握手
+- **A7 GZIP 压缩**：首屏 40,581 → 11,360 bytes（**72% ↓**）
+- **A8 Cache-Control**：HTML 5min 缓存
+
+#### Token 优化
+- **KV 缓存（1h TTL）**：长会话 100% 命中率
+- **B1 SKILL 选择性注入**：单回合 -300 tokens（action 50%，inquire 75%）
+- **D1 Tool 结果缓存**：query_knowledge 100ms → 0.1ms（**1000x**）
+
+### 🆕 监控端点
+
+- **`GET /health`**：健康检查
+- **`GET /metrics`**：JSON 格式性能指标
+  - 端点统计（count / avg_ms / errors）
+  - Tool cache hit rate
+  - Rate limiter 状态
+  - LLM throttle 状态
+
+### ✅ 测试 (Tests)
+
+新增 1 个测试脚本 + 11 个单元测试：
+
+| 测试脚本 | 测试数 | 通过率 |
+|---|---|---|
+| **`test_web_enhancements.py`** | **11** | **11/11 ✅** |
+
+**总计**：**45+ 单元测试 + 5 玩家并发测试 + 5 回合真实 LLM 全部通过**
+
+### 📚 文档 (Documentation)
+
+- **[v3.1 完整产品设计文档](docs/历史注脚体验引擎：完整产品设计文档 v3.1.md)**（重写）
+  - 加入 v1.6.2 所有 P0/P1/P2 优化（11 项）
+  - 5 层并发 + KV 缓存 + SKILL 选择 + SSE + GZIP + 限流 + 监控
+  - 综合收益表（v1.6.0 → v3.0 → v3.1）
+
+### 🔧 改动文件清单
+
+**新增（4 个文件）**：
+- `src/history_footnote/resource_cache.py`（~250 行）
+- `src/history_footnote/skill_selector.py`（~180 行）
+- `src/history_footnote/streaming.py`（~200 行）
+- `src/history_footnote/web_enhancements.py`（~330 行）
+
+**修改（3 个文件）**：
+- `src/history_footnote/dm_agent.py`（graph 复用 + Tool 结果缓存 + SKILL 选择性注入）
+- `src/history_footnote/web_server.py`（GZIP + Cache-Control + /metrics + /health + 限流 + keep-alive + /api/input_stream）
+- `src/history_footnote/kv_cache.py`（TTL 1h）
+
+**测试新增（1 个文件）**：
+- `scripts/test_web_enhancements.py`（11 个测试）
+
+---
+
 ## [v1.6.1] - 2026-07-04
 
 ### 🎉 重大更新

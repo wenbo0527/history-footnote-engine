@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import time  # 🆕 v1.6.2 P1 C2：SSE streaming
 import sys
 import threading
 import uuid
@@ -39,6 +40,23 @@ from history_footnote.storage.save_manager import (  # noqa: E402
 )
 # 🆕 v1.6+ 并发支持：复用全局 SessionPool
 from history_footnote.concurrency import SESSION_POOL, LLM_THROTTLE, SAVE_QUEUE, SessionLock
+# 🆕 v1.6.2 P0 优化：全局资源缓存（避免每回合重复 json.loads + LLM 构造）
+from history_footnote.resource_cache import (
+    load_era_config,
+    get_llm,
+    get_save_manager as get_save_manager_cached,
+    warm_era_configs,
+    clear_all_caches,
+)
+# 🆕 v1.6.2 P2 优化：限流 + 监控 + Tool 结果缓存
+from history_footnote.web_enhancements import (
+    GLOBAL_RATE_LIMITER,
+    LLM_RATE_LIMITER,
+    GLOBAL_METRICS,
+    TOOL_RESULT_CACHE,
+    setup_keepalive,
+    record_request_metrics,
+)
 
 
 # 全局 session 池（v1.6+ 改用 SessionPool）
@@ -106,7 +124,7 @@ def _get_or_load_session(session_id: str | None) -> GameLoop | None:
     if entry is not None:
         return entry[0]
 
-    save_manager = SaveManager(DEFAULT_SAVE_ROOT)
+    save_manager = get_save_manager_cached()  # 🆕 v1.6.2 P0 A3: SaveManager 单例
     session = save_manager.find_session(session_id)
     if session is None:
         return None
@@ -115,8 +133,8 @@ def _get_or_load_session(session_id: str | None) -> GameLoop | None:
     if loaded is None:
         return None
 
-    config = json.loads((_ROOT / "eras" / session.era_id / "era.json").read_text(encoding="utf-8"))
-    llm = make_llm(provider="minimax-anthropic", era_config=config)
+    config = load_era_config(session.era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
+    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
     game = GameLoop(
         era_id=session.era_id,
         era_config=config,
@@ -130,8 +148,8 @@ def _get_or_load_session(session_id: str | None) -> GameLoop | None:
 
 def _new_session(era_id: str, identity: str, gender: str, custom_character: dict | None = None) -> GameLoop:
     """创建新session"""
-    config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
-    llm = make_llm(provider="minimax-anthropic", era_config=config)
+    config = load_era_config(era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
+    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
     game = GameLoop(
         era_id=era_id,
         era_config=config,
@@ -1278,26 +1296,60 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # 静默
 
+    def _gzip_if_accepted(self, body: bytes) -> bytes:
+        """🆕 v1.6.2 P1 A7：如果客户端支持 GZIP，返回压缩后的 body"""
+        accept_encoding = self.headers.get("Accept-Encoding", "")
+        if "gzip" in accept_encoding.lower() and len(body) > 1024:
+            import gzip
+            return gzip.compress(body, compresslevel=6)
+        return body
+
     def _json(self, status: int, data: dict):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        body = self._gzip_if_accepted(body)  # 🆕 v1.6.2 A7
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        if body[:2] == b'\x1f\x8b':  # gzip magic
+            self.send_header("Content-Encoding", "gzip")
+        # 🆕 v1.6.2 A8: Cache-Control
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
     def _html(self, html: str):
         body = html.encode("utf-8")
+        body = self._gzip_if_accepted(body)  # 🆕 v1.6.2 A7
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        if body[:2] == b'\x1f\x8b':  # gzip magic
+            self.send_header("Content-Encoding", "gzip")
+        # 🆕 v1.6.2 A8: 静态 HTML 可以缓存
+        self.send_header("Cache-Control", "public, max-age=300")  # 5 分钟
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
         path = urlparse(self.path).path
+        # 🆕 v1.6.2 P2 D6：请求限流（防 DDoS）
+        import time as _time
+        _t0 = _time.time()
+        client_ip = self.client_address[0]
+        if not GLOBAL_RATE_LIMITER.allow(client_ip):
+            self._json(429, {"error": "Too Many Requests", "limit": "60 req/min"})
+            return
+
         if path == "/" or path == "/index.html":
             self._html(INDEX_HTML)
+            return
+        if path == "/metrics":
+            # 🆕 v1.6.2 监控面板：返回 JSON 格式的性能指标
+            self._json(200, GLOBAL_METRICS.snapshot())
+            return
+        if path == "/health":
+            # 健康检查端点
+            self._json(200, {"status": "ok", "version": "1.6.2"})
             return
         if path == "/api/eras":
             # 列出所有可用时代包（含摘要）
@@ -1325,7 +1377,7 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(urlparse(self.path).query)
             era_id = qs.get("era_id", ["wanli1587"])[0]
             try:
-                config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
+                config = load_era_config(era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
                 ids = config.get("world", {}).get("player_identities", {})
                 out = [{"id": k, "label": v.get("label", k), "role": v.get("role", ""), "gender": v.get("gender")}
                        for k, v in ids.items()]
@@ -1336,7 +1388,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/archives":
             qs = parse_qs(urlparse(self.path).query)
             era_id = qs.get("era_id", [None])[0]
-            save_manager = SaveManager(DEFAULT_SAVE_ROOT)
+            save_manager = get_save_manager_cached()  # 🆕 v1.6.2 P0 A3: SaveManager 单例
             sessions = save_manager.list_sessions(era_id=era_id)
             out = []
             for s in sessions[:10]:
@@ -1362,6 +1414,14 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             data = {}
 
+        # 🆕 v1.6.2 P2 D6：POST 请求限流（更严，LLM 端点特殊限流）
+        import time as _time
+        _t0 = _time.time()
+        client_ip = self.client_address[0]
+        if not GLOBAL_RATE_LIMITER.allow(client_ip):
+            self._json(429, {"error": "Too Many Requests", "limit": "60 req/min"})
+            return
+
         try:
             if path == "/api/generate_character":
                 # 玩家输入自由描述 → LLM 生成完整人设
@@ -1372,10 +1432,10 @@ class Handler(BaseHTTPRequestHandler):
                 identity_desc = data.get("identity_description", "")
                 life_exp = data.get("life_expectation", "")
                 try:
-                    config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
+                    config = load_era_config(era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
                     from history_footnote.character_generator import build_character_prompt, parse_character_response
                     prompt = build_character_prompt(config, gender, identity_desc, life_exp, location=location, location_desc=location_desc)
-                    llm = make_llm(provider="minimax-anthropic", era_config=config)
+                    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
                     from langchain_core.messages import SystemMessage, HumanMessage
                     resp = llm.invoke([
                         SystemMessage(content="你是人设生成助手。严格按 JSON 格式输出。"),
@@ -1392,10 +1452,10 @@ class Handler(BaseHTTPRequestHandler):
                 # 生成「世界画卷」
                 era_id = data.get("era_id", "wanli1587")
                 try:
-                    config = json.loads((_ROOT / "eras" / era_id / "era.json").read_text(encoding="utf-8"))
+                    config = load_era_config(era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
                     from history_footnote.character_generator import build_world_dwell_prompt, parse_world_dwell
                     prompt = build_world_dwell_prompt(config)
-                    llm = make_llm(provider="minimax-anthropic", era_config=config)
+                    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
                     from langchain_core.messages import SystemMessage, HumanMessage
                     resp = llm.invoke([
                         SystemMessage(content="你是世界画卷绘制师。严格按 JSON 格式输出。"),
@@ -1454,6 +1514,10 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             if path == "/api/input":
+                # 🆕 v1.6.2 P2 D6：LLM 端点更严限流（20 req/min）
+                if not LLM_RATE_LIMITER.allow(client_ip):
+                    self._json(429, {"error": "Too Many LLM Requests", "limit": "20 req/min"})
+                    return
                 sid = data.get("session_id")
                 inp = data.get("input", "").strip()
                 if not sid or not inp:
@@ -1539,6 +1603,98 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, _format_state(game))
                 return
 
+            if path == "/api/input_stream":
+                # 🆕 v1.6.2 P1 C2：SSE Streaming 输出
+                # 🆕 v1.6.2 P2 D6：LLM 端点更严限流（20 req/min）
+                if not LLM_RATE_LIMITER.allow(client_ip):
+                    self._json(429, {"error": "Too Many LLM Requests", "limit": "20 req/min"})
+                    return
+                sid = data.get("session_id")
+                inp = data.get("input", "").strip()
+                if not sid or not inp:
+                    self._json(400, {"error": "missing session_id or input"})
+                    return
+                if _session_get(sid) is None:
+                    game = _get_or_load_session(sid)
+                    if game is None:
+                        self._json(404, {"error": "session not found"})
+                        return
+                entry = _session_get(sid)
+                game = entry[0]
+                lock = entry[1]
+
+                # 用 StreamingEmitter 推送
+                from history_footnote.streaming import StreamingEmitter, format_sse
+                from history_footnote.post_validator import post_validate, generate_safe_narrative
+                from history_footnote.concurrency import LLM_THROTTLE
+
+                state_dict = {
+                    "triggered_events": sorted(game.state.triggered_events),
+                    "current_date": game.state.current_date,
+                    "round_number": game.state.round_number,
+                    "selected_identity": game.state.selected_identity,
+                }
+                era_config = game.era_config
+
+                emitter = StreamingEmitter()
+
+                def _producer():
+                    try:
+                        emitter.emit_thinking("DM 正在分析场景...")
+                        with lock:
+                            try:
+                                with LLM_THROTTLE:
+                                    emitter.emit_thinking("DM 正在生成叙事...")
+                                    dm_response = game.dm.run(inp)
+                                # 模拟 streaming：每 50 字一个 chunk
+                                narrative = dm_response.get("narrative", "")
+                                # 把 narrative 按字符切块（避免破坏中文）
+                                import re
+                                chunks = re.findall(r'.{1,40}', narrative)
+                                for chunk in chunks:
+                                    emitter.emit_chunk(chunk)
+                                    time.sleep(0.04)
+                                # 后校验
+                                validation = post_validate(dm_response, state_dict, era_config, inp)
+                                if not validation.valid:
+                                    emitter.emit_thinking(f"后校验发现 {len(validation.errors)} 个问题")
+                                # voice_options
+                                final_data = {
+                                    "session_id": sid,
+                                    "voice_options": dm_response.get("voice_options", []),
+                                    "intent_type": dm_response.get("intent_type", "action"),
+                                    "validation_passed": validation.valid,
+                                    "is_action": dm_response.get("is_action", True),
+                                    "time_cost": dm_response.get("time_cost", 1),
+                                }
+                                emitter.emit_done(final_data)
+                            except TimeoutError:
+                                emitter.emit_error("LLM 调用超时")
+                    except Exception as e:
+                        import traceback
+                        emitter.emit_error(f"{type(e).__name__}: {str(e)[:200]}")
+
+                import threading as _threading
+                _threading.Thread(target=_producer, daemon=True).start()
+
+                # 发送 SSE 响应
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "keep-alive")
+                self.end_headers()
+                try:
+                    for event_type, event_data in emitter.iter_events(timeout=120.0):
+                        chunk = format_sse(event_type, event_data)
+                        self.wfile.write(chunk)
+                        self.wfile.flush()
+                        if event_type in ("done", "error"):
+                            break
+                except (BrokenPipeError, ConnectionResetError):
+                    # 客户端断开
+                    pass
+                return
+
             self._json(404, {"error": "unknown path"})
         except SystemExit:
             self._json(200, {"session_id": data.get("session_id"), "quit": True})
@@ -1548,6 +1704,15 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def run(host: str = "0.0.0.0", port: int = 8765):
+    # 🆕 v1.6.2 P0 优化：启动时预热 era.json + LLM + SaveManager 单例
+    print("[v1.6.2] 预热资源缓存...")
+    warm_era_configs()
+    print(f"[v1.6.2] 预热完成")
+
+    # 🆕 v1.6.2 P2 A6：HTTP keep-alive（启用持久连接）
+    setup_keepalive(Handler)
+    print(f"[v1.6.2] HTTP keep-alive 已启用")
+
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"[HF Web] 历史注脚体验入口已启动: http://localhost:{port}/")
     print(f"[HF Web] 访问 http://localhost:{port}/ 开始游戏")
