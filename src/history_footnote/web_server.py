@@ -1062,8 +1062,30 @@ function renderCharacter(c) {
   if (c.tics) html += `<div style="margin:8px 0"><strong>习惯：</strong>${escapeHtml(c.tics)}</div>`;
   if (c.family) {
     html += `<div style="margin:8px 0"><strong>家庭：</strong><br>`;
+    // 🆕 v1.6.5 修复：把英文 key 翻译成人话 + 数组格式化成自然语言
+    const familyKeyLabels = {
+      spouse: "妻子",
+      husband: "丈夫",
+      children: "子女",
+      elderly: "老人",
+      siblings: "兄弟姐妹",
+      parents: "父母",
+      father: "父亲",
+      mother: "母亲",
+    };
     for (const [k, v] of Object.entries(c.family)) {
-      html += `· <span style="color:#5a4a30">${escapeHtml(k)}：</span>${escapeHtml(typeof v === 'string' ? v : JSON.stringify(v))}<br>`;
+      const label = familyKeyLabels[k] || k;
+      let display;
+      if (Array.isArray(v)) {
+        display = v.map(item => escapeHtml(String(item))).join("、");
+      } else if (typeof v === 'string') {
+        display = escapeHtml(v);
+      } else if (v && typeof v === 'object') {
+        display = escapeHtml(JSON.stringify(v));
+      } else {
+        display = escapeHtml(String(v));
+      }
+      html += `· <span style="color:#5a4a30">${escapeHtml(label)}：</span>${display}<br>`;
     }
     html += `</div>`;
   }
@@ -1426,7 +1448,7 @@ function appendInputArea() {
   div.className = "input-area";
   div.id = "input-area";
   div.innerHTML = `
-    <textarea id="player_input" placeholder="或自由输入（你想做什么/想描述什么都可以）"></textarea>
+    <textarea id="player_input" placeholder="或自由输入（你想做什么/想描述什么都可以）  ⏎ 直接回车提交 · Shift+Enter 换行"></textarea>
     <div class="row">
       <span class="hint">/help 查看元指令 · /state 查看状态 · /save slot1 存档</span>
       <button id="btn_submit" onclick="submitInput()">行动</button>
@@ -1435,8 +1457,21 @@ function appendInputArea() {
   `;
   $main.appendChild(div);
   document.getElementById("player_input").focus();
+  // 🆕 v1.6.5 快捷键：
+  // - Enter（裸键）       → 提交（移动端友好，没 Ctrl 键）
+  // - Shift+Enter / Alt+Enter → 换行（多行输入）
+  // - Ctrl+Enter / Cmd+Enter → 提交（兼容桌面用户习惯）
   document.getElementById("player_input").addEventListener("keydown", e => {
-    if (e.ctrlKey && e.key === "Enter") submitInput();
+    if (e.key === "Enter" && !e.shiftKey && !e.altKey) {
+      // 裸 Enter 提交
+      e.preventDefault();
+      submitInput();
+    } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      // Ctrl/Cmd+Enter 提交（兼容）
+      e.preventDefault();
+      submitInput();
+    }
+    // Shift+Enter / Alt+Enter 默认行为：插入换行
   });
 }
 
