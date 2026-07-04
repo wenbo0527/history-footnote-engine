@@ -13,6 +13,11 @@ from typing import Any
 
 @dataclass
 class GameState:
+    """游戏状态数据模型"""
+
+    # 🆕 v1.6.3 双层叙事保留配置
+    NARRATIVE_RECENT_SIZE: int = 20   # 最近保留完整叙事的回合数
+    NARRATIVE_ARCHIVE_SIZE: int = 100 # 早期摘要最大保留数
     """游戏状态——一局游戏的完整快照
 
     这是存档/读档/checkpoint的最小数据单位。
@@ -51,8 +56,13 @@ class GameState:
     # === 记忆 ===
     event_log: list[dict] = field(default_factory=list)  # 每回合的事件摘要
 
-    # === 叙事历史（精简：只保留最近10回合的完整叙事）===
+    # === 🆕 v1.6.3 叙事历史：双层结构 ===
+    # narrative_history: 兼容旧字段（= recent，但保留 20 回合而非 10）
+    # narrative_recent: 最近 20 回合完整叙事（用于 LLM 上下文）
+    # narrative_archive: 早期最多 100 回合的纯摘要（用于剧情回顾）
     narrative_history: list[dict] = field(default_factory=list)
+    narrative_recent: list[dict] = field(default_factory=list)
+    narrative_archive: list[dict] = field(default_factory=list)
 
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
@@ -92,17 +102,65 @@ class GameState:
         return cls(**data)
 
     def append_narrative(self, round_number: int, narrative: str, summary: str) -> None:
-        """追加一回合的叙事到历史"""
-        self.narrative_history.append(
-            {
-                "round": round_number,
-                "narrative": narrative,
-                "summary": summary,
+        """追加一回合的叙事到历史
+
+        🆕 v1.6.3 双层保留：
+        1. 先入 narrative_recent + narrative_history（最近 N 回合完整叙事）
+        2. 超 N 回合 → 弹出最旧的，提取摘要到 narrative_archive
+        3. archive 最多保留 N 条
+        """
+        entry = {
+            "round": round_number,
+            "narrative": narrative,
+            "summary": summary,
+        }
+        self.narrative_recent.append(entry)
+        self.narrative_history.append(entry)  # 兼容旧字段
+
+        # 超 N 回合：从 recent 弹到 archive
+        while len(self.narrative_recent) > self.NARRATIVE_RECENT_SIZE:
+            old = self.narrative_recent.pop(0)
+            # 生成归档版本（保留前 200 字 + 关键元数据）
+            archived = {
+                "round": old["round"],
+                "summary": old.get("summary", "") or old.get("narrative", "")[:200],
+                "narrative_preview": old.get("narrative", "")[:200],
             }
-        )
-        # 精简策略：只保留最近10回合的完整叙事
-        if len(self.narrative_history) > 10:
-            self.narrative_history = self.narrative_history[-10:]
+            self.narrative_archive.append(archived)
+            # 同步更新 narrative_history（旧字段不弹，保持兼容）
+            # 因为 narrative_history 现在只是 narrative_recent 的镜像
+
+        # archive 上限
+        if len(self.narrative_archive) > self.NARRATIVE_ARCHIVE_SIZE:
+            self.narrative_archive = self.narrative_archive[-self.NARRATIVE_ARCHIVE_SIZE:]
+
+    def get_recap(self, recent_count: int = 5, archive_count: int = 30) -> dict:
+        """🆕 v1.6.3 剧情回顾
+
+        Args:
+            recent_count: 返回最近多少回合完整叙事（默认 5）
+            archive_count: 返回归档摘要多少条（默认 30）
+
+        Returns:
+            {
+                "round_number": 当前回合数,
+                "current_date": 当前日期,
+                "total_narratives": 记录总数,
+                "recent": [最近 N 回合完整...],
+                "archive": [早期 M 条摘要],
+                "month_markers": [月份变更节点...]
+            }
+        """
+        # 找到叙事中的月份标记（用 current_date 字段变化的回合）
+        recent = self.narrative_recent[-recent_count:] if recent_count > 0 else []
+        archive = self.narrative_archive[-archive_count:] if archive_count > 0 else []
+        return {
+            "round_number": self.round_number,
+            "current_date": self.current_date,
+            "total_narratives": len(self.narrative_recent) + len(self.narrative_archive),
+            "recent": recent,
+            "archive": archive,
+        }
 
     def get_visible_state(self) -> dict:
         """返回给玩家可见的状态（过滤敏感信息）"""

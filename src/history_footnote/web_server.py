@@ -642,6 +642,183 @@ INDEX_HTML = """<!DOCTYPE html>
     position: relative;
     z-index: 10;
   }
+
+  /* ============================================================ */
+  /* 🆕 v1.6.3 剧情回顾（按钮 + 弹层）                             */
+  /* ============================================================ */
+  .recap-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: rgba(60, 48, 24, 0.92);
+    color: #f5f0e1;
+    border: 2px solid #8b6f47;
+    border-radius: 24px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    z-index: 50;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .recap-btn:hover {
+    background: rgba(90, 72, 36, 0.95);
+    transform: translateY(-1px);
+  }
+  .recap-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .recap-modal {
+    background: #f5f0e1;
+    color: #2c2416;
+    border: 2px solid #8b6f47;
+    border-radius: 8px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .recap-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #c4a878;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .recap-header h2 {
+    margin: 0;
+    color: #5a3e1f;
+    font-size: 20px;
+  }
+  .recap-meta {
+    flex: 1;
+    color: #8b6f47;
+    font-size: 12px;
+  }
+  .recap-close {
+    background: none;
+    border: none;
+    color: #5a3e1f;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 8px;
+  }
+  .recap-close:hover { color: #a08858; }
+  .recap-body-content {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+  }
+  .recap-body-content section { margin-bottom: 24px; }
+  .recap-body-content h3 {
+    color: #5a3e1f;
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed #c4a878;
+  }
+  .recap-entry {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(255, 250, 235, 0.7);
+    border-left: 3px solid #8b6f47;
+    border-radius: 3px;
+  }
+  .recap-entry summary {
+    cursor: pointer;
+    color: #5a3e1f;
+    font-weight: bold;
+    user-select: none;
+    padding: 4px 0;
+  }
+  .recap-entry summary:hover { color: #a08858; }
+  .recap-entry[open] {
+    background: rgba(255, 250, 235, 0.95);
+  }
+  .recap-body {
+    padding: 8px 0 4px;
+    line-height: 1.7;
+    color: #2c2416;
+    font-size: 14px;
+  }
+  .recap-archive-item {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 12px;
+    margin: 4px 0;
+    background: rgba(255, 250, 235, 0.5);
+    border-left: 2px solid #c4a878;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .recap-round {
+    color: #8b6f47;
+    font-weight: bold;
+    min-width: 70px;
+    font-size: 12px;
+  }
+  .recap-summary {
+    color: #5a4a30;
+    line-height: 1.5;
+  }
+  .recap-empty {
+    color: #8b6f47;
+    font-style: italic;
+    padding: 12px;
+    text-align: center;
+  }
+
+  /* 移动端优化 */
+  @media (max-width: 768px) {
+    .recap-btn {
+      top: auto;
+      bottom: calc(env(safe-area-inset-bottom, 0) + 90px); /* 在 input-area 上方 */
+      right: 12px;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+    .recap-modal-overlay {
+      padding: 0;
+      align-items: stretch;
+    }
+    .recap-modal {
+      max-width: 100%;
+      max-height: 100vh;
+      max-height: 100dvh;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+    }
+    .recap-header {
+      position: sticky;
+      top: 0;
+      background: #f5f0e1;
+      z-index: 1;
+    }
+    .recap-entry {
+      font-size: 13px;
+    }
+    .recap-body {
+      font-size: 13px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1110,6 +1287,83 @@ function renderGame(data) {
   } else {
     appendOpeningVoiceOptions(data);
   }
+  // 🆕 v1.6.3 剧情回顾按钮
+  appendRecapButton();
+}
+
+// 🆕 v1.6.3 剧情回顾：按钮 + 弹层（不打断游戏流程）
+function appendRecapButton() {
+  const btn = document.createElement("button");
+  btn.className = "recap-btn";
+  btn.innerHTML = "📖 剧情回顾";
+  btn.onclick = openRecap;
+  document.body.appendChild(btn);
+}
+
+async function openRecap() {
+  const data = await api("/api/recap", "POST", {
+    session_id: state.session_id,
+    recent_count: 10,
+    archive_count: 50,
+  });
+  if (data.error) {
+    alert("回顾失败：" + data.error);
+    return;
+  }
+  renderRecapModal(data);
+}
+
+function renderRecapModal(recap) {
+  // 移除旧弹层
+  const existing = document.getElementById("recap-modal");
+  if (existing) existing.remove();
+
+  const recent = recap.recent || [];
+  const archive = recap.archive || [];
+
+  const recentHtml = recent.length === 0 ? "<p class='recap-empty'>尚无最近叙事</p>" :
+    recent.map(n => `<details class="recap-entry">
+      <summary>第 ${n.round} 回合${n.summary ? ' · ' + escapeHtml(n.summary.slice(0, 30)) : ''}</summary>
+      <div class="recap-body">${escapeHtml(n.narrative || '').replace(/\n/g, "<br>")}</div>
+    </details>`).join("");
+
+  const archiveHtml = archive.length === 0 ? "<p class='recap-empty'>尚无早期记录</p>" :
+    archive.slice().reverse().map(n => `<div class="recap-archive-item">
+      <span class="recap-round">第 ${n.round} 回合</span>
+      <span class="recap-summary">${escapeHtml(n.summary || n.narrative_preview || '')}</span>
+    </div>`).join("");
+
+  const modal = document.createElement("div");
+  modal.id = "recap-modal";
+  modal.className = "recap-modal-overlay";
+  modal.onclick = (e) => {
+    if (e.target === modal) closeRecap();
+  };
+  modal.innerHTML = `
+    <div class="recap-modal" onclick="event.stopPropagation()">
+      <div class="recap-header">
+        <h2>📖 剧情回顾</h2>
+        <span class="recap-meta">第 ${recap.round_number} 回合 · ${recap.current_date} · 共 ${recap.total_narratives} 条记录</span>
+        <button class="recap-close" onclick="closeRecap()">×</button>
+      </div>
+      <div class="recap-body-content">
+        <section>
+          <h3>📜 最近 ${recent.length} 回合（详细）</h3>
+          ${recentHtml}
+        </section>
+        <section>
+          <h3>📚 早期记录（${archive.length} 条摘要）</h3>
+          ${archiveHtml}
+        </section>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeRecap() {
+  const existing = document.getElementById("recap-modal");
+  if (existing) existing.remove();
 }
 
 function appendOpeningVoiceOptions(data) {
@@ -1653,6 +1907,30 @@ class Handler(BaseHTTPRequestHandler):
                     "session_id": game.session.session_id,
                     **_format_state(game),
                 })
+                return
+
+            if path == "/api/recap":
+                # 🆕 v1.6.3 剧情回顾（增强叙事保留后可用）
+                sid = data.get("session_id")
+                recent_count = data.get("recent_count", 5)
+                archive_count = data.get("archive_count", 30)
+                if not sid:
+                    self._json(400, {"error": "missing session_id"})
+                    return
+                entry = _session_get(sid)
+                if entry is None:
+                    self._json(404, {"error": "session not found or not loaded"})
+                    return
+                game = entry[0]
+                try:
+                    recap = game.state.get_recap(
+                        recent_count=int(recent_count),
+                        archive_count=int(archive_count),
+                    )
+                    self._json(200, recap)
+                except Exception as e:
+                    logger.exception(f"[recap] failed: {e}")
+                    self._json(500, {"error": "recap failed", "error_id": str(uuid.uuid4())[:8]})
                 return
 
             if path == "/api/input":
