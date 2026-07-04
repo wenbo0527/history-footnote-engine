@@ -839,9 +839,22 @@ const $main = document.getElementById("main");
 const $side = document.getElementById("sidebar");
 
 async function api(path, method = "GET", body = null) {
+  // 🆕 2026-07-04 bugfix v2: 自适应 pathname 前缀（避免子域名部署冲突）
+  //   - 部署在子路径 (wenbodemo.com/history-footnote-engine/) : 加子路径前缀
+  //   - 部署在子域名 (footnote.wenbodemo.com:8446/) : 直接 fetch
+  //   - 部署在根路径 (wenbodemo.com/) : 直接 fetch
+  const host = window.location.hostname;
+  let fullPath = path;
+  if (path.startsWith("/api/")) {
+    // 子路径部署 (个人主页子目录)
+    if (window.location.pathname.startsWith("/history-footnote-engine")) {
+      fullPath = `/history-footnote-engine${path}`;
+    }
+    // 否则: 子域名或根路径部署, 直接 fetch
+  }
   const opts = { method, headers: {"Content-Type": "application/json"} };
   if (body) opts.body = JSON.stringify(body);
-  const resp = await fetch(path, opts);
+  const resp = await fetch(fullPath, opts);
   return await resp.json();
 }
 
@@ -1784,14 +1797,26 @@ class Handler(BaseHTTPRequestHandler):
             sessions = save_manager.list_sessions(era_id=era_id)
             out = []
             for s in sessions[:10]:
+                # 🆕 2026-07-04 bugfix v3: selected_identity + player_gender 不在 SaveSession 上（仅 SaveSlot/auto.json 有）
+                identity = ""
+                gender = ""
+                auto_path = s.dir_path / "auto.json"
+                if auto_path.exists():
+                    try:
+                        with open(auto_path, encoding="utf-8") as af:
+                            auto = json.load(af)
+                        identity = auto.get("selected_identity", "")
+                        gender = auto.get("player_gender", "")
+                    except Exception:
+                        pass
                 out.append({
                     "session_id": s.session_id,
                     "era_id": s.era_id,
                     "current_round": s.current_round,
                     "current_date": s.current_date,
                     "summary": s.summary,
-                    "selected_identity": s.selected_identity,
-                    "player_gender": s.player_gender,
+                    "selected_identity": identity,
+                    "player_gender": gender,
                 })
             self._json(200, {"archives": out})
             return
