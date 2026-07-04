@@ -963,12 +963,145 @@ INDEX_HTML = """<!DOCTYPE html>
     border-left-color: #c4a878;
     opacity: 0.7;
   }
+
+  /* ============================================================ */
+  /* 🆕 v1.6.8 版本号常驻 + 反馈弹层                              */
+  /* ============================================================ */
+  .version-badge {
+    position: fixed;
+    bottom: 8px;
+    right: 12px;
+    background: rgba(60, 48, 24, 0.75);
+    color: #f0d8a0;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    z-index: 30;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(196, 168, 120, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+    transition: all 0.2s;
+  }
+  .version-badge:hover {
+    background: rgba(60, 48, 24, 0.92);
+    border-color: #c4a878;
+    transform: translateY(-1px);
+  }
+  .version-badge .version-text {
+    font-weight: bold;
+    letter-spacing: 0.3px;
+  }
+  .version-badge .version-hint {
+    opacity: 0.7;
+    font-size: 10px;
+  }
+
+  /* 反馈弹层（独立于 recap/glossary，因为样式特殊） */
+  .feedback-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .feedback-categories {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  @media (max-width: 600px) {
+    .feedback-categories {
+      grid-template-columns: 1fr;
+    }
+  }
+  .feedback-cat-btn {
+    background: rgba(196, 168, 120, 0.15);
+    color: #5a3e1f;
+    border: 1px solid #8b6f47;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .feedback-cat-btn:hover {
+    background: rgba(196, 168, 120, 0.3);
+  }
+  .feedback-cat-btn.selected {
+    background: #8b6f47;
+    color: #f5f0e1;
+    border-color: #5a3e1f;
+  }
+  .feedback-textarea {
+    min-height: 120px;
+    padding: 10px;
+    border: 1px solid #8b6f47;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    background: #fff;
+  }
+  .feedback-textarea:focus {
+    outline: none;
+    border-color: #5a3e1f;
+  }
+  .feedback-context-note {
+    font-size: 11px;
+    color: #8b6f47;
+    background: rgba(196, 168, 120, 0.1);
+    padding: 8px 10px;
+    border-radius: 3px;
+    line-height: 1.5;
+  }
+  .feedback-submit-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .feedback-submit-btn {
+    background: #8b6f47;
+    color: #f5f0e1;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .feedback-submit-btn:hover {
+    background: #5a3e1f;
+  }
+  .feedback-submit-btn:disabled {
+    background: #c4a878;
+    cursor: not-allowed;
+  }
+  .feedback-success {
+    color: #2d5016;
+    background: rgba(108, 152, 76, 0.15);
+    padding: 12px;
+    border-radius: 4px;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
 <div class="layout">
   <div class="main" id="main"></div>
   <div class="sidebar" id="sidebar"></div>
+</div>
+
+<!-- 🆕 v1.6.8 版本号常驻显示（内测标识） -->
+<div id="version-badge" class="version-badge" onclick="openFeedback()">
+  <span class="version-text">v1.6.8 - 内测版</span>
+  <span class="version-hint">🐛 反馈</span>
 </div>
 
 <script>
@@ -1577,6 +1710,173 @@ function renderGlossaryModal(data) {
 function closeGlossary() {
   const existing = document.getElementById("glossary-modal");
   if (existing) existing.remove();
+}
+
+// ============================================================
+// 🆕 v1.6.8 玩家反馈入口（侧边栏 + 版本号点击触发）
+// ============================================================
+let _selectedCategory = "bug";  // 默认分类
+
+async function openFeedback() {
+  // 拉取分类列表
+  const data = await api("/api/feedback_categories", "POST", {});
+  if (data.error) {
+    alert("反馈入口加载失败：" + data.error);
+    return;
+  }
+  renderFeedbackModal(data.categories);
+}
+
+function renderFeedbackModal(categories) {
+  const existing = document.getElementById("feedback-modal");
+  if (existing) existing.remove();
+
+  const catButtons = categories.map(c => `
+    <button class="feedback-cat-btn ${c.key === _selectedCategory ? 'selected' : ''}"
+            data-key="${c.key}" onclick="selectFeedbackCategory('${c.key}')">
+      ${c.label}
+    </button>
+  `).join("");
+
+  const selectedCat = categories.find(c => c.key === _selectedCategory);
+  const placeholder = selectedCat ? selectedCat.placeholder : "描述你遇到的问题...";
+
+  const modal = document.createElement("div");
+  modal.id = "feedback-modal";
+  modal.className = "recap-modal-overlay";
+  modal.onclick = (e) => { if (e.target === modal) closeFeedback(); };
+  modal.innerHTML = `
+    <div class="recap-modal" onclick="event.stopPropagation()" style="max-width:560px">
+      <div class="recap-header">
+        <h2>🐛 问题反馈</h2>
+        <span class="recap-meta">${categories.length} 种分类 · 自动收集上下文</span>
+        <button class="recap-close" onclick="closeFeedback()">×</button>
+      </div>
+      <div class="recap-body-content">
+        <div class="feedback-form" id="feedback-form-body">
+          <label style="font-size:13px;color:#5a3e1f;font-weight:bold">问题分类：</label>
+          <div class="feedback-categories">${catButtons}</div>
+          <label style="font-size:13px;color:#5a3e1f;font-weight:bold">详细描述：</label>
+          <textarea class="feedback-textarea" id="feedback-description"
+            placeholder="${escapeHtml(placeholder)}"></textarea>
+          <div class="feedback-context-note" id="feedback-context-note">
+            📋 自动收集：当前回合、日期、浏览器、屏幕尺寸、最近 3 个玩家操作。<br>
+            你的反馈将包含一个会话 ID（不会包含个人身份信息）。
+          </div>
+          <div class="feedback-submit-row">
+            <button class="sidebar-action-btn" style="background:transparent;color:#5a3e1f;width:auto;display:inline-block"
+              onclick="closeFeedback()">取消</button>
+            <button class="feedback-submit-btn" id="feedback-submit-btn" onclick="submitFeedback()">提交反馈</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeFeedback() {
+  const existing = document.getElementById("feedback-modal");
+  if (existing) existing.remove();
+}
+
+function selectFeedbackCategory(key) {
+  _selectedCategory = key;
+  // 更新 UI
+  document.querySelectorAll(".feedback-cat-btn").forEach(btn => {
+    btn.classList.toggle("selected", btn.dataset.key === key);
+  });
+  // 更新 placeholder（异步从服务端拉取最新 placeholder）
+  api("/api/feedback_categories", "POST", {}).then(data => {
+    if (data.categories) {
+      const cat = data.categories.find(c => c.key === key);
+      if (cat) {
+        const textarea = document.getElementById("feedback-description");
+        if (textarea) textarea.placeholder = cat.placeholder;
+      }
+    }
+  });
+}
+
+async function submitFeedback() {
+  const desc = document.getElementById("feedback-description").value.trim();
+  if (!desc) {
+    alert("请填写描述");
+    return;
+  }
+  if (desc.length < 5) {
+    alert("描述过短（至少 5 字符）");
+    return;
+  }
+
+  // 收集上下文
+  const context = {
+    round: state.round || 0,
+    date: state.current_date || "unknown",
+    user_agent: navigator.userAgent,
+    screen: `${window.screen.width}x${window.screen.height}`,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    timestamp: new Date().toISOString(),
+    // 玩家最近 3 个输入（从 state 读）
+    recent_inputs: (state.recent_inputs || []).slice(-3),
+  };
+
+  // 禁用按钮
+  const btn = document.getElementById("feedback-submit-btn");
+  btn.disabled = true;
+  btn.textContent = "提交中...";
+
+  try {
+    const result = await api("/api/feedback", "POST", {
+      session_id: state.session_id || "",
+      category: _selectedCategory,
+      description: desc,
+      context: context,
+    });
+
+    if (result.error) {
+      alert("提交失败：" + result.error);
+      btn.disabled = false;
+      btn.textContent = "提交反馈";
+      return;
+    }
+
+    // 成功
+    const formBody = document.getElementById("feedback-form-body");
+    formBody.innerHTML = `
+      <div class="feedback-success">
+        ✅ 反馈已收到！<br>
+        <small>ID: ${result.id}</small><br>
+        <small style="color:#8b6f47">开发团队会查看并处理。</small>
+      </div>
+      <div class="feedback-submit-row">
+        <button class="feedback-submit-btn" onclick="closeFeedback()">关闭</button>
+      </div>
+    `;
+  } catch (e) {
+    alert("网络错误：" + e.message);
+    btn.disabled = false;
+    btn.textContent = "提交反馈";
+  }
+}
+
+// 🆕 v1.6.8 页面加载时拉取版本信息更新 badge
+async function loadVersionBadge() {
+  try {
+    const info = await api("/api/version", "POST", {});
+    if (info && info.full_label) {
+      const textEl = document.querySelector("#version-badge .version-text");
+      if (textEl) textEl.textContent = info.full_label;
+    }
+  } catch (e) {
+    // 静默失败，使用 HTML 模板里的默认值
+  }
+}
+// 在页面加载完成后调用
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", loadVersionBadge);
+} else {
+  loadVersionBadge();
 }
 
 async function filterGlossary(query) {
@@ -2431,6 +2731,59 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.exception(f"[sanitize_patterns] failed: {e}")
                     self._json(500, {"error": "patterns fetch failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/version":
+                # 🆕 v1.6.8 版本信息端点
+                try:
+                    from history_footnote.issue_reporter import get_version_info
+                    self._json(200, get_version_info())
+                except Exception as e:
+                    logger.exception(f"[version] failed: {e}")
+                    self._json(500, {"error": "version fetch failed"})
+                return
+
+            if path == "/api/feedback":
+                # 🆕 v1.6.8 玩家反馈端点
+                try:
+                    from history_footnote.issue_reporter import (
+                        save_feedback, validate_feedback, ISSUE_CATEGORIES,
+                    )
+                    category = data.get("category", "")
+                    description = data.get("description", "")
+                    sid = data.get("session_id", "")
+                    context = data.get("context", {})
+
+                    # 校验
+                    err = validate_feedback(category, description)
+                    if err:
+                        self._json(400, {"error": err})
+                        return
+
+                    result = save_feedback(sid, category, description, context)
+                    logger.info(
+                        f"[feedback] {result['id']} category={category} "
+                        f"session={sid[:16] if sid else 'none'}"
+                    )
+                    self._json(200, {
+                        "id": result["id"],
+                        "saved_at": result["saved_at"],
+                        "saved_to": result.get("saved_to", ""),
+                        "save_error": result.get("save_error", ""),
+                    })
+                except Exception as e:
+                    logger.exception(f"[feedback] failed: {e}")
+                    self._json(500, {"error": "feedback submit failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/feedback_categories":
+                # 🆕 v1.6.8 反馈分类列表（前端动态渲染）
+                try:
+                    from history_footnote.issue_reporter import ISSUE_CATEGORIES
+                    self._json(200, {"categories": ISSUE_CATEGORIES})
+                except Exception as e:
+                    logger.exception(f"[feedback_categories] failed: {e}")
+                    self._json(500, {"error": "fetch failed"})
                 return
 
             if path == "/api/input":
