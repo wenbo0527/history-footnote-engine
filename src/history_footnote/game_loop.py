@@ -437,7 +437,11 @@ class GameLoop:
         return text.strip()
 
     def _validate_narrative(self, narrative: str) -> str:
-        """后校验：Phase 1简化版——确保叙事非空"""
+        """后校验：Phase 1简化版——确保叙事非空
+
+        🆕 v1.6.7 架构重构：清洗逻辑在 dm_agent.extract_narrative_node 已完成
+        这里只做兜底空值检查。
+        """
         if not narrative or not narrative.strip():
             return "时间流逝。一切如常。"
         return narrative

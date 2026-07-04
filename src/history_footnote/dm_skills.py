@@ -924,6 +924,12 @@ def _build_skill_directive(
     parts.append(f"  本回合采用【{pacing.time_mode}】，写作时请按上述所有 SKILL 指令调整。")
     parts.append(f"  **核心原则**：失败不是终点，是岔路口；让玩家有'走进这个时代'的体验。")
 
+    # 🆕 v1.6.7 P0 Bug 修复：明确禁止 LLM 把 SKILL 指令复制到 narrative
+    parts.append(f"\n## ⚠️ 关键禁忌")
+    parts.append(f"  **绝对不要**将本 SKILL 指令中的任何内容（包括 '## ⏱️ SKILL-X'、'## 📌 综合指令' 等）")
+    parts.append(f"  复制或粘贴到 narrative 字段。narrative 字段必须是给玩家看的具体场景描写，")
+    parts.append(f"  不能包含 '=== COMPILED SKILLS ==='、'Decision Mode:'、'Applied Skills' 等元数据。")
+
     return "\n".join(parts)
 
 

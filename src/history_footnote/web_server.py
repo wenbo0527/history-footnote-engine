@@ -1742,24 +1742,35 @@ function appendNarrative(n, lastMeta) {
   if (lastMeta && lastMeta.month_advanced) {
     tag = `<div class="month-marker">━━━ 行动点耗尽，进入 ${lastMeta.new_date} ━━━</div>` + tag;
   }
-  // 🆕 v1.6.6：异步提取明朝名词 + 高亮未读词
-  const narrativeText = escapeHtml(n.narrative);
-  div.innerHTML = tag + `<div class="narrative-body" data-round="${n.round}">${narrativeText}</div>`;
-  $main.insertBefore(div, $main.lastElementChild);
-  // 异步请求后端提取名词（标记未读词）
-  if (state.session_id) {
-    api("/api/extract_terms", "POST", {
-      session_id: state.session_id,
-      text: n.narrative,
-    }).then(data => {
-      if (data.error || !data.new_terms || data.new_terms.length === 0) return;
-      const $body = div.querySelector(".narrative-body");
-      if ($body) {
-        $body.innerHTML = data.marked_text;
-        attachTermTooltips();
-      }
-    }).catch(() => {});
-  }
+  // 🆕 v1.6.7 架构重构：前端不再本地清洗，统一调 /api/sanitize
+  // 服务端 narrative_sanitizer.py 是单一权威（前后端共用）
+  const rawNarrative = n.narrative || "";
+  api("/api/sanitize", "POST", {text: rawNarrative}).then(sanitizeData => {
+    const cleanedNarrative = (sanitizeData && !sanitizeData.error)
+      ? sanitizeData.cleaned
+      : rawNarrative;
+    const narrativeText = escapeHtml(cleanedNarrative);
+    div.innerHTML = tag + `<div class="narrative-body" data-round="${n.round}">${narrativeText}</div>`;
+    $main.insertBefore(div, $main.lastElementChild);
+    // 异步请求后端提取名词（标记未读词）
+    if (state.session_id) {
+      api("/api/extract_terms", "POST", {
+        session_id: state.session_id,
+        text: cleanedNarrative,
+      }).then(data => {
+        if (data.error || !data.new_terms || data.new_terms.length === 0) return;
+        const $body = div.querySelector(".narrative-body");
+        if ($body) {
+          $body.innerHTML = data.marked_text;
+          attachTermTooltips();
+        }
+      }).catch(() => {});
+    }
+  }).catch(() => {
+    // 兜底：sanitize API 失败时直接显示原文
+    div.innerHTML = tag + `<div class="narrative-body" data-round="${n.round}">${escapeHtml(rawNarrative)}</div>`;
+    $main.insertBefore(div, $main.lastElementChild);
+  });
 }
 
 function appendInputArea() {
@@ -2031,6 +2042,10 @@ function escapeHtml(s) {
   if (!s) return "";
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+// 🆕 v1.6.7 架构重构：删除 JS 端 stripSkillMetadata（重复实现）
+// 改用 /api/sanitize 端点调用服务端 narrative_sanitizer.py
+// 服务端是单一权威实现，避免前后端正则漂移
 
 renderStart();
 </script>
@@ -2389,6 +2404,33 @@ class Handler(BaseHTTPRequestHandler):
                 if term not in game.state.seen_terms:
                     game.state.seen_terms.append(term)
                 self._json(200, {"seen_count": len(game.state.seen_terms), "marked": term})
+                return
+
+            if path == "/api/sanitize":
+                # 🆕 v1.6.7 架构重构：前端通过此端点复用服务端清洗逻辑
+                # 避免 JS 重复实现 10 个正则
+                text = data.get("text", "")
+                try:
+                    from history_footnote.narrative_sanitizer import sanitize
+                    cleaned = sanitize(text)
+                    self._json(200, {
+                        "original_length": len(text),
+                        "cleaned": cleaned,
+                        "cleaned_length": len(cleaned),
+                    })
+                except Exception as e:
+                    logger.exception(f"[sanitize] failed: {e}")
+                    self._json(500, {"error": "sanitize failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/sanitize_patterns":
+                # 🆕 v1.6.7 提供给前端同步使用的清洗模式（可选）
+                try:
+                    from history_footnote.narrative_sanitizer import patterns_as_dict
+                    self._json(200, patterns_as_dict())
+                except Exception as e:
+                    logger.exception(f"[sanitize_patterns] failed: {e}")
+                    self._json(500, {"error": "patterns fetch failed", "error_id": str(uuid.uuid4())[:8]})
                 return
 
             if path == "/api/input":

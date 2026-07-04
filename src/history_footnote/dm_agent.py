@@ -20,6 +20,13 @@ from __future__ import annotations
 
 import json
 from typing import Annotated, Any, TypedDict
+# 🆕 v1.6.7 架构重构：所有 SKILL 元数据清洗逻辑沉淀到 narrative_sanitizer.py
+# dm_agent 不再持有 SKILL_METADATA_PATTERNS / _strip_skill_metadata，改为复用
+from history_footnote.narrative_sanitizer import (
+    sanitize as _narrative_sanitize,
+    strip_skill_metadata,
+    extract_json_from_text as _extract_json_from_text,
+)
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import END, StateGraph
@@ -704,73 +711,62 @@ def make_dm_nodes(llm_with_tools, state_ref):
         response = llm_with_tools.invoke(state["messages"])
         return {"messages": [response]}
 
-    def extract_narrative_node(state: DMState) -> dict:
-        """从最后一条AIMessage中提取结构化叙事
 
-        v1.2+ DND化：LLM可能返回JSON或纯文本
-        - 如果JSON：直接解析
-        - 如果纯文本：fallback用state_ref的insight_candidates生成updates
-        """
-        narrative_data = {
-            "narrative": "",
-            "state_changes": {},
-            "events_to_save": [],
-            "updates": None,
-            "is_action": True,
-            "time_cost": 1,
-            "intent_type": "action",  # 🆕 v1.5+：action | inquire | describe | voice
-            "voice_options": [],       # 🆕 v1.5+：2-4 个内在声音选项
-        }
+def extract_narrative_node(state: DMState) -> dict:
+    """从最后一条AIMessage中提取结构化叙事
 
-        for msg in reversed(state["messages"]):
-            if isinstance(msg, AIMessage) and msg.content and not msg.tool_calls:
-                try:
-                    parsed = json.loads(msg.content)
-                    if isinstance(parsed, dict):
-                        narrative_data = parsed
-                    else:
-                        # LLM 返回了 JSON 但只是 string/number 当 narrative
-                        narrative_data["narrative"] = str(parsed)
-                except (json.JSONDecodeError, TypeError):
-                    narrative_data["narrative"] = msg.content
-                break
+    v1.2+ DND化：LLM可能返回JSON或纯文本
+    - 如果JSON：直接解析
+    - 如果纯文本：fallback用state_ref的insight_candidates生成updates
 
-        # v1.2+ Fallback：LLM没返回JSON时，从state_ref.insight_candidates生成updates
-        # 这是真实LLM场景下的关键fallback——确保insight解锁不被LLM格式问题阻塞
-        if narrative_data.get("updates") is None:
-            insight_candidates = state.get("insight_candidates", [])
-            if insight_candidates:
-                fallback_updates = {}
-                for ic in insight_candidates:
-                    if isinstance(ic, dict):
-                        ic_id = ic.get("id")
-                        confirm_needed = ic.get("confirm_needed", True)
-                    else:
-                        ic_id = getattr(ic, "id", None)
-                        confirm_needed = getattr(ic, "confirm_needed", True)
-                    if not ic_id:
-                        continue
-                    if not confirm_needed:
-                        # narrative_guided：直接解锁
-                        fallback_updates[f"insight:{ic_id}"] = "unlocked"
-                    else:
-                        # player_explore：DM默认确认解锁（让LLM叙事里暗示确认）
-                        fallback_updates[f"insight:{ic_id}"] = "unlocked"
-                narrative_data["updates"] = fallback_updates
+    🆕 v1.6.7 架构重构：清洗逻辑下沉到 narrative_sanitizer.sanitize()
+    之前 dm_agent 自己持有一份正则表，现在复用单一权威实现。
+    """
+    narrative_data = {
+        "narrative": "",
+        "state_changes": {},
+        "events_to_save": [],
+        "updates": None,
+        "is_action": True,
+        "time_cost": 1,
+        "intent_type": "action",
+        "voice_options": [],
+    }
 
-        return {
-            "narrative": narrative_data.get("narrative", ""),
-            "state_changes": narrative_data.get("state_changes", {}),
-            "events_to_save": narrative_data.get("events_to_save", []),
-            "updates": narrative_data.get("updates"),
-            "is_action": narrative_data.get("is_action", True),  # 默认true
-            "time_cost": int(narrative_data.get("time_cost", 1)),  # 默认1
-            "intent_type": narrative_data.get("intent_type", "action"),  # 🆕 v1.5+
-            "voice_options": narrative_data.get("voice_options", []),    # 🆕 v1.5+
-            "validation_passed": True,
-        }
+    for msg in reversed(state["messages"]):
+        if isinstance(msg, AIMessage) and msg.content and not msg.tool_calls:
+            # 🆕 v1.6.7：单一权威 sanitize()（JSON 提取 + SKILL 剥离 + fallback 一站完成）
+            narrative_data["narrative"] = _narrative_sanitize(msg.content)
+            break
 
-    return skill_orchestration_node, situation_assessment_node, should_continue, narrative_fusion_node, extract_narrative_node
+    # v1.2+ Fallback：LLM没返回JSON时，从state_ref.insight_candidates生成updates
+    if narrative_data.get("updates") is None:
+        insight_candidates = state.get("insight_candidates", [])
+        if insight_candidates:
+            fallback_updates = {}
+            for ic in insight_candidates:
+                if isinstance(ic, dict):
+                    ic_id = ic.get("id")
+                    confirm_needed = ic.get("confirm_needed", True)
+                else:
+                    ic_id = getattr(ic, "id", None)
+                    confirm_needed = getattr(ic, "confirm_needed", True)
+                if not ic_id:
+                    continue
+                fallback_updates[f"insight:{ic_id}"] = "unlocked"
+            narrative_data["updates"] = fallback_updates
+
+    return {
+        "narrative": narrative_data.get("narrative", ""),
+        "state_changes": narrative_data.get("state_changes", {}),
+        "events_to_save": narrative_data.get("events_to_save", []),
+        "updates": narrative_data.get("updates"),
+        "is_action": narrative_data.get("is_action", True),
+        "time_cost": int(narrative_data.get("time_cost", 1)),
+        "intent_type": narrative_data.get("intent_type", "action"),
+        "voice_options": narrative_data.get("voice_options", []),
+        "validation_passed": True,
+    }
 
 
 def state_confirmation_node(state: DMState) -> dict:
