@@ -1383,6 +1383,7 @@ class DMAgent:
             }
         except Exception as e:
             # 重试时出错 → 返回最小响应
+            logger.exception("[v1.7.2] LLM 重试失败")
             return {
                 "narrative": f"（重试失败：{str(e)[:100]}）",
                 "state_changes": {},

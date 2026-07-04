@@ -199,11 +199,20 @@ class RateLimiter:
             self._blocked_count = 0
 
 
-# 全局限流：每 IP 每分钟最多 60 个请求
-GLOBAL_RATE_LIMITER = RateLimiter(max_requests=60, window_seconds=60.0)
+# 🆕 v1.7.2 限流配置从 config.py 读（环境变量可覆盖）
+from history_footnote.config import RateLimits as _RateCfg
 
-# LLM 调用专门限流（更严）：每 IP 每分钟最多 20 次 LLM 调用
-LLM_RATE_LIMITER = RateLimiter(max_requests=20, window_seconds=60.0)
+# 全局限流：每 IP 每分钟最多 N 个请求（环境变量 GLOBAL_MAX_REQUESTS）
+GLOBAL_RATE_LIMITER = RateLimiter(
+    max_requests=_RateCfg.GLOBAL_MAX_REQUESTS,
+    window_seconds=_RateCfg.GLOBAL_WINDOW_SECONDS,
+)
+
+# LLM 调用专门限流（更严）：每 IP 每分钟最多 N 次 LLM 调用
+LLM_RATE_LIMITER = RateLimiter(
+    max_requests=_RateCfg.LLM_MAX_REQUESTS,
+    window_seconds=_RateCfg.LLM_WINDOW_SECONDS,
+)
 
 
 # ============================================================
@@ -269,6 +278,7 @@ def _get_llm_throttle_stats() -> dict:
         from history_footnote.concurrency import LLM_THROTTLE
         return LLM_THROTTLE.stats()
     except Exception:
+        logger.exception("[v1.7.2] LLM throttle stats 读取失败")
         return {}
 
 

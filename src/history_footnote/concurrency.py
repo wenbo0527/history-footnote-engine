@@ -256,6 +256,7 @@ class AsyncSaveQueue:
             try:
                 fut.result(timeout=timeout)
             except Exception:
+                logger.exception("[v1.7.2] 等待存档 future 失败")
                 pass
 
     def shutdown(self, wait: bool = True) -> None:
@@ -267,7 +268,12 @@ class AsyncSaveQueue:
 # ============================================================
 
 SESSION_POOL = SessionPool(max_sessions=50, session_ttl_seconds=3600)
-LLM_THROTTLE = LLMThrottle(max_concurrent=3, queue_timeout=120.0)
+# 🆕 v1.7.2 并发配置从 config.py 读（环境变量可覆盖）
+from history_footnote.config import Concurrency as _ConcCfg
+LLM_THROTTLE = LLMThrottle(
+    max_concurrent=_ConcCfg.MAX_CONCURRENT,
+    queue_timeout=_ConcCfg.QUEUE_TIMEOUT_SECONDS,
+)
 SAVE_QUEUE = AsyncSaveQueue(max_workers=2)
 
 # 全局 HTTP 线程池（用于 IO 密集操作）

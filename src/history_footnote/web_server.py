@@ -70,6 +70,7 @@ def _render_wiki_summary_safe(wiki) -> str:
         from history_footnote.character_wiki import render_wiki_summary
         return render_wiki_summary(wiki)
     except Exception:
+        logger.exception("[v1.7.2] wiki summary 渲染失败")
         return ""
 def _session_set(sid, game): return SESSION_POOL.add(sid, game)
 def _session_pop(sid): SESSION_POOL.remove(sid)
@@ -120,6 +121,7 @@ def _detect_intent_for_response(player_input: str, dm_response: dict) -> str:
             # 规则判定为 describe/inquire → 比 LLM 更可靠
             return rule_intent
     except Exception:
+        logger.exception("[v1.7.2] intent 类型检测失败")
         pass
     # Fallback: LLM 返回的 intent_type
     return dm_response.get("intent_type", "action")

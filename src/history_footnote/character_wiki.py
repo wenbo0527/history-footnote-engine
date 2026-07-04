@@ -89,12 +89,13 @@ def _extract_npcs_from_narrative(narrative: str) -> list[str]:
 # Character Wiki 数据类
 # ============================================================
 
-# 角色最大数（防存档过大）
-MAX_CHARACTERS = 50
+# 角色最大数（防存档过大）—— 单一权威从 config 读
+from history_footnote.config import WikiLimits as _WikiCfg
+MAX_CHARACTERS = _WikiCfg.MAX_CHARACTERS
 # 事件最大数
-MAX_EVENTS = 200
+MAX_EVENTS = _WikiCfg.MAX_EVENTS
 # 决策最大数
-MAX_DECISIONS = 200
+MAX_DECISIONS = _WikiCfg.MAX_DECISIONS
 
 
 @dataclass

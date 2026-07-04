@@ -96,7 +96,7 @@ def extract_json_from_text(text: str) -> Optional[str]:
     return None
 
 
-def strip_skill_metadata(text: str, min_length: int = 5) -> str:
+def strip_skill_metadata(text: str, min_length: int | None = None) -> str:
     """剥离 LLM 输出中的 SKILL 元数据
 
     这是核心清洗函数。当 LLM 把 system prompt 里的 SKILL 指令
@@ -105,13 +105,18 @@ def strip_skill_metadata(text: str, min_length: int = 5) -> str:
     Args:
         text: 可能是 LLM 输出的整段文本
         min_length: 清洗后少于这个字符数视为"全是元数据"，用 fallback
-                    默认为 5（短叙事如"大缸里有米" 也算有效）
+                    默认为 config.Sanitizer.MIN_LENGTH（5）
 
     Returns:
         清洗后的纯叙事文本
     """
+    # 🆕 v1.7.2 默认值从 config 读（环境变量可覆盖）
+    from history_footnote.config import Sanitizer as _SanCfg
+    if min_length is None:
+        min_length = _SanCfg.MIN_LENGTH
+
     if not text:
-        return "时间流逝。一切如常。"
+        return _SanCfg.FALLBACK_TEXT
 
     cleaned = text
     for pattern in SKILL_METADATA_PATTERNS:
@@ -122,7 +127,7 @@ def strip_skill_metadata(text: str, min_length: int = 5) -> str:
     cleaned = cleaned.strip()
 
     if len(cleaned) < min_length:
-        return "时间流逝。一切如常。"
+        return _SanCfg.FALLBACK_TEXT
 
     return cleaned
 
