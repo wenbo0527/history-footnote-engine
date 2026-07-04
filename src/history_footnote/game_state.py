@@ -69,6 +69,11 @@ class GameState:
     # 新词首次出现时高亮 + tooltip
     seen_terms: list[str] = field(default_factory=list)
 
+    # === 🆕 v1.7.1 Per-Save Character Wiki ===
+    # 人物知识图谱：仅本存档，删除/重置存档时清空
+    # 用于 LLM 上下文 + 侧边栏 UI + 支线一致性
+    character_wiki: dict = field(default_factory=dict)  # CharacterWiki.to_dict()
+
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
     rounds_since_last_insight: int = 0

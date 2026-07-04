@@ -62,6 +62,15 @@ from history_footnote.web_enhancements import (
 # 全局 session 池（v1.6+ 改用 SessionPool）
 # 旧版 _SESSIONS dict 已被 SESSION_POOL 替代
 def _session_get(sid): return SESSION_POOL.get(sid)
+
+
+def _render_wiki_summary_safe(wiki) -> str:
+    """🆕 v1.7.1 安全地渲染 wiki summary（用于 HTTP API）"""
+    try:
+        from history_footnote.character_wiki import render_wiki_summary
+        return render_wiki_summary(wiki)
+    except Exception:
+        return ""
 def _session_set(sid, game): return SESSION_POOL.add(sid, game)
 def _session_pop(sid): SESSION_POOL.remove(sid)
 
@@ -1141,6 +1150,91 @@ INDEX_HTML = """<!DOCTYPE html>
     white-space: pre-wrap;
     color: #2c2416;
   }
+
+  /* ============================================================ */
+  /* 🆕 v1.7.1 Character Wiki 弹层样式                            */
+  /* ============================================================ */
+  .wiki-character {
+    background: rgba(196, 168, 120, 0.08);
+    border-left: 3px solid #8b6f47;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+  }
+  .wiki-char-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .wiki-char-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #5a3e1f;
+  }
+  .wiki-char-rel {
+    font-size: 12px;
+    padding: 2px 8px;
+    background: #8b6f47;
+    color: #f5f0e1;
+    border-radius: 8px;
+  }
+  .wiki-char-count {
+    font-size: 11px;
+    color: #8b6f47;
+    margin-left: auto;
+  }
+  .wiki-char-summary {
+    font-size: 13px;
+    color: #2c2416;
+    margin: 4px 0;
+  }
+  .wiki-char-promises {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+  .promise-player, .promise-npc {
+    padding: 2px 0;
+    color: #5a3e1f;
+  }
+  .promise-npc {
+    color: #2c2416;
+  }
+  .wiki-char-events {
+    margin: 6px 0 0 0;
+    padding-left: 18px;
+    font-size: 12px;
+    color: #5a4a30;
+  }
+  .wiki-char-events li {
+    margin: 2px 0;
+  }
+  .wiki-decision {
+    background: rgba(140, 111, 71, 0.08);
+    border-left: 3px solid #c4a878;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .wiki-dec-round {
+    display: inline-block;
+    background: #5a3e1f;
+    color: #f5f0e1;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    margin-right: 8px;
+  }
+  .wiki-dec-text {
+    color: #2c2416;
+  }
+  .wiki-dec-alt {
+    margin-top: 4px;
+    padding-left: 8px;
+    font-size: 11px;
+    color: #8b6f47;
+    font-style: italic;
+  }
 </style>
 </head>
 <body>
@@ -1149,9 +1243,9 @@ INDEX_HTML = """<!DOCTYPE html>
   <div class="sidebar" id="sidebar"></div>
 </div>
 
-<!-- 🆕 v1.7.0 版本号常驻显示（内测标识） -->
+<!-- 🆕 v1.7.1 版本号常驻显示（内测标识） -->
 <div id="version-badge" class="version-badge" onclick="openFeedback()">
-  <span class="version-text">v1.7.0 - 内测版</span>
+  <span class="version-text">v1.7.1 - 内测版</span>
   <span class="version-hint">🐛 反馈</span>
 </div>
 
@@ -2184,6 +2278,83 @@ function resetInputPlaceholder() {
   }
 }
 
+// 🆕 v1.7.1 Character Wiki 弹层（per-save 人物知识图谱）
+async function openCharacterWiki() {
+  if (!state.session_id) {
+    alert("请先开始游戏");
+    return;
+  }
+  const data = await api("/api/character_wiki", "POST", {
+    session_id: state.session_id,
+  });
+  if (data.error) {
+    alert("Wiki 加载失败：" + data.error);
+    return;
+  }
+  renderCharacterWikiModal(data.wiki);
+}
+
+function renderCharacterWikiModal(wiki) {
+  const existing = document.getElementById("character-wiki-modal");
+  if (existing) existing.remove();
+
+  const stats = wiki.stats || {};
+  const chars = Object.values(wiki.characters || {}).sort(
+    (a, b) => (b.appear_count || 0) - (a.appear_count || 0)
+  );
+
+  const charItems = chars.map(c => {
+    const promises = []
+      .concat((c.promises_player || []).map(p => `<div class="promise-player">我方承诺：${escapeHtml(p)}</div>`))
+      .concat((c.promises_npc || []).map(p => `<div class="promise-npc">对方承诺：${escapeHtml(p)}</div>`))
+      .join("");
+    const events = (c.key_events || []).slice(-5).map(e =>
+      `<li>第 ${e.round} 回合：${escapeHtml(e.summary || "")}</li>`
+    ).join("");
+    return `
+      <div class="wiki-character" data-name="${escapeHtml(c.id)}">
+        <div class="wiki-char-header">
+          <span class="wiki-char-name">${escapeHtml(c.id)}</span>
+          <span class="wiki-char-rel">${escapeHtml(c.relationship)}</span>
+          <span class="wiki-char-count">出现 ${c.appear_count || 0} 次</span>
+        </div>
+        <div class="wiki-char-summary">${escapeHtml(c.first_appear_summary || c.description || "")}</div>
+        ${promises ? `<div class="wiki-char-promises">${promises}</div>` : ""}
+        ${events ? `<ul class="wiki-char-events">${events}</ul>` : ""}
+      </div>
+    `;
+  }).join("") || '<p class="recap-empty">本存档还没有遇到任何人物</p>';
+
+  const decisionItems = (wiki.decisions || []).slice(-10).reverse().map(d => `
+    <div class="wiki-decision">
+      <span class="wiki-dec-round">R${d.round}</span>
+      <span class="wiki-dec-text">${escapeHtml(d.summary)}</span>
+      ${(d.alternatives || []).length > 0 ? `<div class="wiki-dec-alt">其他选项：${d.alternatives.map(escapeHtml).join("、")}</div>` : ""}
+    </div>
+  `).join("") || '<p class="recap-empty">暂无决策记录</p>';
+
+  const modal = document.createElement("div");
+  modal.id = "character-wiki-modal";
+  modal.className = "recap-modal-overlay";
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="recap-modal" onclick="event.stopPropagation()" style="max-width:720px">
+      <div class="recap-header">
+        <h2>🕸️ 人物 Wiki（仅本存档）</h2>
+        <span class="recap-meta">${stats.character_count || 0} 人物 · ${stats.event_count || 0} 事件 · ${stats.decision_count || 0} 决策</span>
+        <button class="recap-close" onclick="document.getElementById('character-wiki-modal').remove()">×</button>
+      </div>
+      <div class="recap-body-content">
+        <h3 style="margin-top:0;color:#5a3e1f">👥 人物</h3>
+        ${charItems}
+        <h3 style="color:#5a3e1f">🎯 关键决策（最近 10）</h3>
+        ${decisionItems}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
 function appendVoiceOptions(voiceOptions) {
   // 🆕 v1.6+ Tab 式 UX：先显示 2-4 个选项 + 「其他」按钮
   // 点「其他」后才展开自由输入框，避免玩家直接打字跳过选项
@@ -2420,6 +2591,9 @@ function renderSidebar(data) {
       </button>
       <button class="sidebar-action-btn" onclick="openGlossary()" title="查看明朝名词解释">
         📚 名词表
+      </button>
+      <button class="sidebar-action-btn" onclick="openCharacterWiki()" title="查看本存档出现的人物 + 支线一致性">
+        🕸️ 人物关系
       </button>
     </div>
   `;
@@ -2922,6 +3096,63 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.exception(f"[render_narrative] failed: {e}")
                     self._json(500, {"error": "render failed"})
+                return
+
+            if path == "/api/character_wiki":
+                # 🆕 v1.7.1 Per-Save Character Wiki 查询
+                sid = data.get("session_id")
+                if not sid:
+                    self._json(400, {"error": "missing session_id"})
+                    return
+                entry = _session_get(sid)
+                if entry is None:
+                    self._json(404, {"error": "session not found"})
+                    return
+                game = entry[0]
+                try:
+                    from history_footnote.character_wiki import CharacterWiki
+                    wiki = CharacterWiki.from_dict(game.state.character_wiki or {})
+                    self._json(200, {
+                        "wiki": wiki.to_dict(),
+                        "summary": _render_wiki_summary_safe(wiki),
+                    })
+                except Exception as e:
+                    logger.exception(f"[character_wiki] failed: {e}")
+                    self._json(500, {"error": "wiki query failed"})
+                return
+
+            if path == "/api/character_wiki_update":
+                # 🆕 v1.7.1 玩家/LLM 主动更新 wiki（如发现错误）
+                sid = data.get("session_id")
+                char_data = data.get("character", {})
+                if not sid:
+                    self._json(400, {"error": "missing session_id"})
+                    return
+                entry = _session_get(sid)
+                if entry is None:
+                    self._json(404, {"error": "session not found"})
+                    return
+                game = entry[0]
+                try:
+                    from history_footnote.character_wiki import CharacterWiki
+                    wiki = CharacterWiki.from_dict(game.state.character_wiki or {})
+                    name = char_data.get("id", "")
+                    if not name:
+                        self._json(400, {"error": "missing character id"})
+                        return
+                    char = wiki.add_or_update_character(
+                        name=name,
+                        round=char_data.get("round", game.state.round_number),
+                        summary=char_data.get("summary", ""),
+                        relationship=char_data.get("relationship"),
+                        traits=char_data.get("traits"),
+                        description=char_data.get("description"),
+                    )
+                    game.state.character_wiki = wiki.to_dict()
+                    self._json(200, {"updated": char.to_dict()})
+                except Exception as e:
+                    logger.exception(f"[character_wiki_update] failed: {e}")
+                    self._json(500, {"error": "update failed"})
                 return
 
             if path == "/api/input":
