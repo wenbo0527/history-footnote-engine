@@ -903,7 +903,14 @@ class DMAgent:
             return persona_md
 
         # 否则用模板生成
+        # 🆕 v1.6.4 P0 Bug 修复：注入最近叙事上下文（避免 NPC 混淆）
+        # 之前：recent_scenes 只有场景标签，LLM 不知上回合完整对话
+        # 现在：注入最近 N 回合的"摘要 + 角色 + 关键对话" 防止上下文断裂
+        recent_context = self._build_recent_context_for_prompt()
+
         return f"""你是{self.era_config.get('era_name', '万历十五年')}的历史DM。
+
+{recent_context}
 
 ## 时代背景
 {timeline.get('description', '')}
@@ -1016,6 +1023,70 @@ class DMAgent:
             return persona_path.read_text(encoding="utf-8")
         return None
 
+    def _build_recent_context_for_prompt(self) -> str:
+        """🆕 v1.6.4 P0 Bug 修复：构建最近叙事上下文
+
+        问题：之前 system prompt 只有 recent_scenes（场景标签如"织机前/茶馆"），
+        导致 LLM 不知道上回合完整对话内容（如谁在对话、玩家承诺了什么、状态如何变化），
+        从而出现 NPC 混淆（张寡妇 → 陈三）、上下文断裂等问题。
+
+        修复：把最近 N 回合的【摘要 + 玩家输入 + 关键状态】注入到 system prompt。
+
+        Args:
+            无（从 self.state.narrative_recent 读）
+
+        Returns:
+            Markdown 格式的"最近剧情上下文"段（如果无历史返回空串）
+        """
+        recent = getattr(self.state, "narrative_recent", [])
+        if not recent:
+            return ""
+
+        # 取最近 3 回合（约 1500 字，平衡上下文 vs token）
+        tail = recent[-3:]
+        lines = [
+            "## 📜 最近剧情上下文（v1.6.4+ 关键修复：保持叙事连贯性）",
+            "",
+            "**重要提示**：以下是你最近 3 回合已经发生的剧情。你的下一回合叙事**必须**承接上文，",
+            "**不可**突然切换场景/NPC/对话对象。如玩家没说离开某地，就继续在该地叙事。",
+            "",
+        ]
+
+        for i, n in enumerate(tail, 1):
+            round_num = n.get("round", "?")
+            summary = n.get("summary", "") or ""
+            narrative = n.get("narrative", "") or ""
+            player_input = ""
+
+            # 从 event_log 找对应的 player_action
+            for ev in (self.state.event_log or []):
+                if ev.get("round") == round_num and ev.get("player_action"):
+                    player_input = ev["player_action"]
+                    break
+
+            lines.append(f"### 第 {round_num} 回合")
+            if player_input:
+                lines.append(f"**玩家行动**：{player_input}")
+            if summary:
+                lines.append(f"**上回合摘要**：{summary}")
+            # 截取叙事前 400 字作为上下文锚点
+            snippet = narrative[:400] + ("…" if len(narrative) > 400 else "")
+            lines.append(f"**叙事片段**：{snippet}")
+            lines.append("")
+
+        # 附加变量变化（如果 round ≥ 2）
+        if len(tail) >= 1:
+            vars_recent = getattr(self.state, "variables", {}) or {}
+            if vars_recent:
+                # 只显示非零值
+                non_zero = {k: v for k, v in vars_recent.items() if v not in (0, 0.0, "")}
+                if non_zero:
+                    lines.append("**当前关键变量**：")
+                    for k, v in list(non_zero.items())[:5]:
+                        lines.append(f"  - {k}: {v}")
+
+        return "\n".join(lines) + "\n"
+
     def run(self, player_input: str) -> dict:
         """运行一回合DM Agent
 
@@ -1047,6 +1118,16 @@ class DMAgent:
             "triggered_events": sorted(self.state.triggered_events),
             "recent_scenes": list(self.state.recent_scenes),
             "recent_inputs": list(self.state.recent_inputs),
+            # 🆕 v1.6.4 P0 Bug 修复：注入最近叙事（让 Mock LLM 也能保持上下文）
+            # 之前只传场景标签，导致 NPC/场景混淆（张寡妇 → 陈三）
+            "recent_narratives": [
+                {
+                    "round": n.get("round"),
+                    "summary": n.get("summary", ""),
+                    "narrative": (n.get("narrative", "") or "")[:400],  # 截前 400 字
+                }
+                for n in getattr(self.state, "narrative_recent", [])[-3:]
+            ],
             "route_tendency": self.state.route_tendency,
             "failure_type": self.state.failure_type,
             "idle_rounds": self.state.player_idle_rounds,
@@ -1195,6 +1276,15 @@ class DMAgent:
             "triggered_events": sorted(self.state.triggered_events),
             "recent_scenes": list(self.state.recent_scenes),
             "recent_inputs": list(self.state.recent_inputs),
+            # 🆕 v1.6.4 P0 Bug 修复：regenerate 也注入最近叙事
+            "recent_narratives": [
+                {
+                    "round": n.get("round"),
+                    "summary": n.get("summary", ""),
+                    "narrative": (n.get("narrative", "") or "")[:400],
+                }
+                for n in getattr(self.state, "narrative_recent", [])[-3:]
+            ],
             "route_tendency": self.state.route_tendency,
             "failure_type": self.state.failure_type,
             "idle_rounds": self.state.player_idle_rounds,
