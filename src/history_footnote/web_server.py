@@ -1098,9 +1098,9 @@ INDEX_HTML = """<!DOCTYPE html>
   <div class="sidebar" id="sidebar"></div>
 </div>
 
-<!-- 🆕 v1.6.8 版本号常驻显示（内测标识） -->
+<!-- 🆕 v1.6.9 版本号常驻显示（内测标识） -->
 <div id="version-badge" class="version-badge" onclick="openFeedback()">
-  <span class="version-text">v1.6.8 - 内测版</span>
+  <span class="version-text">v1.6.9 - 内测版</span>
   <span class="version-hint">🐛 反馈</span>
 </div>
 
@@ -2105,6 +2105,15 @@ function appendInputArea() {
   });
 }
 
+// 🆕 v1.6.9 重置输入框 placeholder 为默认
+function resetInputPlaceholder() {
+  const $ta = document.getElementById("player_input");
+  if ($ta) {
+    $ta.placeholder = "或自由输入（你想做什么/想描述什么都可以）";
+    $ta.value = "";
+  }
+}
+
 function appendVoiceOptions(voiceOptions) {
   // 🆕 v1.6+ Tab 式 UX：先显示 2-4 个选项 + 「其他」按钮
   // 点「其他」后才展开自由输入框，避免玩家直接打字跳过选项
@@ -2231,11 +2240,19 @@ async function submitInputWithText(inputText) {
   if (data.last_voice_options && data.last_voice_options.length > 0) {
     appendVoiceOptions(data.last_voice_options);
   } else {
-    // 没有新选项 → 重置输入框 placeholder 为默认
-    const $ta = document.getElementById("player_input");
-    if ($ta) {
-      $ta.placeholder = "或自由输入（你想做什么/想描述什么都可以）";
-      $ta.value = "";
+    // 🆕 v1.6.9：voice_options 为空时，async 调服务端从 narrative 提取
+    // 双保险：后端 game_loop 已处理一次，这里前端再兜底一次
+    if (data.last_narrative) {
+      extractInlineOptionsFromText(data.last_narrative).then(opts => {
+        if (opts && opts.length > 0) {
+          appendVoiceOptions(opts);
+          return;
+        }
+        // 真没找到 → 重置输入框
+        resetInputPlaceholder();
+      });
+    } else {
+      resetInputPlaceholder();
     }
   }
   $main.scrollTop = $main.scrollHeight;
@@ -2346,6 +2363,20 @@ function escapeHtml(s) {
 // 🆕 v1.6.7 架构重构：删除 JS 端 stripSkillMetadata（重复实现）
 // 改用 /api/sanitize 端点调用服务端 narrative_sanitizer.py
 // 服务端是单一权威实现，避免前后端正则漂移
+
+// 🆕 v1.6.9 前端兜底：调用服务端 merge_voice_options（避免 JS 重复实现）
+async function extractInlineOptionsFromText(text) {
+  if (!text) return [];
+  try {
+    const data = await api("/api/merge_voice_options", "POST", {
+      structured_options: [],
+      narrative_text: text,
+    });
+    return data.options || [];
+  } catch (e) {
+    return [];
+  }
+}
 
 renderStart();
 </script>
@@ -2784,6 +2815,22 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.exception(f"[feedback_categories] failed: {e}")
                     self._json(500, {"error": "fetch failed"})
+                return
+
+            if path == "/api/merge_voice_options":
+                # 🆕 v1.6.9 合并 voice_options（结构化优先，缺失时回填 narrative 内嵌选项）
+                try:
+                    from history_footnote.narrative_sanitizer import merge_voice_options
+                    structured = data.get("structured_options", [])
+                    narrative = data.get("narrative_text", "")
+                    merged = merge_voice_options(structured, narrative)
+                    self._json(200, {
+                        "options": merged,
+                        "source": "structured" if structured else ("inline" if merged else "none"),
+                    })
+                except Exception as e:
+                    logger.exception(f"[merge_voice_options] failed: {e}")
+                    self._json(500, {"error": "merge failed"})
                 return
 
             if path == "/api/input":

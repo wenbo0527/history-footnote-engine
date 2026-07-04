@@ -366,7 +366,17 @@ class GameLoop:
         )
 
         # 🐛 v1.5.1 P1 Issue 5 修复：持久化 voice_options（供存档/前端复用）
-        self.state.last_voice_options = dm_response.get("voice_options", [])
+        # 🆕 v1.6.9 P0 修复：当 LLM 把选项写进 narrative 而未通过 voice_options 返回时，
+        # 自动从 narrative 文本提取"一、二、三"等内嵌选项
+        structured_voice_options = dm_response.get("voice_options", [])
+        if not structured_voice_options and narrative:
+            from history_footnote.narrative_sanitizer import merge_voice_options
+            structured_voice_options = merge_voice_options(None, narrative)
+            if structured_voice_options:
+                logger.info(
+                    f"[v1.6.9] inline options extracted: {len(structured_voice_options)} 个"
+                )
+        self.state.last_voice_options = structured_voice_options
 
         # === 步骤9：呈现给玩家 ===
         # 先回显玩家输入（明确告知"这是你做的事"）

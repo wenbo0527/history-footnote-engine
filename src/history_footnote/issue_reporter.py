@@ -21,10 +21,10 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-# 🆕 v1.6.8 版本信息
+# 🆕 v1.6.9 版本信息
 # 单一权威：所有版本号都从这里读
-VERSION = "1.6.8"
-VERSION_NAME = "v1.6.8 - 内测版"  # 显示给用户
+VERSION = "1.6.9"
+VERSION_NAME = "v1.6.9 - 内测版"  # 显示给用户
 BUILD_DATE = "2026-07-04"
 IS_BETA = True  # 内测标识
 

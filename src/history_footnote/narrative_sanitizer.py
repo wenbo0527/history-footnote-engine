@@ -127,6 +127,95 @@ def strip_skill_metadata(text: str, min_length: int = 5) -> str:
     return cleaned
 
 
+# ============================================================
+# 🆕 v1.6.9 叙事中的选项提取（LLM 写 narrative 时的"中文数字选项"）
+# ============================================================
+
+# 匹配中文章节编号 + 标题
+# 例："一、**答应周老板**：..."  "二、全卖给张顺：..."  "3. 选项..."
+# 关键：捕捉 [编号+顿号/点] 开头的行
+OPTION_LINE_PATTERN = re.compile(
+    r"^\s*([一二三四五六七八九十]+|\d{1,2})\s*[\.、:：]\s*\**\s*(.+?)(?=\n|$)",
+    re.MULTILINE,
+)
+
+
+def extract_inline_options(text: str, max_options: int = 6) -> list[dict]:
+    """🆕 v1.6.9 从 narrative 文本中提取"中文章节选项"
+
+    适用场景：LLM 把选项写进 narrative 文本（"一、**答应周老板**..."），
+    而没有通过 voice_options 字段返回。
+
+    Args:
+        text: narrative 文本
+        max_options: 最多提取多少个选项（默认 6）
+
+    Returns:
+        [{"index": "一", "label": "答应周老板", "full_text": "一、答应周老板：..."}, ...]
+        如果没有找到，返回空列表
+    """
+    if not text:
+        return []
+    options = []
+    matches = list(OPTION_LINE_PATTERN.finditer(text))
+
+    # 🆕 启发式过滤：只保留"看起来像选项"的行
+    # 要求：标签 ≥ 2 字符（避免"一、" 这种孤立行）
+    for m in matches:
+        index = m.group(1).strip()
+        label = m.group(2).strip()
+        # 清理：** 加粗、尾部标点
+        label = re.sub(r"\*+", "", label).strip()
+        # 取标签的前 20 字符（按钮显示用）
+        display_label = label.split("：")[0].split(":")[0].strip()
+        # 去掉 "：..." 之类后缀
+        if len(display_label) < 2:
+            continue
+        if len(display_label) > 30:
+            display_label = display_label[:30] + "..."
+        options.append({
+            "index": index,
+            "label": display_label,
+            "full_text": m.group(0).strip(),
+        })
+        if len(options) >= max_options:
+            break
+
+    return options
+
+
+def merge_voice_options(
+    structured_options: list[dict] | None,
+    narrative_text: str,
+) -> list[dict]:
+    """🆕 v1.6.9 合并 voice_options：优先用结构化选项，缺失时回填内嵌选项
+
+    Args:
+        structured_options: LLM 通过 voice_options 字段返回的选项
+        narrative_text: narrative 文本（fallback 解析来源）
+
+    Returns:
+        最终选项列表
+    """
+    if structured_options and len(structured_options) > 0:
+        return structured_options
+
+    # fallback：从 narrative 提取
+    inline = extract_inline_options(narrative_text)
+    if not inline:
+        return []
+
+    # 把内嵌选项转成 voice_options 格式
+    converted = []
+    for opt in inline:
+        converted.append({
+            "voice_name": opt["index"],
+            "intent_text": opt["label"],
+            "source": "inline_extracted",  # 标记：是从 narrative 提取的
+        })
+    return converted
+
+
 def sanitize(text: str) -> str:
     """一站式清洗：先提 JSON，再清 SKILL，最后 fallback
 
