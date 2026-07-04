@@ -163,7 +163,8 @@ class LLMThrottle:
     - 队列等待 → 自动调度
     """
 
-    def __init__(self, max_concurrent: int = 4, queue_timeout: float = 30.0):
+    def __init__(self, max_concurrent: int = 3, queue_timeout: float = 60.0):
+        # 🆕 v1.6.2 默认值：max=3（与全局一致）, queue_timeout=60s（兼容长 LLM 调用）
         self._semaphore = threading.Semaphore(max_concurrent)
         self.max_concurrent = max_concurrent
         self.queue_timeout = queue_timeout

@@ -10,12 +10,15 @@ authors = [
 ]
 keywords = ["ai", "gaming", "narrative", "agent", "langgraph", "history"]
 
-# 核心依赖（Phase 1）
+# 核心依赖（v1.6.2 已用）
 dependencies = [
     "langgraph>=0.2.0",
     "langchain-core>=0.3.0",
     "langchain-openai>=0.2.0",
+    "langchain-anthropic>=0.2.0",  # 🆕 v1.6.2：用于 Minimax M3 (Anthropic 兼容)
     "pydantic>=2.0",
+    "python-dotenv>=1.0",  # 🆕 v1.6.2：加载 .env
+    "requests>=2.31",  # 🆕 v1.6.2：测试脚本用
 ]
 
 [project.optional-dependencies]
@@ -26,6 +29,7 @@ dev = [
 ]
 minimax = [
     "openai>=1.50",  # Minimax兼容OpenAI协议
+    "langchain-anthropic>=0.2.0",  # Minimax 兼容 Anthropic 协议
 ]
 
 [project.scripts]

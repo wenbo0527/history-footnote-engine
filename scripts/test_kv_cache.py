@@ -70,9 +70,10 @@ def test_real_scenario_50_rounds():
 
 
 def test_get_cache_control_returns_ephemeral():
-    """cache_control 配置"""
+    """cache_control 配置（v1.6.2 默认 1h TTL）"""
     cc = get_cache_control_for_system()
-    assert cc == {"type": "ephemeral"}
+    # 🆕 v1.6.2：默认 TTL 改为 1h（更适合长会话）
+    assert cc == {"type": "1h"}, f"期望 1h，实际 {cc}"
     print(f"✅ test_get_cache_control_returns_ephemeral: {cc}")
 
 

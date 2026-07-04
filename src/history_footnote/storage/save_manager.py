@@ -114,7 +114,13 @@ class SaveManager:
         return session
 
     def find_session(self, session_id: str) -> SaveSession | None:
-        """根据session_id查找会话"""
+        """根据session_id查找会话
+
+        🆕 v1.6.2 安全加固：先用 SESSION_ID_PATTERN 校验格式
+        防止 path traversal（如 session_id='../../etc'）
+        """
+        if not session_id or not SESSION_ID_PATTERN.match(session_id):
+            return None
         dir_path = self.save_root / session_id
         if not dir_path.is_dir():
             return None

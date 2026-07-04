@@ -12,11 +12,11 @@
 from __future__ import annotations
 
 import json
-import os
+import logging
 import time  # 🆕 v1.6.2 P1 C2：SSE streaming
 import sys
 import threading
-import uuid
+import uuid  # 🆕 v1.6.2 安全：错误响应 ID
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -1291,6 +1291,14 @@ renderStart();
 </html>
 """
 
+# 🆕 v1.6.2 安全：统一 logger（错误响应落日志，不返回 traceback 给前端）
+logger = logging.getLogger("history_footnote.web_server")
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
@@ -1359,7 +1367,8 @@ class Handler(BaseHTTPRequestHandler):
                     if era_dir.is_dir() and not era_dir.name.startswith(("_", ".")):
                         era_json = era_dir / "era.json"
                         if era_json.exists():
-                            config = json.loads(era_json.read_text(encoding="utf-8"))
+                            # 🆕 v1.6.2 P0 A1：用全局缓存替代 json.loads
+                            config = load_era_config(era_dir.name)
                             timeline = config.get("world", {}).get("timeline", {})
                             out.append({
                                 "id": config.get("era_id", era_dir.name),
@@ -1444,8 +1453,10 @@ class Handler(BaseHTTPRequestHandler):
                     parsed = parse_character_response(resp.content)
                     self._json(200, {"character": parsed, "raw": resp.content})
                 except Exception as e:
-                    import traceback
-                    self._json(500, {"error": str(e), "trace": traceback.format_exc()})
+                    # 🆕 v1.6.2 安全：返回通用错误 + error_id
+                    error_id = str(uuid.uuid4())[:8]
+                    logger.exception(f"[error_id={error_id}] generate_character failed: {e}")
+                    self._json(500, {"error": "character generation failed", "error_id": error_id})
                 return
 
             if path == "/api/generate_world_dwell":
@@ -1464,8 +1475,10 @@ class Handler(BaseHTTPRequestHandler):
                     parsed = parse_world_dwell(resp.content)
                     self._json(200, {"world_dwell": parsed, "raw": resp.content})
                 except Exception as e:
-                    import traceback
-                    self._json(500, {"error": str(e), "trace": traceback.format_exc()})
+                    # 🆕 v1.6.2 安全：返回通用错误 + error_id
+                    error_id = str(uuid.uuid4())[:8]
+                    logger.exception(f"[error_id={error_id}] world_dwell failed: {e}")
+                    self._json(500, {"error": "world dwell generation failed", "error_id": error_id})
                 return
 
             if path == "/api/lore":
@@ -1699,8 +1712,11 @@ class Handler(BaseHTTPRequestHandler):
         except SystemExit:
             self._json(200, {"session_id": data.get("session_id"), "quit": True})
         except Exception as e:
-            import traceback
-            self._json(500, {"error": str(e), "trace": traceback.format_exc()})
+            # 🆕 v1.6.2 安全修复：不返回 traceback 给前端（泄露文件路径）
+            # 落服务端日志 + 返回错误 ID 用于排查
+            error_id = str(uuid.uuid4())[:8]
+            logger.exception(f"[error_id={error_id}] Unhandled exception in {self.path}: {e}")
+            self._json(500, {"error": "internal server error", "error_id": error_id})
 
 
 def run(host: str = "0.0.0.0", port: int = 8765):
