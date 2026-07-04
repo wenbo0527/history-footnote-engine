@@ -64,6 +64,11 @@ class GameState:
     narrative_recent: list[dict] = field(default_factory=list)
     narrative_archive: list[dict] = field(default_factory=list)
 
+    # === 🆕 v1.6.6 明朝名词首次出现跟踪（用于 tooltip 高亮未读词） ===
+    # seen_terms: 玩家已经见过并解释过的名词（已读）
+    # 新词首次出现时高亮 + tooltip
+    seen_terms: list[str] = field(default_factory=list)
+
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
     rounds_since_last_insight: int = 0

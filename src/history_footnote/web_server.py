@@ -819,6 +819,150 @@ INDEX_HTML = """<!DOCTYPE html>
       font-size: 13px;
     }
   }
+
+  /* ============================================================ */
+  /* 🆕 v1.6.6 侧边栏动作按钮 + 名词表 + tooltip 高亮              */
+  /* ============================================================ */
+  .sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #5a4a30;
+  }
+  .sidebar-action-btn {
+    background: rgba(196, 168, 120, 0.2);
+    color: #f0d8a0;
+    border: 1px solid #8b6f47;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sidebar-action-btn:hover {
+    background: rgba(196, 168, 120, 0.4);
+    border-color: #c4a878;
+  }
+
+  /* 名词高亮（首次出现） */
+  .term-new {
+    color: #a08858;
+    border-bottom: 1.5px dashed #c4a878;
+    cursor: help;
+    position: relative;
+    padding: 1px 2px;
+    border-radius: 2px;
+    transition: background 0.2s;
+  }
+  .term-new:hover {
+    background: rgba(196, 168, 120, 0.25);
+  }
+  .term-new::after {
+    content: " ?";
+    font-size: 10px;
+    color: #c4a878;
+    font-weight: bold;
+    vertical-align: super;
+  }
+
+  /* Tooltip 弹层 */
+  .term-tooltip {
+    position: absolute;
+    background: #2c2416;
+    color: #f0d8a0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #8b6f47;
+    max-width: 280px;
+    font-size: 12px;
+    line-height: 1.5;
+    z-index: 200;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    pointer-events: none;
+  }
+  .term-tooltip .term-name {
+    color: #f0d8a0;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .term-tooltip .term-cat {
+    color: #c4a878;
+    font-size: 11px;
+    font-weight: normal;
+    margin-left: 6px;
+  }
+  .term-tooltip .term-def {
+    color: #d8c89c;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .term-tooltip .term-example {
+    color: #a08858;
+    font-style: italic;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .term-tooltip .term-related {
+    color: #c4a878;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  /* 名词表弹层（复用 recap-modal 样式） */
+  .glossary-search {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #8b6f47;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #fff;
+    margin-bottom: 12px;
+  }
+  .glossary-search:focus {
+    outline: none;
+    border-color: #5a3e1f;
+  }
+  .glossary-list {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 600px) {
+    .glossary-list {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .glossary-item {
+    padding: 10px;
+    background: rgba(255, 250, 235, 0.7);
+    border-left: 3px solid #8b6f47;
+    border-radius: 3px;
+  }
+  .glossary-item .term-name {
+    color: #5a3e1f;
+    font-weight: bold;
+    margin-right: 6px;
+  }
+  .glossary-item .term-cat {
+    color: #a08858;
+    font-size: 11px;
+  }
+  .glossary-item .term-def {
+    color: #2c2416;
+    font-size: 13px;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .glossary-read {
+    border-left-color: #c4a878;
+    opacity: 0.7;
+  }
 </style>
 </head>
 <body>
@@ -1309,17 +1453,7 @@ function renderGame(data) {
   } else {
     appendOpeningVoiceOptions(data);
   }
-  // 🆕 v1.6.3 剧情回顾按钮
-  appendRecapButton();
-}
-
-// 🆕 v1.6.3 剧情回顾：按钮 + 弹层（不打断游戏流程）
-function appendRecapButton() {
-  const btn = document.createElement("button");
-  btn.className = "recap-btn";
-  btn.innerHTML = "📖 剧情回顾";
-  btn.onclick = openRecap;
-  document.body.appendChild(btn);
+  // 🆕 v1.6.6 侧边栏内已集成剧情回顾按钮（不再用浮动按钮）
 }
 
 async function openRecap() {
@@ -1388,6 +1522,175 @@ function closeRecap() {
   if (existing) existing.remove();
 }
 
+// ============================================================
+// 🆕 v1.6.6 明朝名词表（侧边栏入口 + 全局 tooltip）
+// ============================================================
+
+async function openGlossary() {
+  // 打开名词表弹层（默认列出全部）
+  const data = await api("/api/glossary", "POST", {query: ""});
+  if (data.error) {
+    alert("名词表加载失败：" + data.error);
+    return;
+  }
+  renderGlossaryModal(data);
+}
+
+function renderGlossaryModal(data) {
+  const existing = document.getElementById("glossary-modal");
+  if (existing) existing.remove();
+
+  const items = (data.terms || []).map(t => `
+    <div class="glossary-item" data-term="${escapeHtml(t.key)}" onclick="showTermDetail('${escapeHtml(t.key)}')">
+      <span class="term-name">${escapeHtml(t.key)}</span>
+      <span class="term-cat">[${escapeHtml(t.category)}]</span>
+      <div class="term-def">${escapeHtml(t.definition)}</div>
+    </div>
+  `).join("");
+
+  const modal = document.createElement("div");
+  modal.id = "glossary-modal";
+  modal.className = "recap-modal-overlay";
+  modal.onclick = (e) => { if (e.target === modal) closeGlossary(); };
+  modal.innerHTML = `
+    <div class="recap-modal" onclick="event.stopPropagation()">
+      <div class="recap-header">
+        <h2>📚 明朝名词表</h2>
+        <span class="recap-meta">共 ${data.total_in_dict} 个名词 · 显示 ${data.count} 个</span>
+        <button class="recap-close" onclick="closeGlossary()">×</button>
+      </div>
+      <div class="recap-body-content">
+        <input type="text" class="glossary-search" id="glossary-search-input"
+          placeholder="🔍 搜索名词（如：牙行、湖丝、科举...）" oninput="filterGlossary(this.value)" />
+        <div class="glossary-list" id="glossary-list">${items || '<p class="recap-empty">未找到匹配名词</p>'}</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  // 自动 focus 搜索框
+  setTimeout(() => {
+    const inp = document.getElementById("glossary-search-input");
+    if (inp) inp.focus();
+  }, 100);
+}
+
+function closeGlossary() {
+  const existing = document.getElementById("glossary-modal");
+  if (existing) existing.remove();
+}
+
+async function filterGlossary(query) {
+  // 客户端过滤：避免每次都打 API
+  const data = await api("/api/glossary", "POST", {query: query});
+  const list = document.getElementById("glossary-list");
+  if (!list) return;
+  if (data.error || !data.terms) {
+    list.innerHTML = '<p class="recap-empty">加载失败</p>';
+    return;
+  }
+  list.innerHTML = data.terms.map(t => `
+    <div class="glossary-item" data-term="${escapeHtml(t.key)}" onclick="showTermDetail('${escapeHtml(t.key)}')">
+      <span class="term-name">${escapeHtml(t.key)}</span>
+      <span class="term-cat">[${escapeHtml(t.category)}]</span>
+      <div class="term-def">${escapeHtml(t.definition)}</div>
+    </div>
+  `).join("") || '<p class="recap-empty">未找到匹配名词</p>';
+}
+
+async function showTermDetail(key) {
+  const data = await api("/api/glossary", "POST", {term: key});
+  if (data.error) {
+    alert("未找到：" + key);
+    return;
+  }
+  // 标记已读
+  if (state.session_id) {
+    api("/api/mark_term_seen", "POST", {
+      session_id: state.session_id,
+      term: key,
+    }).catch(() => {});
+  }
+  // 显示弹层
+  showTermTooltipInline(data);
+}
+
+function showTermTooltipInline(termData) {
+  const existing = document.getElementById("term-detail-modal");
+  if (existing) existing.remove();
+
+  const example = termData.example ? `<div class="term-example">例：${escapeHtml(termData.example)}</div>` : "";
+  const related = (termData.related && termData.related.length)
+    ? `<div class="term-related">相关：${termData.related.map(r => `<span class="term-name" style="font-size:12px">${escapeHtml(r)}</span>`).join("、")}</div>`
+    : "";
+
+  const modal = document.createElement("div");
+  modal.id = "term-detail-modal";
+  modal.className = "recap-modal-overlay";
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="recap-modal" onclick="event.stopPropagation()" style="max-width:480px">
+      <div class="recap-header">
+        <h2><span class="term-name">${escapeHtml(termData.key)}</span> <span class="term-cat">[${escapeHtml(termData.category)}]</span></h2>
+        <button class="recap-close" onclick="document.getElementById('term-detail-modal').remove()">×</button>
+      </div>
+      <div class="recap-body-content">
+        <div class="term-def" style="font-size:14px;line-height:1.7;color:#2c2416">${escapeHtml(termData.definition)}</div>
+        ${example}
+        ${related}
+        <div style="margin-top:16px;text-align:right">
+          <button class="sidebar-action-btn" style="background:rgba(139,111,71,0.15);color:#5a3e1f;display:inline-block;width:auto"
+            onclick="document.getElementById('term-detail-modal').remove()">知道了</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+// 给叙事中所有 .term-new 元素绑定 tooltip 事件
+function attachTermTooltips() {
+  document.querySelectorAll(".term-new").forEach(el => {
+    if (el.dataset.tooltipBound) return;
+    el.dataset.tooltipBound = "1";
+    el.addEventListener("mouseenter", async (e) => {
+      const term = el.dataset.term;
+      if (!term) return;
+      const data = await api("/api/glossary", "POST", {term: term});
+      if (data.error) return;
+      // 标记已读
+      if (state.session_id) {
+        api("/api/mark_term_seen", "POST", {
+          session_id: state.session_id,
+          term: term,
+        }).catch(() => {});
+      }
+      // 显示 tooltip
+      let tooltip = document.getElementById("term-tooltip");
+      if (!tooltip) {
+        tooltip = document.createElement("div");
+        tooltip.id = "term-tooltip";
+        tooltip.className = "term-tooltip";
+        document.body.appendChild(tooltip);
+      }
+      const example = data.example ? `<div class="term-example">例：${escapeHtml(data.example)}</div>` : "";
+      tooltip.innerHTML = `
+        <div class="term-name">${escapeHtml(data.key)} <span class="term-cat">[${escapeHtml(data.category)}]</span></div>
+        <div class="term-def">${escapeHtml(data.definition)}</div>
+        ${example}
+      `;
+      // 定位
+      const rect = el.getBoundingClientRect();
+      tooltip.style.left = (rect.left + window.scrollX) + "px";
+      tooltip.style.top = (rect.bottom + window.scrollY + 6) + "px";
+      tooltip.style.display = "block";
+    });
+    el.addEventListener("mouseleave", () => {
+      const tooltip = document.getElementById("term-tooltip");
+      if (tooltip) tooltip.style.display = "none";
+    });
+  });
+}
+
 function appendOpeningVoiceOptions(data) {
   // 🐛 v1.5.1 P0 Bug #2 修复：开局的 DE 风格选项（基于开局处境）
   // 这些是"你脑海中的声音"——基于玩家人设给 2-3 个开局方向
@@ -1439,8 +1742,24 @@ function appendNarrative(n, lastMeta) {
   if (lastMeta && lastMeta.month_advanced) {
     tag = `<div class="month-marker">━━━ 行动点耗尽，进入 ${lastMeta.new_date} ━━━</div>` + tag;
   }
-  div.innerHTML = tag + `<div>${escapeHtml(n.narrative)}</div>`;
+  // 🆕 v1.6.6：异步提取明朝名词 + 高亮未读词
+  const narrativeText = escapeHtml(n.narrative);
+  div.innerHTML = tag + `<div class="narrative-body" data-round="${n.round}">${narrativeText}</div>`;
   $main.insertBefore(div, $main.lastElementChild);
+  // 异步请求后端提取名词（标记未读词）
+  if (state.session_id) {
+    api("/api/extract_terms", "POST", {
+      session_id: state.session_id,
+      text: n.narrative,
+    }).then(data => {
+      if (data.error || !data.new_terms || data.new_terms.length === 0) return;
+      const $body = div.querySelector(".narrative-body");
+      if ($body) {
+        $body.innerHTML = data.marked_text;
+        attachTermTooltips();
+      }
+    }).catch(() => {});
+  }
 }
 
 function appendInputArea() {
@@ -1694,6 +2013,16 @@ function renderSidebar(data) {
       ${Object.entries(v).map(([k, val]) =>
         `<div class="stat-line"><span class="label">${k}</span><span class="val">${val}</span></div>`
       ).join("")}
+    </div>
+
+    <!-- 🆕 v1.6.6 侧边栏底部快捷按钮（剧情回顾 + 名词表） -->
+    <div class="sidebar-actions">
+      <button class="sidebar-action-btn" onclick="openRecap()" title="查看最近剧情回顾">
+        📖 剧情回顾
+      </button>
+      <button class="sidebar-action-btn" onclick="openGlossary()" title="查看明朝名词解释">
+        📚 名词表
+      </button>
     </div>
   `;
 }
@@ -1966,6 +2295,100 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.exception(f"[recap] failed: {e}")
                     self._json(500, {"error": "recap failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/glossary":
+                # 🆕 v1.6.6 明朝名词字典查询
+                query = data.get("query", "")
+                term_key = data.get("term", "")
+                try:
+                    if term_key:
+                        # 单个名词查询
+                        from history_footnote.term_glossary import get_term, get_term_html
+                        term = get_term(term_key)
+                        if not term:
+                            self._json(404, {"error": "term not found"})
+                            return
+                        self._json(200, {
+                            "key": term_key,
+                            "category": term["category"],
+                            "definition": term["definition"],
+                            "example": term.get("example", ""),
+                            "related": term.get("related", []),
+                            "html": get_term_html(term_key),
+                        })
+                    else:
+                        # 搜索/列表
+                        from history_footnote.term_glossary import search_terms, TERM_GLOSSARY
+                        keys = search_terms(query, limit=50)
+                        terms_data = []
+                        for k in keys:
+                            t = TERM_GLOSSARY[k]
+                            terms_data.append({
+                                "key": k,
+                                "category": t["category"],
+                                "definition": t["definition"][:80] + ("…" if len(t["definition"]) > 80 else ""),
+                            })
+                        self._json(200, {
+                            "query": query,
+                            "count": len(terms_data),
+                            "terms": terms_data,
+                            "total_in_dict": len(TERM_GLOSSARY),
+                        })
+                except Exception as e:
+                    logger.exception(f"[glossary] failed: {e}")
+                    self._json(500, {"error": "glossary query failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/extract_terms":
+                # 🆕 v1.6.6 从叙事文本提取名词
+                text = data.get("text", "")
+                if not text:
+                    self._json(400, {"error": "missing text"})
+                    return
+                sid = data.get("session_id")
+                seen = []
+                if sid:
+                    entry = _session_get(sid)
+                    if entry:
+                        seen = entry[0].state.seen_terms or []
+                try:
+                    from history_footnote.term_glossary import extract_terms_from_text, get_term, escape_html as term_escape
+                    terms_found = extract_terms_from_text(text)
+                    # 区分已读/未读
+                    new_terms = [t for t in terms_found if t not in seen]
+                    # 标记未读名词
+                    marked = text
+                    for t in terms_found:
+                        if t not in seen:
+                            # 新词 → 加 data-term 属性（前端加 tooltip）
+                            marked = marked.replace(t, f'<span class="term-new" data-term="{term_escape(t)}">{term_escape(t)}</span>')
+                    self._json(200, {
+                        "found_terms": terms_found,
+                        "new_terms": new_terms,
+                        "seen_terms": seen,
+                        "marked_text": marked,
+                    })
+                except Exception as e:
+                    logger.exception(f"[extract_terms] failed: {e}")
+                    self._json(500, {"error": "extract failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/mark_term_seen":
+                # 🆕 v1.6.6 标记名词已读
+                sid = data.get("session_id")
+                term = data.get("term", "")
+                if not sid or not term:
+                    self._json(400, {"error": "missing session_id or term"})
+                    return
+                entry = _session_get(sid)
+                if entry is None:
+                    self._json(404, {"error": "session not found"})
+                    return
+                game = entry[0]
+                if term not in game.state.seen_terms:
+                    game.state.seen_terms.append(term)
+                self._json(200, {"seen_count": len(game.state.seen_terms), "marked": term})
                 return
 
             if path == "/api/input":
