@@ -63,7 +63,7 @@
 
 ```json
 {{
-  "narrative": "具体场景描写（半文半白，至少300字）",
+  "narrative": "具体场景描写（半文半白，**必须 300-500 字**，绝对不能 < 100 字)",
   "narrative_blocks": [   // 🆕 v1.7.0 可选：结构化分段
     {{"type": "scene",      "text": "环境描写..."}},
     {{"type": "dialogue",   "speaker": "张顺", "text": "三两三"}},

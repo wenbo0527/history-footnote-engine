@@ -534,9 +534,15 @@ class Handler(BaseHTTPRequestHandler):
                 opening_text = buf.getvalue().strip()
                 if opening_text:
                     game.state.append_narrative(0, opening_text, "开场")
+                # 🆕 v1.7.22: start 时不注入 freetext 占位（让前端用 appendOpeningVoiceOptions）
+                # 原因：开场需要 3 个剧情相关选项（appendOpeningVoiceOptions 提供）
+                # 而非 1 个 freetext 占位
+                _state = _format_state(game)
+                _state.pop("last_voice_options", None)  # 移除兜底占位
+                _state["last_voice_options"] = []  # 显式空（前端/测试可判断）
                 self._json(200, {
                     "session_id": game.session.session_id,
-                    **_format_state(game),
+                    **_state,
                 })
                 return
 
