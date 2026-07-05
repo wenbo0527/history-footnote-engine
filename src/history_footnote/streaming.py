@@ -72,6 +72,25 @@ class StreamingEmitter:
         """发射思考状态"""
         self.emit("thinking", text)
 
+    def emit_phase(self, phase: str, message: str = "", progress: int = 0) -> None:
+        """🆕 v1.7.15 发射阶段事件（用于前端弹窗进度条）
+
+        Args:
+            phase: 阶段标识
+                - "queue": 加入 LLM 队列
+                - "analyzing": 分析玩家意图
+                - "generating": LLM 正在生成叙事
+                - "validating": 后校验
+                - "finalizing": 整理 voice_options
+            message: 该阶段的人类可读描述
+            progress: 进度 0-100
+        """
+        self.emit("phase", {
+            "phase": phase,
+            "message": message,
+            "progress": max(0, min(100, progress)),
+        })
+
     def emit_done(self, final_data: dict) -> None:
         """发射完成事件"""
         self.emit("done", final_data)

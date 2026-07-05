@@ -337,6 +337,24 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._json(500, {"error": str(e)})
             return
+        if path == "/api/state":
+            # 🆕 v1.7.15: 获取当前 session 完整 state（流式调用后取最终态）
+            qs = parse_qs(urlparse(self.path).query)
+            sid = qs.get("session_id", [None])[0]
+            if not sid:
+                self._json(400, {"error": "missing session_id"})
+                return
+            try:
+                game = _get_or_load_session(sid)
+                if game is None:
+                    self._json(404, {"error": "session not found"})
+                    return
+                # _format_state 已包含所有字段（current_date, round, action_points, variables, last_narrative 等）
+                self._json(200, _format_state(game))
+            except Exception as e:
+                logger.exception(f"[/api/state] 失败: {e}")
+                self._json(500, {"error": str(e)})
+            return
         if path == "/api/archives":
             qs = parse_qs(urlparse(self.path).query)
             era_id = qs.get("era_id", [None])[0]
@@ -1001,13 +1019,19 @@ class Handler(BaseHTTPRequestHandler):
 
                 def _producer():
                     try:
+                        # 🆕 v1.7.15 阶段化进度事件（前端弹窗用）
+                        emitter.emit_phase("analyzing", "DM 正在分析场景...", 10)
                         emitter.emit_thinking("DM 正在分析场景...")
                         with lock:
                             try:
+                                # 🆕 v1.7.15 阶段 1: 等待 LLM 队列
+                                emitter.emit_phase("queue", "等待 LLM 队列...", 20)
                                 with LLM_THROTTLE:
-                                    emitter.emit_thinking("DM 正在生成叙事...")
+                                    # 🆕 v1.7.15 阶段 2: LLM 正在生成
+                                    emitter.emit_phase("generating", "DM 正在生成叙事...", 30)
                                     dm_response = game.dm.run(inp)
-                                # 模拟 streaming：每 50 字一个 chunk
+                                # 🆕 v1.7.15 阶段 3: 模拟 streaming（按字块输出）
+                                emitter.emit_phase("streaming", "正在渲染叙事...", 60)
                                 narrative = dm_response.get("narrative", "")
                                 # 把 narrative 按字符切块（避免破坏中文）
                                 import re
@@ -1015,11 +1039,13 @@ class Handler(BaseHTTPRequestHandler):
                                 for chunk in chunks:
                                     emitter.emit_chunk(chunk)
                                     time.sleep(0.04)
-                                # 后校验
+                                # 🆕 v1.7.15 阶段 4: 后校验
+                                emitter.emit_phase("validating", "校验叙事质量...", 85)
                                 validation = post_validate(dm_response, state_dict, era_config, inp)
                                 if not validation.valid:
                                     emitter.emit_thinking(f"后校验发现 {len(validation.errors)} 个问题")
-                                # voice_options
+                                # 🆕 v1.7.15 阶段 5: 整理
+                                emitter.emit_phase("finalizing", "整理行动选项...", 95)
                                 final_data = {
                                     "session_id": sid,
                                     "voice_options": dm_response.get("voice_options", []),

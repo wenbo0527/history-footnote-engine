@@ -1326,16 +1326,77 @@ try {
 }
 }
 
+// 🆕 v1.7.15 弹窗进度管理
+const LoadingModal = {
+  overlay: null,
+  startTime: 0,
+  timer: null,
+  show(title = "🌀 DM 正在渲染下一回合...") {
+    this.close();  // 关闭已存在的
+    this.startTime = Date.now();
+    const html = `
+      <div id="loading-modal" class="loading-modal-overlay">
+        <div class="loading-modal">
+          <div class="loading-title">${escapeHtml(title)}</div>
+          <div class="loading-phase">⏳ 准备中...</div>
+          <div class="loading-progress">
+            <div class="loading-progress-bar" style="width:0%"></div>
+          </div>
+          <div class="loading-time">⏱️ 已等待 0 秒</div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", html);
+    this.overlay = document.getElementById("loading-modal");
+    // 启动计时器
+    this.timer = setInterval(() => {
+      const $t = this.overlay?.querySelector(".loading-time");
+      if ($t) {
+        const sec = Math.floor((Date.now() - this.startTime) / 1000);
+        $t.textContent = `⏱️ 已等待 ${sec} 秒`;
+      }
+    }, 200);
+  },
+  update(phase, message, progress) {
+    if (!this.overlay) return;
+    const $phase = this.overlay.querySelector(".loading-phase");
+    const $bar = this.overlay.querySelector(".loading-progress-bar");
+    if ($phase && message) $phase.textContent = message;
+    if ($bar && typeof progress === "number") $bar.style.width = progress + "%";
+  },
+  close() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    if (this.overlay) {
+      this.overlay.classList.add("loading-modal-fadeout");
+      setTimeout(() => {
+        if (this.overlay && this.overlay.parentNode) {
+          this.overlay.parentNode.removeChild(this.overlay);
+        }
+        this.overlay = null;
+      }, 200);
+    } else {
+      this.overlay = null;
+    }
+  },
+};
+
 async function submitInputWithText(inputText) {
 const $btn = document.getElementById("btn_submit");
 if ($btn) {
   $btn.disabled = true;
   $btn.innerHTML = "<span class='loading'>⏳ DM 正在叙述...</span>";
 }
+
+// 🆕 v1.7.15 显示弹窗
+LoadingModal.show("🌀 DM 正在渲染下一回合...");
+
 let data;
 try {
-  data = await api("/api/input", "POST", {session_id: state.session_id, input: inputText});
+  // 🆕 v1.7.15 改用 SSE 流式接口（带阶段进度）
+  data = await submitInputStream(inputText);
 } catch (e) {
+  LoadingModal.close();
   // 🆕 v1.7.8 网络错误：恢复 UI
   if ($btn) {
     $btn.disabled = false;
@@ -1343,8 +1404,11 @@ try {
   }
   const $m = document.getElementById("submit_msg");
   if ($m) $m.innerHTML = "<div class='error'>网络错误：无法连接到服务器</div>";
-  throw e;  // 重新抛出让 submitVoiceOption 也能恢复 voice 按钮
+  throw e;
 }
+
+// 成功，关闭弹窗
+LoadingModal.close();
 if ($btn) {
   $btn.disabled = false;
   $btn.innerHTML = "行动";
@@ -1376,15 +1440,12 @@ if (oldBanner) oldBanner.remove();
 if (data.last_voice_options && data.last_voice_options.length > 0) {
   appendVoiceOptions(data.last_voice_options);
 } else {
-  // 🆕 v1.6.9：voice_options 为空时，async 调服务端从 narrative 提取
-  // 双保险：后端 game_loop 已处理一次，这里前端再兜底一次
   if (data.last_narrative) {
     extractInlineOptionsFromText(data.last_narrative).then(opts => {
       if (opts && opts.length > 0) {
         appendVoiceOptions(opts);
         return;
       }
-      // 真没找到 → 重置输入框
       resetInputPlaceholder();
     });
   } else {
@@ -1392,6 +1453,81 @@ if (data.last_voice_options && data.last_voice_options.length > 0) {
   }
 }
 $main.scrollTop = $main.scrollHeight;
+}
+
+// 🆕 v1.7.15 SSE 流式提交（带阶段进度 + 弹窗更新）
+async function submitInputStream(inputText) {
+const resp = await fetch("/api/input_stream", {
+  method: "POST",
+  headers: {"Content-Type": "application/json"},
+  body: JSON.stringify({session_id: state.session_id, input: inputText}),
+});
+if (!resp.ok) {
+  throw new Error(`HTTP ${resp.status}`);
+}
+const reader = resp.body.getReader();
+const decoder = new TextDecoder();
+let buffer = "";
+let finalData = null;
+while (true) {
+  const {done, value} = await reader.read();
+  if (done) break;
+  buffer += decoder.decode(value, {stream: true});
+  // SSE 格式：event: <type>\ndata: <data>\n\n
+  const events = buffer.split("\n\n");
+  buffer = events.pop() || "";  // 最后一段可能不完整
+  for (const ev of events) {
+    if (!ev.trim()) continue;
+    let eventType = "message";
+    let dataLine = "";
+    for (const line of ev.split("\n")) {
+      if (line.startsWith("event:")) eventType = line.slice(6).trim();
+      else if (line.startsWith("data:")) dataLine += line.slice(5).trim();
+    }
+    if (!dataLine) continue;
+    let data;
+    try { data = JSON.parse(dataLine); } catch { data = dataLine; }
+    if (eventType === "phase" && typeof data === "object") {
+      LoadingModal.update(data.phase, data.message, data.progress);
+    } else if (eventType === "chunk") {
+      // 模拟 streaming chunk（已生成的叙事片段）
+      // 这里不强求实时显示，但弹窗仍显示进度
+    } else if (eventType === "done") {
+      finalData = data;
+    } else if (eventType === "error") {
+      throw new Error(typeof data === "string" ? data : JSON.stringify(data));
+    }
+  }
+}
+if (!finalData) {
+  throw new Error("SSE 结束但未收到 done 事件");
+}
+// done 事件已包含 voice_options / intent_type / time_cost
+// 但还需要 last_narrative + last_is_action + last_time_cost + last_intent_type
+// 这些是后端 _format_state 输出的，从 state.narrative_history[-1] 读取
+// 简单做法：再发个 GET /api/state 拿全量
+let stateData = {};
+try {
+  stateData = await api("/api/state?session_id=" + state.session_id);
+} catch (e) {
+  console.warn("Failed to load /api/state after stream", e);
+}
+return {
+  ...finalData,
+  last_narrative: stateData.last_narrative || null,
+  last_is_action: stateData.last_is_action,
+  last_time_cost: stateData.last_time_cost,
+  last_intent_type: stateData.last_intent_type,
+  last_month_advanced: stateData.last_month_advanced,
+  last_new_date: stateData.last_new_date,
+  current_date: stateData.current_date,
+  round_number: stateData.round_number,
+  action_points_current: stateData.action_points_current,
+  action_points_max: stateData.action_points_max,
+  variables: stateData.variables,
+  // voice_options 已经在 finalData 里
+  last_voice_options: finalData.voice_options || [],
+};
 }
 
 async function submitInput() {
