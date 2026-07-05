@@ -73,6 +73,17 @@ SKILL_METADATA_PATTERNS: list[re.Pattern] = [
         re.MULTILINE | re.IGNORECASE,
     ),
 
+    # 🆕 v1.7.19: 单行内嵌 family schema（行首是中文 label 如"家庭：spouse: ..."）
+    # 模式：family/spouse/children/elderly key + value，但前面有任意文本
+    # 例："家庭：spouse: 周氏 / children: ['阿福（9岁）', '阿芸（5岁）'] / elderly: 老娘..."
+    # 修复策略：匹配 key: value 到下一个 " / " 或行尾，删除该段
+    re.compile(
+        r"\b(spouse|children|elderly|household|family)\s*:\s*"
+        r"(?:\[[^\]]*\]|\([^)]*\)|[^/\n]+?)"
+        r"(?=\s*(?:/|$|\n))",
+        re.IGNORECASE,
+    ),
+
     # 🆕 v1.7.11 LLM 思考过程 / 内部标记 清洗
     # <zh>...</zh> / <en>...</en> 是某些 LLM 输出的"思考语言标签"
     re.compile(r"<zh>.*?</zh>", re.DOTALL | re.IGNORECASE),

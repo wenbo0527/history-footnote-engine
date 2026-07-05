@@ -1056,12 +1056,35 @@ class Handler(BaseHTTPRequestHandler):
                         emitter.emit_thinking("DM 正在分析场景...")
                         with lock:
                             try:
+                                # 🆕 v1.7.19 修复：必须调 _run_round（之前只调 dm.run，跳过 narrative append + state 更新）
+                                # 重定向 stdout 捕获 DM 输出（与 /api/input 流程一致）
+                                import io as _io
+                                from contextlib import redirect_stdout as _redirect_stdout
+                                _buf = _io.StringIO()
                                 # 🆕 v1.7.15 阶段 1: 等待 LLM 队列
                                 emitter.emit_phase("queue", "等待 LLM 队列...", 20)
                                 with LLM_THROTTLE:
                                     # 🆕 v1.7.15 阶段 2: LLM 正在生成
                                     emitter.emit_phase("generating", "DM 正在生成叙事...", 30)
-                                    dm_response = game.dm.run(inp)
+                                    # 🆕 v1.7.19 修复：调 _run_round（而非只 dm.run）
+                                    # 原因：_run_round 才会：
+                                    #   1. 调 dm.run 生成 narrative
+                                    #   2. 调 append_narrative（写入 narrative_history）
+                                    #   3. 消耗行动点 + 推进月份
+                                    #   4. 提取 voice_options 到 state
+                                    pre = game._preprocess_input(inp)
+                                    with _redirect_stdout(_buf):
+                                        game._run_round(pre)
+                                    # 拿 narrative（从 state 读）
+                                    narrative = game.state.narrative_history[-1].get("narrative", "") if game.state.narrative_history else ""
+                                    # 构造 dm_response 给后续 streaming + done 用
+                                    dm_response = {
+                                        "narrative": narrative,
+                                        "voice_options": game.state.last_voice_options or [],
+                                        "intent_type": getattr(game.state, "last_intent_type", "action"),
+                                        "is_action": getattr(game.state, "last_is_action", True),
+                                        "time_cost": getattr(game.state, "last_time_cost", 1),
+                                    }
                                 # 🆕 v1.7.15 阶段 3: 模拟 streaming（按字块输出）
                                 emitter.emit_phase("streaming", "正在渲染叙事...", 60)
                                 narrative = dm_response.get("narrative", "")
