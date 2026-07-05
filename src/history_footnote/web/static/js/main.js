@@ -2,7 +2,6 @@
 // 拆分自 web_server.py（原 INDEX_HTML 内嵌 JS）
 // v1.6+ 起累积：开场 + 游戏循环 + 弹层 + 移动端
 
-<script>
 let state = {
 session_id: null,
 identity: null,

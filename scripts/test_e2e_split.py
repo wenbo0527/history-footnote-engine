@@ -56,6 +56,10 @@ def test_html_loads():
     # 必须外链 CSS/JS（拆分成功的标志）
     assert '/static/css/main.css' in body
     assert '/static/js/main.js' in body
+    # 🆕 v1.7.4: 不应内嵌 <style>（v1.7.3 拆分后）
+    assert "<style>" not in body, "HTML 仍内嵌 <style>（拆分不彻底）"
+    # 不应有内联大段 JS
+    assert body.count("\nlet ") == 0, "HTML 内嵌 JS（应已外链）"
     print(f"✅ test_html_loads: {len(body)} chars, 外链 CSS/JS 正确")
 
 
@@ -69,13 +73,38 @@ def test_css_loads():
 
 
 def test_js_loads():
-    """JS 静态资源加载"""
+    """JS 静态资源加载 + 严格语法检查"""
+    import subprocess
+    import tempfile
     status, body = get("/static/js/main.js")
     assert status == 200
     # 关键函数必须存在
     for fn in ["api(", "renderStart", "appendNarrative", "openFeedback", "openCharacterWiki"]:
         assert fn in body, f"JS 缺 {fn}"
-    print(f"✅ test_js_loads: {len(body)} chars, 5 个核心函数齐")
+    # 🆕 v1.7.4: 严格检查 - 不应有 HTML 标签（拆分后）
+    html_tags = ["<script>", "</script>", "<body>", "</body>", "<html>", "</html>", "<head>", "</head>"]
+    for tag in html_tags:
+        assert tag not in body, f"JS 含 HTML 标签 {tag}（拆分不彻底）"
+    # 关键：首字符应该是注释或代码，不是 HTML
+    assert not body.lstrip().startswith("<"), f"JS 以 < 开头（可能是 HTML 泄漏）"
+    # 检查括号配对
+    assert body.count("{") == body.count("}"), f"JS 大括号不配对: {body.count('{')} vs {body.count('}')}"
+    # 🆕 v1.7.4: node --check 语法验证（如果有 node）
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
+            f.write(body)
+            tmp_path = f.name
+        result = subprocess.run(
+            ["node", "--check", tmp_path],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0:
+            print(f"✅ test_js_loads: {len(body)} chars, 5 核心函数齐, node --check 通过")
+        else:
+            raise AssertionError(f"node --check failed: {result.stderr}")
+    except FileNotFoundError:
+        # 没有 node - 跳过语法检查
+        print(f"✅ test_js_loads: {len(body)} chars, 5 核心函数齐, 无 HTML 标签 (node 未安装，跳过语法检查)")
 
 
 def test_static_path_traversal():
