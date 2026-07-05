@@ -687,6 +687,95 @@ if (existing) existing.remove();
 // ============================================================
 let _selectedCategory = "bug";  // 默认分类
 
+// 🆕 v1.7.16: LLM 状态面板（Token 统计 + Fallback 历史）
+async function showLLMStats() {
+  let data;
+  try {
+    data = await api("/api/llm/stats?recent_limit=20");
+  } catch (e) {
+    alert("无法获取 LLM 统计：" + e.message);
+    return;
+  }
+  // 渲染 HTML
+  const totals = data.totals || {};
+  const providers = data.providers || [];
+  const recent = data.recent || [];
+  let html = `<div class='start-screen'>
+    <h2>📊 LLM 调用统计</h2>
+    <div style='max-width:600px;margin:0 auto;text-align:left'>
+
+      <div class='llm-stats-summary'>
+        <div class='llm-stat-card'>
+          <div class='llm-stat-label'>总调用次数</div>
+          <div class='llm-stat-value'>${totals.calls || 0}</div>
+        </div>
+        <div class='llm-stat-card'>
+          <div class='llm-stat-label'>总 Token</div>
+          <div class='llm-stat-value'>${(totals.tokens || 0).toLocaleString()}</div>
+        </div>
+        <div class='llm-stat-card'>
+          <div class='llm-stat-label'>输入 / 输出</div>
+          <div class='llm-stat-value'>${(totals.input_tokens || 0).toLocaleString()} / ${(totals.output_tokens || 0).toLocaleString()}</div>
+        </div>
+        <div class='llm-stat-card ${totals.fallback_count > 0 ? "warn" : ""}'>
+          <div class='llm-stat-label'>Fallback 次数</div>
+          <div class='llm-stat-value'>${totals.fallback_count || 0}</div>
+        </div>
+      </div>
+
+      <h3>按 Provider</h3>
+      <table class='llm-stats-table'>
+        <tr><th>Provider</th><th>调用</th><th>成功</th><th>失败</th><th>Token</th><th>平均延迟</th><th>最大延迟</th></tr>`;
+  for (const p of providers) {
+    const avg = p.total_calls > 0 ? Math.round(p.total_latency_ms / p.total_calls) : 0;
+    html += `<tr>
+      <td>${escapeHtml(p.provider)}</td>
+      <td>${p.total_calls}</td>
+      <td>${p.successful_calls}</td>
+      <td>${p.failed_calls}</td>
+      <td>${(p.total_tokens || 0).toLocaleString()}</td>
+      <td>${avg}ms</td>
+      <td>${p.max_latency_ms || 0}ms</td>
+    </tr>`;
+  }
+  html += `</table>
+
+      <h3>最近 20 次调用</h3>
+      <table class='llm-stats-table llm-stats-recent'>
+        <tr><th>时间</th><th>Provider</th><th>状态</th><th>Token</th><th>延迟</th></tr>`;
+  for (const r of recent.slice().reverse()) {
+    const ts = (r.ts || "").slice(11, 19);
+    const status = r.success ? "✅" : (r.timeout ? "⏱️" : "❌");
+    const fallbackTag = r.fallback ? " 🔁" : "";
+    const errTip = r.error ? ` title='${escapeHtml(r.error)}'` : "";
+    html += `<tr${errTip}>
+      <td>${ts}</td>
+      <td>${escapeHtml(r.provider || "?")}${fallbackTag}</td>
+      <td>${status}</td>
+      <td>${(r.total_tokens || 0).toLocaleString()}</td>
+      <td>${r.latency_ms || 0}ms</td>
+    </tr>`;
+  }
+  html += `</table>
+    </div>
+    <div style='text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center'>
+      <button class='btn-secondary' onclick='resetLLMStats()'>重置统计</button>
+      <button class='btn-secondary' onclick='renderStart()'>返回</button>
+    </div>
+  </div>`;
+  document.getElementById("main").innerHTML = html;
+}
+
+async function resetLLMStats() {
+  if (!confirm("确定要重置 LLM 统计吗？")) return;
+  try {
+    await api("/api/llm/reset_stats", "POST", {});
+    await showLLMStats();  // 重新加载（空状态）
+  } catch (e) {
+    alert("重置失败：" + e.message);
+  }
+}
+
 async function openFeedback() {
 // 拉取分类列表
 const data = await api("/api/feedback_categories", "POST", {});

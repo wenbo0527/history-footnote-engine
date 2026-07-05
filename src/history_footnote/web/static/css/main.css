@@ -547,6 +547,74 @@ body {
   font-size: 12px;
   font-style: italic;
 }
+
+/* 🆕 v1.7.16: LLM 状态徽章 + 统计面板 */
+.llm-status-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: #2a4a3a;
+  color: #a0e0a0;
+  border: 1px solid #4a7a5a;
+  border-radius: 3px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.llm-status-badge:hover {
+  background: #4a7a5a;
+  color: #fff;
+}
+.llm-stats-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0;
+}
+.llm-stat-card {
+  background: #3c3018;
+  border: 1px solid #6b4020;
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+}
+.llm-stat-card.warn {
+  border-color: #a04030;
+  background: #5a2820;
+}
+.llm-stat-label {
+  color: #a08858;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.llm-stat-value {
+  color: #f0d8a0;
+  font-size: 18px;
+  font-weight: bold;
+}
+.llm-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.llm-stats-table th {
+  background: #5a3e1f;
+  color: #f0d8a0;
+  padding: 6px 8px;
+  text-align: left;
+  border: 1px solid #6b4020;
+}
+.llm-stats-table td {
+  background: #2a2010;
+  color: #d4a070;
+  padding: 4px 8px;
+  border: 1px solid #6b4020;
+}
+.llm-stats-recent td {
+  font-size: 11px;
+  padding: 3px 6px;
+}
 .loading {
   display: inline-block;
   color: #8b6f47;

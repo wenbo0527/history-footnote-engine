@@ -145,7 +145,9 @@ def _get_or_load_session(session_id: str | None) -> GameLoop | None:
         return None
 
     config = load_era_config(session.era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
-    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
+    # 🆕 v1.7.16: 改用 LLMWrapper（支持超时 + fallback + token 日志）
+    from history_footnote.llm_wrapper import get_wrapped_llm
+    llm = get_wrapped_llm(primary_provider="minimax-anthropic", era_config=config)
     game = GameLoop(
         era_id=session.era_id,
         era_config=config,
@@ -160,7 +162,9 @@ def _get_or_load_session(session_id: str | None) -> GameLoop | None:
 def _new_session(era_id: str, identity: str, gender: str, custom_character: dict | None = None) -> GameLoop:
     """创建新session"""
     config = load_era_config(era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
-    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
+    # 🆕 v1.7.16: 改用 LLMWrapper
+    from history_footnote.llm_wrapper import get_wrapped_llm
+    llm = get_wrapped_llm(primary_provider="minimax-anthropic", era_config=config)
     game = GameLoop(
         era_id=era_id,
         era_config=config,
@@ -355,6 +359,26 @@ class Handler(BaseHTTPRequestHandler):
                 logger.exception(f"[/api/state] 失败: {e}")
                 self._json(500, {"error": str(e)})
             return
+        if path == "/api/llm/stats":
+            # 🆕 v1.7.16: LLM 调用的 token 统计 + fallback 历史
+            try:
+                from history_footnote.llm_wrapper import get_usage_logger
+                logger_instance = get_usage_logger()
+                qs = parse_qs(urlparse(self.path).query)
+                recent_limit = int(qs.get("recent_limit", ["20"])[0])
+                stats = logger_instance.get_stats()
+                stats["recent"] = logger_instance.get_recent(limit=recent_limit)
+                self._json(200, stats)
+            except Exception as e:
+                logger.exception(f"[/api/llm/stats] 失败: {e}")
+                self._json(500, {"error": str(e)})
+            return
+        if path == "/api/llm/reset_stats":
+            # 🆕 v1.7.16: 重置统计（开发/调试用）
+            from history_footnote.llm_wrapper import get_usage_logger
+            get_usage_logger().reset()
+            self._json(200, {"ok": True, "message": "stats reset"})
+            return
         if path == "/api/archives":
             qs = parse_qs(urlparse(self.path).query)
             era_id = qs.get("era_id", [None])[0]
@@ -414,7 +438,9 @@ class Handler(BaseHTTPRequestHandler):
                     config = load_era_config(era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
                     from history_footnote.character_generator import build_character_prompt, parse_character_response
                     prompt = build_character_prompt(config, gender, identity_desc, life_exp, location=location, location_desc=location_desc)
-                    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
+                    # 🆕 v1.7.16: 改用 LLMWrapper（超时 + fallback + token 日志）
+                    from history_footnote.llm_wrapper import get_wrapped_llm
+                    llm = get_wrapped_llm(primary_provider="minimax-anthropic", era_config=config)
                     from langchain_core.messages import SystemMessage, HumanMessage
                     resp = llm.invoke([
                         SystemMessage(content="你是人设生成助手。严格按 JSON 格式输出。"),
@@ -436,7 +462,9 @@ class Handler(BaseHTTPRequestHandler):
                     config = load_era_config(era_id)  # 🆕 v1.6.2 P0 A1: 缓存版
                     from history_footnote.character_generator import build_world_dwell_prompt, parse_world_dwell
                     prompt = build_world_dwell_prompt(config)
-                    llm = get_llm(provider="minimax-anthropic", era_config=config)  # 🆕 v1.6.2 P0 A2: LLM 缓存
+                    # 🆕 v1.7.16: 改用 LLMWrapper
+                    from history_footnote.llm_wrapper import get_wrapped_llm
+                    llm = get_wrapped_llm(primary_provider="minimax-anthropic", era_config=config)
                     from langchain_core.messages import SystemMessage, HumanMessage
                     resp = llm.invoke([
                         SystemMessage(content="你是世界画卷绘制师。严格按 JSON 格式输出。"),

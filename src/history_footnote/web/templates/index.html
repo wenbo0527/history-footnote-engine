@@ -16,10 +16,11 @@
 <div class="sidebar" id="sidebar"></div>
 </div>
 
-<!-- 🆕 v1.7.15 版本号常驻显示（内测标识） -->
-<div id="version-badge" class="version-badge" onclick="openFeedback()">
-  <span class="version-text">v1.7.15 - 内测版</span>
-  <span class="version-hint">🐛 反馈</span>
+<!-- 🆕 v1.7.16 版本号常驻显示（内测标识） + LLM 状态 -->
+<div id="version-badge" class="version-badge">
+  <span class="version-text" onclick="openFeedback()">v1.7.16 - 内测版</span>
+  <span class="version-hint" onclick="openFeedback()">🐛 反馈</span>
+  <span class="llm-status-badge" id="llm-status-badge" onclick="showLLMStats()" title="LLM 调用统计">📊 LLM</span>
 </div>
 
 <script src="/static/js/main.js"></script>
