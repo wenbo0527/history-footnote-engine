@@ -1,0 +1,638 @@
+openapi: 3.0.0
+info:
+  title: 历史脚注引擎 API
+  description: |
+    明代万历年间沉浸式剧情游戏 HTTP API
+    v1.7.23 - 短期改进版
+  version: 1.7.23
+  contact:
+    name: wenbo0527
+    url: https://github.com/wenbo0527/history-footnote-engine
+
+servers:
+  - url: http://localhost:8765
+    description: 本地开发服务器
+
+tags:
+  - name: game
+    description: 游戏核心 API（开局/输入/状态）
+  - name: stream
+    description: SSE 流式 API
+  - name: archive
+    description: 存档/读档/列表
+  - name: meta
+    description: 工具/统计/反馈
+
+paths:
+  /api/archive/delete:
+    post:
+      tags: [archive]
+      summary: Delete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: 请求错误
+        '404':
+          description: 未找到
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/archives:
+    get:
+      tags: [archive]
+      summary: Archives
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/archives/clear:
+    post:
+      tags: [archive]
+      summary: Clear
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: 请求错误
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/character_wiki:
+    post:
+      tags: [meta]
+      summary: Character Wiki
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: 请求错误
+        '404':
+          description: 未找到
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/character_wiki_update:
+    post:
+      tags: [meta]
+      summary: Character Wiki Update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: 请求错误
+        '404':
+          description: 未找到
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/eras:
+    get:
+      tags: [meta]
+      summary: Eras
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/extract_terms:
+    post:
+      tags: [meta]
+      summary: Extract Terms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: 请求错误
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/feedback:
+    post:
+      tags: [meta]
+      summary: Feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: 请求错误
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/feedback_categories:
+    post:
+      tags: [meta]
+      summary: Feedback Categories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/generate_character:
+    post:
+      tags: [meta]
+      summary: Generate Character
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/generate_world_dwell:
+    post:
+      tags: [meta]
+      summary: Generate World Dwell
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/glossary:
+    post:
+      tags: [meta]
+      summary: Glossary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '404':
+          description: 未找到
+        '500':
+          description: 服务器内部错误
+
+  /api/identities:
+    get:
+      tags: [meta]
+      summary: Identities
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/input:
+    post:
+      tags: [game]
+      summary: Input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '429':
+          description: 限流
+        '400':
+          description: 请求错误
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: 未找到
+        '500':
+          description: 服务器内部错误
+
+  /api/input_stream:
+    post:
+      tags: [game]
+      summary: Input Stream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '429':
+          description: 限流
+        '400':
+          description: 请求错误
+        '404':
+          description: 未找到
+        '500':
+          description: 服务器内部错误
+
+  /api/llm/reset_stats:
+    get:
+      tags: [meta]
+      summary: Reset Stats
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器内部错误
+
+  /api/llm/stats:
+    get:
+      tags: [meta]
+      summary: Stats
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/load:
+    post:
+      tags: [meta]
+      summary: Load
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: 未找到
+        '500':
+          description: 服务器内部错误
+
+  /api/lore:
+    post:
+      tags: [meta]
+      summary: Lore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: 请求错误
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: 未找到
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/mark_term_seen:
+    post:
+      tags: [meta]
+      summary: Mark Term Seen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: 请求错误
+        '404':
+          description: 未找到
+        '500':
+          description: 服务器内部错误
+
+  /api/merge_voice_options:
+    post:
+      tags: [meta]
+      summary: Merge Voice Options
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/recap:
+    post:
+      tags: [game]
+      summary: Recap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: 请求错误
+        '404':
+          description: 未找到
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/render_narrative:
+    post:
+      tags: [meta]
+      summary: Render Narrative
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/sanitize:
+    post:
+      tags: [meta]
+      summary: Sanitize
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/sanitize_patterns:
+    post:
+      tags: [meta]
+      summary: Sanitize Patterns
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/start:
+    post:
+      tags: [game]
+      summary: Start
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器内部错误
+
+  /api/state:
+    get:
+      tags: [game]
+      summary: State
+      responses:
+        '400':
+          description: 请求错误
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: 未找到
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
+  /api/version:
+    post:
+      tags: [meta]
+      summary: Version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: 服务器错误
+        '500':
+          description: 服务器内部错误
+
