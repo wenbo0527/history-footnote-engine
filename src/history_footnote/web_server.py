@@ -193,9 +193,13 @@ INDEX_HTML = _INDEX_HTML
 logger = logging.getLogger("history_footnote.web_server")
 if not logger.handlers:
     handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+    handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+# 🆕 v1.7.17 修复：禁用 propagate（防止与 root logger 重复输出）
+# 背景：__init__.py 配置 root logger + handlers，web_server logger 通过 propagate 也会输出
+# 现象：每条 log 出现 2 次（root + web_server 自身）
+logger.propagate = False
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1082,6 +1086,8 @@ class Handler(BaseHTTPRequestHandler):
                                     "is_action": dm_response.get("is_action", True),
                                     "time_cost": dm_response.get("time_cost", 1),
                                 }
+                                # 🆕 v1.7.17 debug（清理版）
+                                logger.info(f"emit_done for sid={sid}, voice_count={len(final_data['voice_options'])}")
                                 emitter.emit_done(final_data)
                             except TimeoutError:
                                 emitter.emit_error("LLM 调用超时")

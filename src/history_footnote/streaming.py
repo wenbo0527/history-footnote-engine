@@ -104,15 +104,25 @@ class StreamingEmitter:
     def iter_events(self, timeout: float = 60.0):
         """迭代事件流"""
         deadline = time.time() + timeout
-        while not self._done_event.is_set():
+        while True:
             try:
                 remaining = deadline - time.time()
                 if remaining <= 0:
                     self.emit_error("Timeout")
                     break
                 event_type, data = self._queue.get(timeout=min(remaining, 0.5))
+                # 🆕 v1.7.17 debug
+                import os
+                if os.environ.get("DEBUG_SSE"):
+                    print(f"  [iter_events] got {event_type}, _done_event={self._done_event.is_set()}", flush=True)
                 yield event_type, data
+                # 🆕 v1.7.17 修复：先 yield 再检查 done（确保 done 事件被消费）
+                if event_type in ("done", "error"):
+                    break
             except queue.Empty:
+                if self._done_event.is_set():
+                    # 队列空 + done_event 已 set → 退出
+                    break
                 continue
 
 
