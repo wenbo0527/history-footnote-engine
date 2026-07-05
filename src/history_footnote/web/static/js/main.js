@@ -443,15 +443,73 @@ if (data.error) {
   html += "<p style='color:#5a4a30;text-align:center'>暂无存档</p>";
 } else {
   data.archives.forEach(a => {
-    html += `<div class='archive-item' onclick='loadArchive("${a.session_id}")'>
-      <div class='ar-session'>${a.session_id}</div>
-      <div class='ar-meta'>${a.current_date} · 第${a.current_round}回合 · 进度摘要: ${a.summary}</div>
-      <div class='ar-meta'>身份: ${a.selected_identity} (${a.player_gender})</div>
+    const sidEsc = escapeHtml(a.session_id);
+    html += `<div class='archive-item'>
+      <div class='ar-clickable' onclick='loadArchive("${sidEsc}")'>
+        <div class='ar-session'>${sidEsc}</div>
+        <div class='ar-meta'>${escapeHtml(a.current_date || '')} · 第${a.current_round}回合 · 进度摘要: ${escapeHtml(a.summary || '')}</div>
+        <div class='ar-meta'>身份: ${escapeHtml(a.selected_identity || '?')} (${escapeHtml(a.player_gender || '?')})</div>
+      </div>
+      <button class='ar-delete-btn' onclick='deleteArchive("${sidEsc}", event)' title='删除此存档'>🗑️</button>
     </div>`;
   });
 }
-html += "<div style='text-align:center;margin-top:24px'><button class='btn-secondary' onclick='renderStart()'>返回</button></div></div>";
+html += "<div style='text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center'>";
+html += "<button class='btn-secondary' onclick='renderStart()'>返回</button>";
+if (data.archives && data.archives.length > 0) {
+  html += "<button class='btn-danger' onclick='clearAllArchives()'>🗑️ 清空全部</button>";
+}
+html += "</div></div>";
 $main.innerHTML = html;
+}
+
+// 🆕 v1.7.14: 删除单个存档（带二次确认）
+async function deleteArchive(sessionId, evt) {
+if (evt) {
+  evt.stopPropagation();  // 防止触发行点击
+}
+if (!confirm(`确定要删除存档吗？\n\n${sessionId}\n\n此操作不可撤销！`)) {
+  return;
+}
+try {
+  const data = await api("/api/archive/delete", "POST", {session_id: sessionId});
+  if (data.error) {
+    alert("删除失败：" + data.error);
+    return;
+  }
+  if (data.deleted) {
+    // 重新加载存档列表
+    await showArchives();
+  }
+} catch (e) {
+  console.error("deleteArchive error:", e);
+  alert("删除失败：网络错误");
+}
+}
+
+// 🆕 v1.7.14: 清空所有存档（带二次确认）
+async function clearAllArchives() {
+if (!confirm("⚠️ 确定要清空所有存档吗？\n\n此操作将永久删除此时代的所有游戏进度，不可恢复！")) {
+  return;
+}
+if (!confirm("再确认一次：真的要清空全部存档吗？")) {
+  return;
+}
+try {
+  const data = await api("/api/archives/clear", "POST", {
+    era_id: state.era_id,
+    confirm: true,
+  });
+  if (data.error) {
+    alert("清空失败：" + data.error);
+    return;
+  }
+  alert(`已清空 ${data.deleted_count} 个存档${data.failed && data.failed.length > 0 ? `，${data.failed.length} 个失败` : ''}`);
+  await showArchives();
+} catch (e) {
+  console.error("clearAllArchives error:", e);
+  alert("清空失败：网络错误");
+}
 }
 
 async function loadArchive(session_id) {

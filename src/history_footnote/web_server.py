@@ -895,6 +895,75 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, _format_state(game))
                 return
 
+            if path == "/api/archive/delete":
+                # 🆕 v1.7.14：删除单个存档
+                sid = data.get("session_id", "").strip()
+                if not sid:
+                    self._json(400, {"error": "missing session_id"})
+                    return
+                try:
+                    save_manager = get_save_manager_cached()
+                    # 安全检查：session_id 不能包含路径分隔符
+                    if "/" in sid or "\\" in sid or ".." in sid:
+                        self._json(400, {"error": "invalid session_id"})
+                        return
+                    if not save_manager.find_session(sid):
+                        self._json(404, {"error": "session not found", "session_id": sid})
+                        return
+                    ok = save_manager.delete_session(sid)
+                    if ok:
+                        # 同时清理 _session_get 缓存（如果加载过）
+                        _session_pop(sid)
+                        logger.info(f"[v1.7.14] Deleted archive: {sid}")
+                        self._json(200, {"ok": True, "session_id": sid, "deleted": True})
+                    else:
+                        self._json(500, {"error": "delete failed", "session_id": sid})
+                except Exception as e:
+                    logger.exception(f"[/api/archive/delete] 失败: {e}")
+                    self._json(500, {"error": f"delete failed: {e}"})
+                return
+
+            if path == "/api/archives/clear":
+                # 🆕 v1.7.14：清空某 era 的所有存档
+                era_id = data.get("era_id", "").strip()
+                confirm = data.get("confirm", False)  # 二次确认
+                if not era_id:
+                    self._json(400, {"error": "missing era_id"})
+                    return
+                if not confirm:
+                    self._json(400, {"error": "需要 confirm=true 二次确认"})
+                    return
+                try:
+                    save_manager = get_save_manager_cached()
+                    sessions = save_manager.list_sessions(era_id=era_id)
+                    if not sessions:
+                        self._json(200, {"ok": True, "deleted_count": 0, "deleted_ids": []})
+                        return
+                    deleted_ids = []
+                    failed = []
+                    for s in sessions:
+                        # 安全检查
+                        sid = s.session_id
+                        if "/" in sid or "\\" in sid or ".." in sid:
+                            failed.append(sid)
+                            continue
+                        if save_manager.delete_session(sid):
+                            deleted_ids.append(sid)
+                            _session_pop(sid)
+                        else:
+                            failed.append(sid)
+                    logger.info(f"[v1.7.14] Cleared {len(deleted_ids)} archives for era {era_id}")
+                    self._json(200, {
+                        "ok": True,
+                        "deleted_count": len(deleted_ids),
+                        "deleted_ids": deleted_ids,
+                        "failed": failed,
+                    })
+                except Exception as e:
+                    logger.exception(f"[/api/archives/clear] 失败: {e}")
+                    self._json(500, {"error": f"clear failed: {e}"})
+                return
+
             if path == "/api/input_stream":
                 # 🆕 v1.6.2 P1 C2：SSE Streaming 输出
                 # 🆕 v1.6.2 P2 D6：LLM 端点更严限流（20 req/min）

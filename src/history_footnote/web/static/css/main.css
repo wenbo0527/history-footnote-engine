@@ -443,10 +443,44 @@ body {
   font-size: 12px;
   cursor: pointer;
   border: 1px solid transparent;
+  display: flex;           /* 🆕 v1.7.14: 让删除按钮和内容并排 */
+  align-items: center;
+  gap: 8px;
 }
 .archive-item:hover { border-color: #c4a878; }
+.archive-item .ar-clickable {
+  flex: 1;                 /* 🆕 v1.7.14: 内容区占满 */
+  cursor: pointer;
+}
 .archive-item .ar-session { color: #f0d8a0; font-weight: bold; }
 .archive-item .ar-meta { color: #a08858; margin-top: 3px; }
+.archive-item .ar-delete-btn {  /* 🆕 v1.7.14: 删除按钮 */
+  background: transparent;
+  border: 1px solid #6b4020;
+  color: #d4a070;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.archive-item .ar-delete-btn:hover {
+  background: #a04030;
+  color: #fff;
+  border-color: #a04030;
+}
+.btn-danger {              /* 🆕 v1.7.14: 危险按钮（清空） */
+  background: #6b2820;
+  color: #f0d8a0;
+  border: 1px solid #a04030;
+  padding: 8px 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.btn-danger:hover { background: #a04030; }
 .loading {
   display: inline-block;
   color: #8b6f47;
