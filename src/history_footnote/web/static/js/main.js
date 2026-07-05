@@ -1200,8 +1200,41 @@ if (!inputText) {
 }
 state._submitting = true;
 state._selectedVoice = opt;
-await submitInputWithText(inputText);
-state._submitting = false;
+
+// 🆕 v1.7.8 立即视觉反馈 + 禁用所有 voice 按钮（防止重复点击）
+const voiceOptions = document.getElementById("voice-options");
+let originalVoiceHTML = null;
+if (voiceOptions) {
+  originalVoiceHTML = voiceOptions.innerHTML;
+  // 禁用所有 voice 按钮
+  voiceOptions.querySelectorAll("button").forEach(b => {
+    b.disabled = true;
+    b.style.opacity = "0.6";
+    b.style.cursor = "not-allowed";
+  });
+  // 高亮选中的
+  const buttons = voiceOptions.querySelectorAll(".voice-option-btn");
+  if (buttons[index]) {
+    buttons[index].style.opacity = "1";
+    buttons[index].style.background = "#f5e6c8";
+    buttons[index].style.borderColor = "#c4a878";
+    buttons[index].innerHTML = `<span class='voice-name'>⏳ ${escapeHtml(opt.voice_name || '?')}</span><span class='voice-intent'>${escapeHtml(inputText)}</span>`;
+  }
+}
+
+try {
+  await submitInputWithText(inputText);
+} catch (e) {
+  // 🆕 v1.7.8 失败时恢复 voice 按钮
+  console.error("submitVoiceOption error:", e);
+  if (voiceOptions && originalVoiceHTML !== null) {
+    voiceOptions.innerHTML = originalVoiceHTML;
+  }
+  const $m = document.getElementById("submit_msg");
+  if ($m) $m.innerHTML = "<div class='error'>提交失败，请重试</div>";
+} finally {
+  state._submitting = false;
+}
 }
 
 async function submitInputWithText(inputText) {
@@ -1210,7 +1243,19 @@ if ($btn) {
   $btn.disabled = true;
   $btn.innerHTML = "<span class='loading'>⏳ DM 正在叙述...</span>";
 }
-const data = await api("/api/input", "POST", {session_id: state.session_id, input: inputText});
+let data;
+try {
+  data = await api("/api/input", "POST", {session_id: state.session_id, input: inputText});
+} catch (e) {
+  // 🆕 v1.7.8 网络错误：恢复 UI
+  if ($btn) {
+    $btn.disabled = false;
+    $btn.innerHTML = "行动";
+  }
+  const $m = document.getElementById("submit_msg");
+  if ($m) $m.innerHTML = "<div class='error'>网络错误：无法连接到服务器</div>";
+  throw e;  // 重新抛出让 submitVoiceOption 也能恢复 voice 按钮
+}
 if ($btn) {
   $btn.disabled = false;
   $btn.innerHTML = "行动";
@@ -1271,11 +1316,25 @@ state._submitting = true;
 const $btn = document.getElementById("btn_submit");
 $btn.disabled = true;
 $btn.innerHTML = "<span class='loading'>⏳ DM 正在叙述...</span>";
-const data = await api("/api/input", "POST", {session_id: state.session_id, input});
+let data;
+try {
+  data = await api("/api/input", "POST", {session_id: state.session_id, input});
+} catch (e) {
+  // 🆕 v1.7.8 网络错误：恢复输入框 + UI
+  $ta.value = input;  // 恢复输入（玩家不用重打）
+  $btn.disabled = false;
+  $btn.innerHTML = "行动";
+  document.getElementById("submit_msg").innerHTML = "<div class='error'>网络错误：无法连接到服务器，请重试</div>";
+  state._submitting = false;
+  return;
+}
 $btn.disabled = false;
 $btn.innerHTML = "行动";
 if (data.error) {
+  // 🆕 v1.7.8 服务端错误：恢复输入（玩家可修改后重发）
+  $ta.value = input;
   document.getElementById("submit_msg").innerHTML = "<div class='error'>" + data.error + "</div>";
+  state._submitting = false;
   return;
 }
 renderSidebar(data);
