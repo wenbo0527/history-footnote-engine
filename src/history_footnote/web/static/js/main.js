@@ -1717,6 +1717,42 @@ let apDots = "";
 for (let i = 0; i < apMax; i++) {
   apDots += `<div class="ap-dot${i < apCur ? " filled" : ""}"></div>`;
 }
+// 🆕 v1.7.26 侧边栏固化数据
+const sb = data.sidebar_data || {};
+const tasks = sb.active_tasks || [];
+const deadlines = sb.upcoming_deadlines || [];
+const fin = sb.financial_status || {};
+
+// 渲染任务列表
+const tasksHtml = tasks.length > 0
+  ? tasks.map(t => {
+      const icon = t.urgency === "high" ? "🔴" : "🟡";
+      return `<div class="sidebar-task"><span class="task-icon">${icon}</span><span class="task-title">${escapeHtml(t.title || "")}</span></div>`;
+    }).join("")
+  : "<div style='color:#5a4a30;font-size:12px'>暂无待办</div>";
+
+// 渲染还债日
+const deadlinesHtml = deadlines.length > 0
+  ? deadlines.map(d => {
+      const days = d.days_estimate ? `约${d.days_estimate}天后` : "近期";
+      const amount = d.amount ? ` · ${escapeHtml(d.amount)}` : "";
+      return `<div class="sidebar-deadline">
+        <div class="deadline-name">${escapeHtml(d.name || "")}</div>
+        <div class="deadline-meta">${days}${amount}</div>
+      </div>`;
+    }).join("")
+  : "<div style='color:#5a4a30;font-size:12px'>近期无还债</div>";
+
+// 渲染财务
+const finHtml = `
+  ${fin.cash !== undefined ? `<div class="stat-line"><span class="label">💰 现金</span><span class="val">${fin.cash} 两</span></div>` : ""}
+  ${fin.rice_days !== undefined ? `<div class="stat-line"><span class="label">🍚 米粮</span><span class="val">${fin.rice_days} 日</span></div>` : ""}
+  ${fin.monthly_burn !== undefined ? `<div class="stat-line"><span class="label">📉 月耗</span><span class="val">约 ${fin.monthly_burn} 两</span></div>` : ""}
+  ${fin.family ? `<div class="sidebar-fin-extra">👨‍👩‍👧 ${escapeHtml(fin.family)}</div>` : ""}
+  ${fin.external ? `<div class="sidebar-fin-extra">📢 ${escapeHtml(fin.external)}</div>` : ""}
+  ${Object.keys(fin).length === 0 ? "<div style='color:#5a4a30;font-size:12px'>财务数据待更新</div>" : ""}
+`;
+
 $side.innerHTML = `
   <h2>${data.era_name || "万历十五年"}</h2>
   <div class="stat-line"><span class="label">回合</span><span class="val">${data.round_number}</span></div>
@@ -1731,7 +1767,17 @@ $side.innerHTML = `
     💬 问询/观察不消耗行动点，可继续追问。
   </div>
 
-  <div class="sidebar-secondary"> <!-- 🆕 v1.6.2 移动端隐藏次要信息 -->
+  <!-- 🆕 v1.7.26 固化面板：任务 / 还债 / 财务 -->
+  <h3>📋 待办 (${tasks.length})</h3>
+  <div class="sidebar-tasks">${tasksHtml}</div>
+
+  <h3>⏰ 还债日 (${deadlines.length})</h3>
+  <div class="sidebar-deadlines">${deadlinesHtml}</div>
+
+  <h3>💰 财务</h3>
+  <div class="sidebar-fin">${finHtml}</div>
+
+  <div class="sidebar-secondary">
     <h3>已解锁认知 (${(data.unlocked_insights || []).length}/14)</h3>
     <div>${(data.unlocked_insights || []).map(i => `<span class="insight-tag">${i}</span>`).join("") || "<span style='color:#5a4a30;font-size:12px'>尚无</span>"}</div>
 

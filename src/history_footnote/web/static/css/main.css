@@ -301,6 +301,50 @@ body {
 }
 .sidebar .stat-line .label { color: #a08858; }
 .sidebar .stat-line .val { color: #f0d8a0; font-weight: bold; }
+
+/* 🆕 v1.7.26 固化面板：任务 / 还债 / 财务 */
+.sidebar-tasks { margin-bottom: 12px; }
+.sidebar-task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 12px;
+  color: #f0d8a0;
+  border-bottom: 1px dotted rgba(160, 136, 88, 0.15);
+}
+.sidebar-task:last-child { border-bottom: none; }
+.sidebar-task .task-icon { font-size: 11px; flex-shrink: 0; }
+.sidebar-task .task-title { flex: 1; }
+
+.sidebar-deadlines { margin-bottom: 12px; }
+.sidebar-deadline {
+  padding: 4px 0;
+  font-size: 12px;
+  border-bottom: 1px dotted rgba(160, 136, 88, 0.15);
+}
+.sidebar-deadline:last-child { border-bottom: none; }
+.sidebar-deadline .deadline-name {
+  color: #f0d8a0;
+  font-weight: bold;
+}
+.sidebar-deadline .deadline-meta {
+  color: #a08858;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.sidebar-fin { margin-bottom: 12px; }
+.sidebar-fin-extra {
+  font-size: 11px;
+  color: #a08858;
+  line-height: 1.4;
+  margin-top: 4px;
+  padding: 3px 6px;
+  background: rgba(139, 111, 71, 0.1);
+  border-left: 2px solid #8b6f47;
+  border-radius: 2px;
+}
 .sidebar .insight-tag {
   display: inline-block;
   background: #4a3820;

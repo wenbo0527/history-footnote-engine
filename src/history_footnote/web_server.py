@@ -76,6 +76,31 @@ def _session_set(sid, game): return SESSION_POOL.add(sid, game)
 def _session_pop(sid): SESSION_POOL.remove(sid)
 
 
+def _build_sidebar_data(state, recent_narratives: list) -> dict:
+    """🆕 v1.7.26: 构建侧边栏数据（任务/还债/财务）
+
+    1. 先从 state 取（如果 LLM 主动写入）
+    2. 兜底：从最新 narrative 解析或推断
+    """
+    # 优先用 state 上的固化数据
+    if state.active_tasks or state.upcoming_deadlines or state.financial_status:
+        return {
+            "active_tasks": list(state.active_tasks),
+            "upcoming_deadlines": list(state.upcoming_deadlines),
+            "financial_status": dict(state.financial_status),
+        }
+    # 兜底：从最新 narrative 解析
+    if recent_narratives:
+        latest = recent_narratives[-1].get("narrative", "")
+        from history_footnote.sidebar_parser import build_sidebar_data as _parse_sidebar
+        return _parse_sidebar(latest, state.variables)
+    return {
+        "active_tasks": [],
+        "upcoming_deadlines": [],
+        "financial_status": {},
+    }
+
+
 def _format_state(game: GameLoop) -> dict:
     """序列化当前游戏状态供前端展示"""
     s = game.state
@@ -105,9 +130,9 @@ def _format_state(game: GameLoop) -> dict:
         "custom_character": getattr(s, "custom_character", {}),
         # 🐛 v1.5.1 P1 Issue 5 修复：暴露 last_voice_options 给前端
         "last_voice_options": list(getattr(s, "last_voice_options", []) or []),
-        # 🆕 v1.7.21 兜底：last_voice_options 为空时注入"自由输入"占位
-        # 背景：玩家选了"自由输入"后，UI 必须有可见的退出路径
-        # LLM 偶尔不返回 voice_options（特别是 inquire 意图）
+        # 🆕 v1.7.26 侧边栏固化面板数据
+        # 从 narrative 的 <aside> 块解析（LLM 输出）+ 后端推断兜底
+        "sidebar_data": _build_sidebar_data(s, recent_narr),
     }
     # 兜底注入（如果空）
     if not result["last_voice_options"]:
