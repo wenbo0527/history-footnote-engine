@@ -1078,6 +1078,17 @@ class Handler(BaseHTTPRequestHandler):
                                     emitter.emit_thinking(f"后校验发现 {len(validation.errors)} 个问题")
                                 # 🆕 v1.7.15 阶段 5: 整理
                                 emitter.emit_phase("finalizing", "整理行动选项...", 95)
+                                # 🆕 v1.7.18: done 事件包含全量数据
+                                # 背景：前端不再发 /api/state（减少并发 fetch）
+                                # 全量数据来自 _format_state
+                                _full_state = _format_state(game)
+                                # _format_state 没有 last_narrative 字段，但有 recent_narratives[]
+                                _recent_narrs = _full_state.get("recent_narratives", [])
+                                _last_narrative_obj = _recent_narrs[-1] if _recent_narrs else {
+                                    "round": _full_state.get("round_number", 0),
+                                    "summary": "",
+                                    "narrative": "",
+                                }
                                 final_data = {
                                     "session_id": sid,
                                     "voice_options": dm_response.get("voice_options", []),
@@ -1085,9 +1096,20 @@ class Handler(BaseHTTPRequestHandler):
                                     "validation_passed": validation.valid,
                                     "is_action": dm_response.get("is_action", True),
                                     "time_cost": dm_response.get("time_cost", 1),
+                                    # 🆕 v1.7.18 全量数据
+                                    "last_narrative": _last_narrative_obj,
+                                    "last_is_action": dm_response.get("is_action", True),
+                                    "last_time_cost": dm_response.get("time_cost", 1),
+                                    "last_intent_type": dm_response.get("intent_type", "action"),
+                                    "last_month_advanced": _full_state.get("last_month_advanced", False),
+                                    "last_new_date": _full_state.get("last_new_date"),
+                                    "current_date": _full_state.get("current_date", ""),
+                                    "round_number": _full_state.get("round_number", 0),
+                                    "action_points_current": _full_state.get("action_points_current", 0),
+                                    "action_points_max": _full_state.get("action_points_max", 3),
+                                    "variables": _full_state.get("variables", {}),
                                 }
-                                # 🆕 v1.7.17 debug（清理版）
-                                logger.info(f"emit_done for sid={sid}, voice_count={len(final_data['voice_options'])}")
+                                logger.info(f"emit_done for sid={sid}, voice_count={len(final_data['voice_options'])}, narr_len={len(_last_narrative_obj.get('narrative', ''))}")
                                 emitter.emit_done(final_data)
                             except TimeoutError:
                                 emitter.emit_error("LLM 调用超时")
@@ -1102,7 +1124,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream; charset=utf-8")
                 self.send_header("Cache-Control", "no-cache")
-                self.send_header("Connection", "keep-alive")
+                # 🆕 v1.7.18: SSE 必须 close，不能 keep-alive
+                # 原因：keep-alive 让客户端 fetch 一直等 EOF，触发 ERR_ABORTED
+                # SSE 协议设计：服务端完成所有事件后直接 close TCP
+                self.send_header("Connection", "close")
+                self.send_header("X-Accel-Buffering", "no")  # 禁用 nginx 缓冲
                 self.end_headers()
                 try:
                     for event_type, event_data in emitter.iter_events(timeout=120.0):

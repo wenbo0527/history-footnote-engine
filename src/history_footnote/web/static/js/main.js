@@ -1591,31 +1591,14 @@ while (true) {
 if (!finalData) {
   throw new Error("SSE 结束但未收到 done 事件");
 }
-// done 事件已包含 voice_options / intent_type / time_cost
-// 但还需要 last_narrative + last_is_action + last_time_cost + last_intent_type
-// 这些是后端 _format_state 输出的，从 state.narrative_history[-1] 读取
-// 简单做法：再发个 GET /api/state 拿全量
-let stateData = {};
-try {
-  stateData = await api("/api/state?session_id=" + state.session_id);
-} catch (e) {
-  console.warn("Failed to load /api/state after stream", e);
-}
+// 🆕 v1.7.18: done 事件已包含全量数据（不再额外 fetch /api/state）
+// 背景：之前的 /api/state 在 SSE 还没彻底关闭时并发 fetch，
+//       会触发 ERR_ABORTED（Connection: keep-alive 让 socket 复用）
+// 修复：done 事件直接带全量数据 + 服务端 SSE Connection: close
 return {
   ...finalData,
-  last_narrative: stateData.last_narrative || null,
-  last_is_action: stateData.last_is_action,
-  last_time_cost: stateData.last_time_cost,
-  last_intent_type: stateData.last_intent_type,
-  last_month_advanced: stateData.last_month_advanced,
-  last_new_date: stateData.last_new_date,
-  current_date: stateData.current_date,
-  round_number: stateData.round_number,
-  action_points_current: stateData.action_points_current,
-  action_points_max: stateData.action_points_max,
-  variables: stateData.variables,
-  // voice_options 已经在 finalData 里
   last_voice_options: finalData.voice_options || [],
+  voice_options: finalData.voice_options || [],
 };
 }
 
