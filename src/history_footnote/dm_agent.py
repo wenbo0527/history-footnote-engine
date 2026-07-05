@@ -711,6 +711,26 @@ def make_dm_nodes(llm_with_tools, state_ref):
         response = llm_with_tools.invoke(state["messages"])
         return {"messages": [response]}
 
+    # 🆕 v1.7.6 修复：第 5 个嵌套节点（extract_narrative_node）
+    # 之前 extract_narrative_node 在顶层定义（line 715），但 make_dm_nodes 调用方
+    # 期望从闭包内拿到 5 个节点。修复：在 make_dm_nodes 内增加一个闭包版。
+    def extract_narrative_node_inner(state: DMState) -> dict:
+        """闭包版 extract_narrative_node（绑定 state_ref）
+
+        复用顶层 extract_narrative_node 实现
+        """
+        return extract_narrative_node(state)
+
+    # 🆕 v1.7.6 修复：返回 5 个节点元组
+    # 之前 make_dm_nodes 没有 return → 返回 None → cannot unpack
+    return (
+        skill_orchestration_node,
+        situation_assessment_node,
+        should_continue,
+        narrative_fusion_node,
+        extract_narrative_node_inner,
+    )
+
 
 def extract_narrative_node(state: DMState) -> dict:
     """从最后一条AIMessage中提取结构化叙事
