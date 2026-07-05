@@ -72,6 +72,15 @@ SKILL_METADATA_PATTERNS: list[re.Pattern] = [
         r"\n?",
         re.MULTILINE | re.IGNORECASE,
     ),
+
+    # 🆕 v1.7.11 LLM 思考过程 / 内部标记 清洗
+    # <zh>...</zh> / <en>...</en> 是某些 LLM 输出的"思考语言标签"
+    re.compile(r"<zh>.*?</zh>", re.DOTALL | re.IGNORECASE),
+    re.compile(r"<en>.*?</en>", re.DOTALL | re.IGNORECASE),
+    # 裸的 <zh> 开标签但无闭合（LLM 输出被截断）
+    re.compile(r"<zh>[^\n]*\n?(.*?)(?=\n\n|\Z)", re.DOTALL | re.IGNORECASE),
+    # 脚注引用 [^N-N]: ... （LLM 引用原文时用）
+    re.compile(r"^\s*\[\^?\d+[-‐‑‒–—]\d+\]:\s*[^\n]*\n?", re.MULTILINE),
 ]
 
 
@@ -179,6 +188,15 @@ OPTION_LINE_PATTERN = re.compile(
     re.MULTILINE,
 )
 
+# 🆕 v1.7.11 真实 LLM 输出的"*" 包裹格式
+# 例：*王掌柜开价一百一十文，当场成交省事，但比上月跌了十文。*
+# 例：*去陈牙行碰碰运气，可能价高些，也可能白跑一趟。*
+# 这种格式下没有"一、二、三"标号，但每行是一个独立选项
+ASTERISK_OPTION_PATTERN = re.compile(
+    r"^\*([^*]+)\*\s*$",
+    re.MULTILINE,
+)
+
 
 def extract_inline_options(text: str, max_options: int = 6) -> list[dict]:
     """🆕 v1.6.9 从 narrative 文本中提取"中文章节选项"
@@ -220,6 +238,27 @@ def extract_inline_options(text: str, max_options: int = 6) -> list[dict]:
         })
         if len(options) >= max_options:
             break
+
+    # 🆕 v1.7.11: 真实 LLM 经常输出 *xxx* 格式的选项（无"一、二"标号）
+    # 如果 OPTION_LINE_PATTERN 没找到，尝试 ASTERISK_OPTION_PATTERN
+    if not options:
+        asterisk_matches = list(ASTERISK_OPTION_PATTERN.finditer(text))
+        for i, m in enumerate(asterisk_matches):
+            label = m.group(1).strip()
+            if len(label) < 4:
+                continue
+            # 取前 20 字作为按钮标签
+            display_label = label[:20] + ("..." if len(label) > 20 else "")
+            # 用数字标号（一、二、三...）
+            index_chars = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
+            index = index_chars[i] if i < len(index_chars) else str(i + 1)
+            options.append({
+                "index": index,
+                "label": display_label,
+                "full_text": m.group(0).strip(),
+            })
+            if len(options) >= max_options:
+                break
 
     return options
 
