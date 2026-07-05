@@ -199,10 +199,33 @@ def strip_skill_metadata(text: str, min_length: int | None = None) -> str:
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip()
 
+    # 🆕 v1.7.25: 末尾问号兜底（保证玩家永远有决策引导）
+    # 背景：v1.7.24 prompt 强化 4 段结构 + 末尾问号，但 LLM 不一定遵循
+    # 现象：5/5 narrative 末尾无问号（玩家不知道要决策什么）
+    # 修复：检测末尾 30 字内无问号时，**追加**通用问句（不替换原文）
+    if not _ends_with_question(cleaned):
+        # 提取一个合适的"决策点"提示
+        fallback_questions = [
+            "\n\n**你想做什么？**",
+            "\n\n**接下来怎么办？**",
+            "\n\n**你怎么应对？**",
+        ]
+        # 用最后一句话作为锚点（去掉尾部标点）
+        import random
+        cleaned += fallback_questions[hash(cleaned[-20:]) % len(fallback_questions)]
+
     if len(cleaned) < min_length:
         return _SanCfg.FALLBACK_TEXT
 
     return cleaned
+
+
+def _ends_with_question(text: str) -> bool:
+    """🆕 v1.7.25: 检测末尾 30 字内是否有问号（含中英文 ?？）"""
+    if not text:
+        return False
+    tail = text[-30:].strip()
+    return ("?" in tail) or ("？" in tail)
 
 
 # ============================================================

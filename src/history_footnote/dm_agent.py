@@ -1149,31 +1149,51 @@ class DMAgent:
         result = self.graph.invoke(initial_state)
 
         # 🆕 v1.7.23: narrative 短答重试机制
+        # 🆕 v1.7.25: 扩到末尾问号检测（无问号也重试）
         # 背景：LLM 偶尔输出 < 100 字（远低于 prompt 要求的 300-500 字）
+        #       或末尾无问号（玩家不知道要决策什么）
         # 现象：玩家看到"你只需要做一件事：在这个年头上活着。"等短答
-        # 修复：narrative < 100 字时重试 1-2 次
+        # 修复：narrative < 100 字 或 末尾 30 字无问号 时重试 1-2 次
         narrative = result.get("narrative", "")
+        import logging
+        _log = logging.getLogger("history_footnote.dm_agent")
+        # 🆕 v1.7.25 工具函数：检测末尾问号
+        def _narr_ends_with_question(text: str) -> bool:
+            if not text:
+                return False
+            tail = text[-30:].strip()
+            return ("?" in tail) or ("？" in tail)
+        # 判断是否需要重试
+        need_retry = False
+        retry_reason = ""
         if len(narrative) < 100:
-            import logging
-            _log = logging.getLogger("history_footnote.dm_agent")
+            need_retry = True
+            retry_reason = f"短答（{len(narrative)}字）"
+        elif not _narr_ends_with_question(narrative):
+            need_retry = True
+            retry_reason = "末尾无问号"
+        if need_retry:
             _log.warning(
-                f"[v1.7.23] narrative 短答（{len(narrative)}字），触发重试"
+                f"[v1.7.25] narrative {retry_reason}，触发重试"
             )
             for retry_i in range(2):  # 最多 2 次重试
                 try:
                     result = self.graph.invoke(initial_state)
                     narrative = result.get("narrative", "")
-                    if len(narrative) >= 100:
+                    # 重新检查
+                    short_ok = len(narrative) >= 100
+                    question_ok = _narr_ends_with_question(narrative)
+                    if short_ok and question_ok:
                         _log.info(
-                            f"[v1.7.23] 第 {retry_i+1} 次重试成功，narrative={len(narrative)}字"
+                            f"[v1.7.25] 第 {retry_i+1} 次重试成功，narrative={len(narrative)}字"
                         )
                         break
                 except Exception as e:
-                    _log.exception(f"[v1.7.23] 重试 {retry_i+1} 失败: {e}")
+                    _log.exception(f"[v1.7.25] 重试 {retry_i+1} 失败: {e}")
                     break
             else:
                 _log.error(
-                    f"[v1.7.23] 2 次重试仍失败，narrative={len(narrative)}字，使用 fallback"
+                    f"[v1.7.25] 2 次重试仍失败，narrative={len(narrative)}字，使用 fallback"
                 )
 
         # 🆕 v1.6+ P0 修复：返回 DMResponse 完整字段（含 voice_options/intent_type/is_action/time_cost）
