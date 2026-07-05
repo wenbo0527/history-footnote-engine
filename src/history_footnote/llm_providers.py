@@ -6,6 +6,7 @@
 - anthropic: Anthropic官方（claude-3-5-sonnet等）
 - minimax-anthropic: Minimax（Anthropic兼容协议，base_url=api.minimaxi.com/anthropic）
 - minimax-openai: Minimax（OpenAI兼容协议，base_url=api.minimaxi.com/v1）
+- deepseek: DeepSeek（OpenAI兼容协议，base_url=api.deepseek.com，支持思考模式）
 - custom: 自定义OpenAI兼容endpoint
 
 设计：所有provider返回LangChain BaseChatModel实例，DM Agent不知道具体是谁。
@@ -36,10 +37,10 @@ def make_llm(
     """构造LLM实例
 
     Args:
-        provider: "mock" / "openai" / "anthropic" / "minimax-anthropic" / "minimax-openai" / "custom"
+        provider: "mock" / "openai" / "anthropic" / "minimax-anthropic" / "minimax-openai" / "deepseek" / "custom"
         model: 模型名称（为空时用provider默认）
         api_key: API Key（为空时从环境变量读）
-        base_url: 自定义endpoint（仅custom/minimax-*需要）
+        base_url: 自定义endpoint（仅custom/minimax-*/deepseek需要）
         extra_kwargs: 透传给LLM的额外参数
         era_config: era配置（mock模式需要，用于生成叙事）
 
@@ -87,6 +88,31 @@ def make_llm(
             api_key=api_key or os.environ.get("MINIMAX_API_KEY") or os.environ.get("OPENAI_API_KEY"),
             base_url=base_url or "https://api.minimaxi.com/v1",
             **extra_kwargs,
+        )
+
+    elif provider == "deepseek":
+        # 🆕 v1.7.12 DeepSeek（OpenAI 兼容协议 + 思考模式）
+        # 协议参考：https://api-docs.deepseek.com/
+        # 用户给定的官方示例：
+        #   client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+        #   response = client.chat.completions.create(
+        #       model="deepseek-v4-pro", ..., reasoning_effort="high",
+        #       extra_body={"thinking": {"type": "enabled"}}
+        #   )
+        # LangChain 透传：reasoning_effort 通过 model_kwargs 传；extra_body 同样通过 model_kwargs
+        from langchain_openai import ChatOpenAI
+        # 合并思考模式参数（如果未在 extra_kwargs 中显式指定）
+        ds_kwargs = {
+            "reasoning_effort": "high",
+            "extra_body": {"thinking": {"type": "enabled"}},
+        }
+        # 允许调用方覆盖（通过 extra_kwargs 传入）
+        ds_kwargs.update(extra_kwargs or {})
+        return ChatOpenAI(
+            model=model or "deepseek-v4-pro",
+            api_key=api_key or os.environ.get("DEEPSEEK_API_KEY"),
+            base_url=base_url or "https://api.deepseek.com",
+            **ds_kwargs,
         )
 
     elif provider == "custom":
@@ -141,6 +167,14 @@ def get_provider_info(provider: str) -> dict:
             "default_model": "MiniMax-M3",
             "default_base_url": "https://api.minimaxi.com/v1",
         },
+        "deepseek": {
+            "name": "DeepSeek",
+            "description": "DeepSeek 模型（OpenAI 兼容 + 思考模式），base_url=api.deepseek.com",
+            "env_vars": ["DEEPSEEK_API_KEY"],
+            "default_model": "deepseek-v4-pro",
+            "default_base_url": "https://api.deepseek.com",
+            "features": ["thinking_mode", "reasoning_effort=high"],
+        },
         "custom": {
             "name": "Custom OpenAI-compatible",
             "description": "自定义OpenAI兼容endpoint（需要指定base_url）",
@@ -153,4 +187,4 @@ def get_provider_info(provider: str) -> dict:
 
 def list_providers() -> list[str]:
     """列出所有支持的provider"""
-    return ["mock", "openai", "anthropic", "minimax-anthropic", "minimax-openai", "custom"]
+    return ["mock", "openai", "anthropic", "minimax-anthropic", "minimax-openai", "deepseek", "custom"]
