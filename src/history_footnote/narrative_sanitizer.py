@@ -177,6 +177,24 @@ def strip_skill_metadata(text: str, min_length: int | None = None) -> str:
     for pattern in SKILL_METADATA_PATTERNS:
         cleaned = pattern.sub("", cleaned)
 
+    # 🆕 v1.7.24: 清洗末尾的"技术信息"（行动点/消耗等）
+    # 背景：LLM 偶尔在 narrative 末尾输出 "**行动点：0/3（问询不消耗）**"
+    #       破坏文学沉浸感 + 占用叙事空间
+    # 修复：移除末尾的元信息块（横线分隔 + 技术元数据）
+    cleaned = re.sub(
+        r"\n*\s*---\s*\n+\s*\*\*行动点[^*]*\*\*\s*",
+        "\n",
+        cleaned,
+        flags=re.MULTILINE,
+    )
+    # 也匹配 "消耗 X 点" 等元信息
+    cleaned = re.sub(
+        r"\n+\s*\*\*(消耗|行动点|时间)[^*]*\*\*\s*$",
+        "",
+        cleaned,
+        flags=re.MULTILINE,
+    )
+
     # 清理多余空行
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip()

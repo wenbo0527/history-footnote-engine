@@ -1197,12 +1197,29 @@ document.getElementById("player_input").addEventListener("keydown", e => {
 }
 
 // 🆕 v1.6.9 重置输入框 placeholder 为默认
+// 🆕 v1.7.24 改：调用 /api/dilemma 动态生成困境引导 placeholder
 function resetInputPlaceholder() {
 const $ta = document.getElementById("player_input");
 if ($ta) {
   $ta.placeholder = "或自由输入（你想做什么/想描述什么都可以）";
   $ta.value = "";
 }
+}
+
+// 🆕 v1.7.24: 从 narrative 提取困境，动态更新 placeholder
+async function updatePlaceholderFromNarrative(narrative) {
+  if (!narrative || narrative.length < 50) return;
+  try {
+    const r = await api("/api/dilemma", "POST", {text: narrative});
+    if (r && r.placeholder && r.placeholder.length > 0) {
+      const $ta = document.getElementById("player_input");
+      if ($ta) {
+        $ta.placeholder = r.placeholder;
+      }
+    }
+  } catch (e) {
+    console.warn("[v1.7.24] dilemma placeholder update failed:", e);
+  }
 }
 
 // 🆕 v1.7.1 Character Wiki 弹层（per-save 人物知识图谱）
@@ -1539,6 +1556,11 @@ if (data.last_narrative) {
     new_date: data.last_new_date,
   };
   appendNarrative(data.last_narrative, lastMeta);
+  // 🆕 v1.7.24: 动态更新 placeholder（困境引导）
+  const _narrText = typeof data.last_narrative === "string"
+    ? data.last_narrative
+    : (data.last_narrative.narrative || "");
+  updatePlaceholderFromNarrative(_narrText);
 }
 // 🆕 v1.5+：渲染新一轮的内在声音选项
 // 🐛 v1.6+ 修复：先清理旧选项区 + 旧 banner，避免重复

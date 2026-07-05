@@ -681,6 +681,51 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(500, {"error": "sanitize failed", "error_id": str(uuid.uuid4())[:8]})
                 return
 
+            if path == "/api/dilemma":
+                # 🆕 v1.7.24: 从 narrative 提取"当前困境" + 引导问题
+                # 用于动态更新前端 placeholder
+                # 提取策略：
+                #   1. 找最后一句问句（以"?"/"？"结尾）
+                #   2. 找【当前困境】段
+                #   3. 找最后 100 字作为"上下文"
+                #   4. 失败时用通用 placeholder
+                text = data.get("text", "")
+                try:
+                    import re
+                    # 1. 提取"【当前困境】"段
+                    dilemma_match = re.search(
+                        r"【当前困境】\s*(.+?)(?=【|$)", text, re.DOTALL
+                    )
+                    dilemma = dilemma_match.group(1).strip() if dilemma_match else ""
+                    # 2. 提取最后一句问句
+                    question_match = re.search(
+                        r"([^。！？\n]*[？\?])", text
+                    )
+                    question = question_match.group(1).strip() if question_match else ""
+                    # 3. 取 narrative 最后 80 字（作为 fallback context）
+                    context = text.strip()[-80:] if text else ""
+                    # 4. 构造 placeholder
+                    if dilemma and question:
+                        placeholder = f"【当前困境】\n{dilemma[:200]}\n\n{question}"
+                    elif question:
+                        placeholder = question
+                    elif dilemma:
+                        placeholder = f"【当前困境】\n{dilemma[:200]}\n\n你想做什么？"
+                    else:
+                        # fallback：用最后 80 字作为引导
+                        placeholder = f"……{context}\n\n你想做什么？"
+                    self._json(200, {
+                        "placeholder": placeholder[:300],  # 限长
+                        "dilemma": dilemma[:200],
+                        "question": question,
+                        "has_dilemma": bool(dilemma),
+                        "has_question": bool(question),
+                    })
+                except Exception as e:
+                    logger.exception(f"[dilemma] failed: {e}")
+                    self._json(500, {"error": "dilemma extraction failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
             if path == "/api/sanitize_patterns":
                 # 🆕 v1.6.7 提供给前端同步使用的清洗模式（可选）
                 try:
