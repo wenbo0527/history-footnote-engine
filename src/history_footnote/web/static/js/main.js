@@ -422,9 +422,24 @@ renderGame(data);
 }
 
 async function showArchives() {
-const data = await api("/api/archives?era_id=" + state.era_id);
+let data;
+try {
+  data = await api("/api/archives?era_id=" + state.era_id);
+} catch (e) {
+  // 🆕 v1.7.13: 网络错误处理（ERR_EMPTY_RESPONSE 等）
+  console.error("showArchives fetch error:", e);
+  $main.innerHTML = `<div class='start-screen'><h2>存档列表</h2>
+    <p style='color:#a33;text-align:center'>无法连接服务器，请稍后重试</p>
+    <div style='text-align:center;margin-top:24px'>
+      <button class='btn-secondary' onclick='renderStart()'>返回</button>
+    </div></div>`;
+  return;
+}
 let html = "<div class='start-screen'><h2>存档列表</h2><div style='max-width:500px;margin:0 auto;text-align:left'>";
-if (data.archives.length === 0) {
+if (data.error) {
+  // 🆕 v1.7.13: 后端返回 500 等错误
+  html += `<p style='color:#a33;text-align:center'>${data.error}</p>`;
+} else if (!data.archives || data.archives.length === 0) {
   html += "<p style='color:#5a4a30;text-align:center'>暂无存档</p>";
 } else {
   data.archives.forEach(a => {

@@ -340,20 +340,29 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/archives":
             qs = parse_qs(urlparse(self.path).query)
             era_id = qs.get("era_id", [None])[0]
-            save_manager = get_save_manager_cached()  # 🆕 v1.6.2 P0 A3: SaveManager 单例
-            sessions = save_manager.list_sessions(era_id=era_id)
-            out = []
-            for s in sessions[:10]:
-                out.append({
-                    "session_id": s.session_id,
-                    "era_id": s.era_id,
-                    "current_round": s.current_round,
-                    "current_date": s.current_date,
-                    "summary": s.summary,
-                    "selected_identity": s.selected_identity,
-                    "player_gender": s.player_gender,
-                })
-            self._json(200, {"archives": out})
+            try:
+                save_manager = get_save_manager_cached()  # 🆕 v1.6.2 P0 A3: SaveManager 单例
+                sessions = save_manager.list_sessions(era_id=era_id)
+                out = []
+                for s in sessions[:10]:
+                    # 🆕 v1.7.13: SaveSession 没有 selected_identity/player_gender 字段
+                    # 用 getattr 兜底（防止 AttributeError → ERR_EMPTY_RESPONSE）
+                    out.append({
+                        "session_id": s.session_id,
+                        "era_id": s.era_id,
+                        "current_round": getattr(s, "current_round", 0),
+                        "current_date": getattr(s, "current_date", ""),
+                        "summary": getattr(s, "summary", ""),
+                        "created_at": getattr(s, "created_at", ""),
+                        "last_saved_at": getattr(s, "last_saved_at", ""),
+                        "selected_identity": getattr(s, "selected_identity", ""),
+                        "player_gender": getattr(s, "player_gender", ""),
+                    })
+                self._json(200, {"archives": out})
+            except Exception as e:
+                # 🆕 v1.7.13 修复：捕获异常并返回 500（不再让请求挂死）
+                logger.exception("[/api/archives] 失败: %s", e)
+                self._json(500, {"error": f"列出存档失败: {e}", "archives": []})
             return
         self._json(404, {"error": "not found"})
 
