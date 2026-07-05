@@ -889,29 +889,42 @@ class Handler(BaseHTTPRequestHandler):
                             game.state.last_voice_options = extracted
                             logger.info(f"[v1.7.9] 注入 {len(extracted)} voice_options from narrative")
                         else:
-                            # 🆕 v1.7.9 改进：基于 context 注入**独特**的 3 个内在声音
-                            # 根据 narrative 提取关键词，匹配不同的"内在声音"
+                            # 🆕 v1.7.22 改进：优先 context-relevant 兜底，避免"永远同一 3 个"
+                            # 旧版本（v1.7.9）固定 3 个 base_voices，导致每次都看到"谨慎行事/按本心/问问旁人"
+                            # 修复：先收集 context-matched 声音（基于 narrative 关键词），然后用 base 补足
                             narr_text = last.get("narrative", "")
-                            # 默认 3 个 + 1 个兜底（让玩家总可继续）
+                            # 🆕 v1.7.22: 时代个性选项（每个都是 1 个独立维度）
+                            context_voices = []
+                            if "银" in narr_text or "钱" in narr_text or "税" in narr_text or "束脩" in narr_text:
+                                context_voices.append({"voice_id": "voice_accountant", "voice_name": "算盘声", "intent_text": "再盘算盘算，看能不能借到银子或换条活路"})
+                            if "官" in narr_text or "里长" in narr_text or "朝廷" in narr_text or "赵里长" in narr_text:
+                                context_voices.append({"voice_id": "voice_compliance", "voice_name": "本分", "intent_text": "照官府说的办，别给家里招祸"})
+                            if "织" in narr_text or "布" in narr_text or "丝" in narr_text or "织机" in narr_text:
+                                context_voices.append({"voice_id": "voice_craft", "voice_name": "手艺人的骄傲", "intent_text": "把活儿做好，名声立住了自然有客来"})
+                            if "牙行" in narr_text or "王掌柜" in narr_text or "客商" in narr_text:
+                                context_voices.append({"voice_id": "voice_market", "voice_name": "生意经", "intent_text": "问问价、比比货，总不吃亏"})
+                            if "王癞子" in narr_text or "赵里长" in narr_text or "李秀才" in narr_text or "沈氏" in narr_text:
+                                context_voices.append({"voice_id": "voice_social", "voice_name": "邻里情分", "intent_text": "人情世故，也得顾着"})
+                            # 🆕 v1.7.22: base_voices 只用作补足（context_voices 不够 3 个时）
                             base_voices = [
-                                {"voice_id": "voice_default_1", "voice_name": "谨慎行事", "intent_text": "先观察，再决定"},
-                                {"voice_id": "voice_default_2", "voice_name": "按本心", "intent_text": "照自己想做的去做"},
-                                {"voice_id": "voice_default_3", "voice_name": "问问旁人", "intent_text": "找个信得过的人商量"},
+                                {"voice_id": "voice_observed", "voice_name": "先看再看", "intent_text": "不急，先把眼前事理清楚"},
+                                {"voice_id": "voice_action", "voice_name": "动手试", "intent_text": "先动起来，做了再说"},
+                                {"voice_id": "voice_ask", "voice_name": "问问人", "intent_text": "这事得问个懂行的人"},
                             ]
-                            # 根据 narrative 关键词，添加额外的"时代个性"选项
-                            extra = []
-                            if "银" in narr_text or "钱" in narr_text or "税" in narr_text:
-                                extra.append({"voice_id": "voice_accountant", "voice_name": "算盘声", "intent_text": "再盘算盘算，看有没有别的进项"})
-                            if "官" in narr_text or "里长" in narr_text or "朝廷" in narr_text:
-                                extra.append({"voice_id": "voice_compliance", "voice_name": "本分", "intent_text": "照官府说的办，别惹麻烦"})
-                            if "织" in narr_text or "布" in narr_text or "丝" in narr_text:
-                                extra.append({"voice_id": "voice_craft", "voice_name": "手艺人的骄傲", "intent_text": "把活儿做好，名声自然有"})
-                            if "王" in narr_text or "张" in narr_text or "李" in narr_text:
-                                extra.append({"voice_id": "voice_social", "voice_name": "邻里情分", "intent_text": "人情世故，也得顾着"})
-                            # 截取前 3 个（保证 UI 紧凑）
-                            voices = base_voices + extra
-                            game.state.last_voice_options = voices[:3] if len(voices) >= 3 else voices + base_voices[:3-len(voices)]
-                            logger.info(f"[v1.7.9] 注入 {len(game.state.last_voice_options)} voice_options (mock fallback with context)")
+                            # 🆕 v1.7.22 修复：context 优先 + base 补足（去重）
+                            # 不再用 [:3] 截断，保留 context 相关性
+                            seen = set()
+                            merged = []
+                            for v in context_voices + base_voices:
+                                key = v["voice_id"]
+                                if key in seen:
+                                    continue
+                                seen.add(key)
+                                merged.append(v)
+                                if len(merged) >= 3:
+                                    break
+                            game.state.last_voice_options = merged
+                            logger.info(f"[v1.7.22] 注入 {len(merged)} voice_options (context-first: {len(context_voices)} context, {len(merged) - len(context_voices)} base)")
 
                     # 计算行动点消耗情况
                     ap_after = game.state.action_points_current

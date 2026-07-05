@@ -1294,6 +1294,9 @@ voiceOptions = voiceOptions || [];
 const div = document.createElement("div");
 div.className = "voice-options";
 div.id = "voice-options";
+// 🆕 v1.7.22 修复：如果后端已经注入了 voice_freetext 占位，前端不要再加 "自由输入" 按钮
+// 否则会出现 2 个 "自由输入" 按钮（重复）
+const hasFreetext = voiceOptions.some(v => v.is_freetext);
 // 🆕 v1.7.21: 如果 voiceOptions 为空，header 文案变化
 const headerHint = voiceOptions.length > 0
   ? '<span class="voice-options-hint">或点下方"自由输入"</span>'
@@ -1310,6 +1313,13 @@ const gridItems = voiceOptions.map((opt, i) => {
     </button>
   `;
 }).join("");
+// 🆕 v1.7.22: 只在没 freetext 占位时才显示前端的"自由输入"按钮
+const freetextButton = hasFreetext
+  ? ""
+  : `<button class="voice-option-btn other" onclick="showFreeInputTab()">
+      <span class="voice-name">✍️ 自由输入</span>
+      <span class="voice-intent">都不对？自己描述要做什么</span>
+    </button>`;
 div.innerHTML = `
   <div class="voice-options-header">
     🎭 你脑海中的声音——选择按哪个行动
@@ -1317,10 +1327,7 @@ div.innerHTML = `
   </div>
   <div class="voice-options-grid">
     ${gridItems}
-    <button class="voice-option-btn other" onclick="showFreeInputTab()">
-      <span class="voice-name">✍️ 自由输入</span>
-      <span class="voice-intent">都不对？自己描述要做什么</span>
-    </button>
+    ${freetextButton}
   </div>
 `;
 // 🆕 v1.7.7 改：插到 action-area 内部 input-area 之前
