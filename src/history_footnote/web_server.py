@@ -86,7 +86,7 @@ def _format_state(game: GameLoop) -> dict:
             "summary": nh.get("summary", ""),
             "narrative": nh.get("narrative", ""),
         })
-    return {
+    result = {
         "session_id": game.session.session_id,
         "era_id": game.era_id,
         "era_name": game.era_config.get("era_name", game.era_id),
@@ -105,7 +105,19 @@ def _format_state(game: GameLoop) -> dict:
         "custom_character": getattr(s, "custom_character", {}),
         # 🐛 v1.5.1 P1 Issue 5 修复：暴露 last_voice_options 给前端
         "last_voice_options": list(getattr(s, "last_voice_options", []) or []),
+        # 🆕 v1.7.21 兜底：last_voice_options 为空时注入"自由输入"占位
+        # 背景：玩家选了"自由输入"后，UI 必须有可见的退出路径
+        # LLM 偶尔不返回 voice_options（特别是 inquire 意图）
     }
+    # 兜底注入（如果空）
+    if not result["last_voice_options"]:
+        result["last_voice_options"] = [{
+            "voice_id": "voice_freetext",
+            "voice_name": "✍️ 自由输入",
+            "intent_text": "",
+            "is_freetext": True,
+        }]
+    return result
 
 
 def _detect_intent_for_response(player_input: str, dm_response: dict) -> str:
@@ -1112,9 +1124,21 @@ class Handler(BaseHTTPRequestHandler):
                                     "summary": "",
                                     "narrative": "",
                                 }
+                                # 🆕 v1.7.21: 兜底 — voice_options 为空时，注入"自由输入"占位选项
+                                # 背景：LLM 偶尔返回空 voice_options → 前端 appendVoiceOptions([]) 直接 return
+                                #       → 玩家看不到任何 UI → 完全卡死
+                                # 修复：后端兜底，前端也兜底（双保险）
+                                _voice_opts = dm_response.get("voice_options", []) or []
+                                if not _voice_opts:
+                                    _voice_opts = [{
+                                        "voice_id": "voice_freetext",
+                                        "voice_name": "✍️ 自由输入",
+                                        "intent_text": "",  # 空字符串 = 触发自由输入框
+                                        "is_freetext": True,
+                                    }]
                                 final_data = {
                                     "session_id": sid,
-                                    "voice_options": dm_response.get("voice_options", []),
+                                    "voice_options": _voice_opts,
                                     "intent_type": dm_response.get("intent_type", "action"),
                                     "validation_passed": validation.valid,
                                     "is_action": dm_response.get("is_action", True),

@@ -1287,22 +1287,36 @@ function appendVoiceOptions(voiceOptions) {
 // 点「其他」后才展开自由输入框，避免玩家直接打字跳过选项
 // 🆕 v1.7.7 改：插入到 action-area 内（input-area 之前），形成"行动区"
 // 🆕 v1.7.9 改："其他" 按钮更突出（拆分样式 + 明确文案），强调"自由输入"是次要路径
-if (!voiceOptions || voiceOptions.length === 0) return;
+// 🆕 v1.7.21 改：即使 voiceOptions 为空也必须显示"自由输入"按钮
+// 背景：之前 if (empty) return → 玩家看不到任何 UI → 死局
+// 修复：移除 early return，至少显示"自由输入"按钮
+voiceOptions = voiceOptions || [];
 const div = document.createElement("div");
 div.className = "voice-options";
 div.id = "voice-options";
+// 🆕 v1.7.21: 如果 voiceOptions 为空，header 文案变化
+const headerHint = voiceOptions.length > 0
+  ? '<span class="voice-options-hint">或点下方"自由输入"</span>'
+  : '<span class="voice-options-hint">DM 没生成选项——直接描述你想做什么</span>';
+const gridItems = voiceOptions.map((opt, i) => {
+  // 🆕 v1.7.21: is_freetext 标记的选项，点它直接展开自由输入框
+  const onclick = opt.is_freetext
+    ? 'showFreeInputTab()'
+    : `submitVoiceOption(${i}, ${JSON.stringify(opt).replace(/"/g, '&quot;')})`;
+  return `
+    <button class="voice-option-btn ${opt.is_freetext ? 'other' : ''}" onclick="${onclick}">
+      <span class="voice-name">${escapeHtml(opt.voice_name || '?')}</span>
+      <span class="voice-intent">${escapeHtml(opt.intent_text || '都不对？自己描述要做什么')}</span>
+    </button>
+  `;
+}).join("");
 div.innerHTML = `
   <div class="voice-options-header">
     🎭 你脑海中的声音——选择按哪个行动
-    <span class="voice-options-hint">或点下方"自由输入"</span>
+    ${headerHint}
   </div>
   <div class="voice-options-grid">
-    ${voiceOptions.map((opt, i) => `
-      <button class="voice-option-btn" onclick="submitVoiceOption(${i}, ${JSON.stringify(opt).replace(/"/g, '&quot;')})">
-        <span class="voice-name">${escapeHtml(opt.voice_name || '?')}</span>
-        <span class="voice-intent">${escapeHtml(opt.intent_text || '?')}</span>
-      </button>
-    `).join("")}
+    ${gridItems}
     <button class="voice-option-btn other" onclick="showFreeInputTab()">
       <span class="voice-name">✍️ 自由输入</span>
       <span class="voice-intent">都不对？自己描述要做什么</span>

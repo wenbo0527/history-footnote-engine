@@ -23,8 +23,8 @@ from typing import Optional
 
 # 🆕 v1.7.10 版本信息
 # 单一权威：所有版本号都从这里读
-VERSION = "1.7.20"
-VERSION_NAME = "v1.7.20 - 内测版"  # 显示给用户
+VERSION = "1.7.21"
+VERSION_NAME = "v1.7.21 - 内测版"  # 显示给用户
 BUILD_DATE = "2026-07-05"
 IS_BETA = True  # 内测标识
 
