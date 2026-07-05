@@ -992,14 +992,19 @@ api("/api/sanitize", "POST", {text: rawNarrative}).then(sanitizeData => {
 function appendInputArea() {
 // 🆕 v1.7.7 改：把 voice_options 容器嵌到 input-area 内部，统一为"行动区"
 // 玩家视觉上"声音选项 + 输入框"是一个整体
+// 🆕 v1.7.9 改：默认隐藏输入框（声音按钮优先），点"自由输入"才展开
 const wrapper = document.createElement("div");
 wrapper.className = "action-area";
 wrapper.id = "action-area";
 wrapper.innerHTML = `
-  <div class="input-area" id="input-area">
-    <textarea id="player_input" placeholder="或自由输入（你想做什么/想描述什么都可以）  ⏎ 直接回车提交 · Shift+Enter 换行"></textarea>
+  <div class="input-area input-area-collapsed" id="input-area">
+    <div class="input-area-header">
+      <span class="input-area-title">✍️ 自由发挥</span>
+      <button class="input-area-toggle" onclick="cancelFreeInput()" title="返回声音选项">← 返回</button>
+    </div>
+    <textarea id="player_input" placeholder="想做什么 / 想说什么？  ⏎ 提交 · Shift+Enter 换行"></textarea>
     <div class="row">
-      <span class="hint">/help 查看元指令 · /state 查看状态 · /save slot1 存档</span>
+      <span class="hint">/help 元指令 · /state 状态 · /save slot1 存档</span>
       <button id="btn_submit" onclick="submitInput()">行动</button>
     </div>
     <div id="submit_msg"></div>
@@ -1115,12 +1120,16 @@ function appendVoiceOptions(voiceOptions) {
 // 🆕 v1.6+ Tab 式 UX：先显示 2-4 个选项 + 「其他」按钮
 // 点「其他」后才展开自由输入框，避免玩家直接打字跳过选项
 // 🆕 v1.7.7 改：插入到 action-area 内（input-area 之前），形成"行动区"
+// 🆕 v1.7.9 改："其他" 按钮更突出（拆分样式 + 明确文案），强调"自由输入"是次要路径
 if (!voiceOptions || voiceOptions.length === 0) return;
 const div = document.createElement("div");
 div.className = "voice-options";
 div.id = "voice-options";
 div.innerHTML = `
-  <div class="voice-options-header">🎭 你脑海中的声音——选择按哪个行动</div>
+  <div class="voice-options-header">
+    🎭 你脑海中的声音——选择按哪个行动
+    <span class="voice-options-hint">或点下方"自由输入"</span>
+  </div>
   <div class="voice-options-grid">
     ${voiceOptions.map((opt, i) => `
       <button class="voice-option-btn" onclick="submitVoiceOption(${i}, ${JSON.stringify(opt).replace(/"/g, '&quot;')})">
@@ -1129,8 +1138,8 @@ div.innerHTML = `
       </button>
     `).join("")}
     <button class="voice-option-btn other" onclick="showFreeInputTab()">
-      <span class="voice-name">✍️ 其他...</span>
-      <span class="voice-intent">如果都不对，自己描述要做什么</span>
+      <span class="voice-name">✍️ 自由输入</span>
+      <span class="voice-intent">都不对？自己描述要做什么</span>
     </button>
   </div>
 `;
@@ -1148,43 +1157,46 @@ if ($actionArea && $inputArea && $actionArea.contains($inputArea)) {
 }
 
 function showFreeInputTab() {
-// 🆕 v1.6+ Tab 式 UX：玩家点「其他」后展开自由输入框
-// 1. 隐藏选项区（避免视觉混乱）
-const $opts = document.getElementById("voice-options");
-if ($opts) $opts.style.display = "none";
-
-// 2. 在 input-area 上方插入一个"自由发挥"提示区
+// 🆕 v1.7.9 改：玩家点 "自由输入" 后展开输入框（不是新 tab，只是展开折叠区）
+// 1. 展开 input-area（移除 collapsed class）
 const $inputArea = document.getElementById("input-area");
-if ($inputArea && !$main.querySelector(".free-input-banner")) {
-  const banner = document.createElement("div");
-  banner.className = "free-input-banner";
-  banner.innerHTML = `
-    <span class="free-input-banner-text">✍️ 自由发挥 — 自己描述要做什么</span>
-    <button class="free-input-cancel" onclick="cancelFreeInput()">← 返回选项</button>
-  `;
-  $main.insertBefore(banner, $inputArea);
+if ($inputArea) {
+  $inputArea.classList.remove("input-area-collapsed");
+  $inputArea.classList.add("input-area-expanded");
 }
 
-// 3. 聚焦输入框 + 自动滚动到底部
+// 2. 高亮声音区为"已折叠"（变灰）
+const $opts = document.getElementById("voice-options");
+if ($opts) $opts.classList.add("voice-options-collapsed");
+
+// 3. 聚焦输入框
 const $ta = document.getElementById("player_input");
 if ($ta) {
   $ta.focus();
-  $ta.placeholder = "（自由发挥）想做什么 / 想说什么？例：我要去乡试考场亲眼看看……";
+  $ta.placeholder = "想做什么 / 想说什么？例：我要去乡试考场亲眼看看……";
 }
+
+// 4. 滚动到底部
 $main.scrollTop = $main.scrollHeight;
 }
 
 function cancelFreeInput() {
-// 🆕 v1.6+：玩家可以「← 返回选项」回到选项区
+// 🆕 v1.7.9 改：玩家点 "← 返回" 后折叠输入框，回到声音选项为主的状态
+// 1. 折叠 input-area
+const $inputArea = document.getElementById("input-area");
+if ($inputArea) {
+  $inputArea.classList.remove("input-area-expanded");
+  $inputArea.classList.add("input-area-collapsed");
+}
+
+// 2. 取消声音区折叠
 const $opts = document.getElementById("voice-options");
-if ($opts) $opts.style.display = "";
+if ($opts) $opts.classList.remove("voice-options-collapsed");
 
-const $banner = $main.querySelector(".free-input-banner");
-if ($banner) $banner.remove();
-
+// 3. 清空输入框内容
 const $ta = document.getElementById("player_input");
 if ($ta) {
-  $ta.placeholder = "或自由输入（你想做什么/想描述什么都可以）";
+  $ta.placeholder = "想做什么 / 想说什么？";
   $ta.value = "";
 }
 }

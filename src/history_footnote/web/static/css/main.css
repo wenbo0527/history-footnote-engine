@@ -105,18 +105,85 @@ body {
   background: rgba(255, 250, 235, 0.6);
   border-width: 1px;
 }
+.action-area .voice-options-collapsed {
+  opacity: 0.5;
+  pointer-events: none;
+  margin: 0;
+  padding: 8px;
+}
 .action-area .input-area {
   margin: 0;
   border: 1px solid #c4a878;
   background: rgba(255, 250, 235, 0.9);
 }
+
+/* 🆕 v1.7.9 输入框折叠状态：默认隐藏，点"自由输入"才展开 */
+/* 节省移动端 100px 高度，强化"声音是主选" */
+.action-area .input-area-collapsed {
+  display: none;
+}
+.action-area .input-area-expanded {
+  display: block;
+  animation: expandInput 0.25s ease-out;
+}
+@keyframes expandInput {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 🆕 v1.7.9 输入框 header：显示"自由发挥"标题 + 返回按钮 */
+.input-area-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #c4a878;
+}
+.input-area-title {
+  color: #5a3e1f;
+  font-weight: bold;
+  font-size: 14px;
+}
+.input-area-toggle {
+  background: transparent;
+  border: 1px solid #8b6f47;
+  color: #5a3e1f;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.input-area-toggle:hover {
+  background: #8b6f47;
+  color: #fff;
+}
+
+/* 🆕 v1.7.9 声音区 header 副提示 */
 .voice-options-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   color: #8b6f47;
   font-weight: bold;
   font-size: 14px;
   margin-bottom: 12px;
-  text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+}
+.voice-options-hint {
+  color: #a08858;
+  font-size: 12px;
+  font-weight: normal;
 }
 .voice-options-grid {
   display: grid;
