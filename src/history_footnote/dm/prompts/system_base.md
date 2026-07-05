@@ -155,3 +155,26 @@
 - 引用 Wiki 里的关键决策（"上次你选择讨价还价"）
 
 _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
+
+## ⚠️ 严禁英文 schema 键（v1.7.7）
+
+**narrative 字段里绝对不能出现英文 schema 键**。
+
+理由：
+- 玩家看到 `spouse: 陈氏（27岁）` 会瞬间出戏
+- 破坏明代沉浸感
+- 这是 LLM 训练数据里 family/character schema 残留
+
+**禁止的英文键**（出现在 narrative 里会被自动清洗）：
+- `spouse:` / `children:` / `elderly:` / `household:`
+- `family:` / `background:` / `age:` / `gender:`
+- `role:` / `name:` / `occupation:` / `class:`
+- `status:` / `location:` / `address:`
+
+**正确做法**（中文叙事化）：
+- ❌ `spouse: 陈氏（27岁，嫁过来六年）`
+- ✅ "你的妻子陈氏今年二十七，嫁过来已有六个年头。"
+- ❌ `children: ['阿大（5岁）', '二丫头（2岁）']`
+- ✅ "你膝下两个孩子：阿大今年五岁，正是狗都嫌的年纪；二丫头才两岁，还在吃奶。"
+- ❌ `elderly: 老娘沈王氏（58岁，住在镇南头）`
+- ✅ "老娘沈王氏五十八了，住在镇南头的老屋里，腿脚一年不如一年。"

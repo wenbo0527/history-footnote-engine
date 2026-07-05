@@ -990,18 +990,22 @@ api("/api/sanitize", "POST", {text: rawNarrative}).then(sanitizeData => {
 }
 
 function appendInputArea() {
-const div = document.createElement("div");
-div.className = "input-area";
-div.id = "input-area";
-div.innerHTML = `
-  <textarea id="player_input" placeholder="或自由输入（你想做什么/想描述什么都可以）  ⏎ 直接回车提交 · Shift+Enter 换行"></textarea>
-  <div class="row">
-    <span class="hint">/help 查看元指令 · /state 查看状态 · /save slot1 存档</span>
-    <button id="btn_submit" onclick="submitInput()">行动</button>
+// 🆕 v1.7.7 改：把 voice_options 容器嵌到 input-area 内部，统一为"行动区"
+// 玩家视觉上"声音选项 + 输入框"是一个整体
+const wrapper = document.createElement("div");
+wrapper.className = "action-area";
+wrapper.id = "action-area";
+wrapper.innerHTML = `
+  <div class="input-area" id="input-area">
+    <textarea id="player_input" placeholder="或自由输入（你想做什么/想描述什么都可以）  ⏎ 直接回车提交 · Shift+Enter 换行"></textarea>
+    <div class="row">
+      <span class="hint">/help 查看元指令 · /state 查看状态 · /save slot1 存档</span>
+      <button id="btn_submit" onclick="submitInput()">行动</button>
+    </div>
+    <div id="submit_msg"></div>
   </div>
-  <div id="submit_msg"></div>
 `;
-$main.appendChild(div);
+$main.appendChild(wrapper);
 document.getElementById("player_input").focus();
 // 🆕 v1.6.5 快捷键：
 // - Enter（裸键）       → 提交（移动端友好，没 Ctrl 键）
@@ -1110,6 +1114,7 @@ document.body.appendChild(modal);
 function appendVoiceOptions(voiceOptions) {
 // 🆕 v1.6+ Tab 式 UX：先显示 2-4 个选项 + 「其他」按钮
 // 点「其他」后才展开自由输入框，避免玩家直接打字跳过选项
+// 🆕 v1.7.7 改：插入到 action-area 内（input-area 之前），形成"行动区"
 if (!voiceOptions || voiceOptions.length === 0) return;
 const div = document.createElement("div");
 div.className = "voice-options";
@@ -1129,9 +1134,13 @@ div.innerHTML = `
     </button>
   </div>
 `;
-// 🐛 Issue #4 修复：voice_options 应该插到 input_area 之前
+// 🆕 v1.7.7 改：插到 action-area 内部 input-area 之前
+// 视觉上"声音 + 输入"是一个整体
+const $actionArea = document.getElementById("action-area");
 const $inputArea = document.getElementById("input-area");
-if ($inputArea && $main.contains($inputArea)) {
+if ($actionArea && $inputArea && $actionArea.contains($inputArea)) {
+  $actionArea.insertBefore(div, $inputArea);
+} else if ($inputArea && $main.contains($inputArea)) {
   $main.insertBefore(div, $inputArea);
 } else {
   $main.appendChild(div);

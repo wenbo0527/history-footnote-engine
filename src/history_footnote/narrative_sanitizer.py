@@ -58,7 +58,42 @@ SKILL_METADATA_PATTERNS: list[re.Pattern] = [
     re.compile(r"^\s*Applied\s+Skills.*\n?", re.MULTILINE | re.IGNORECASE),
     # 重复的"时间跨度: ..."行（保留第一行）
     re.compile(r"^(时间跨度:.*\n){2,}", re.MULTILINE),
+
+    # 🆕 v1.7.7 英文 schema 清洗（防止 LLM 幻觉输出 spouse:/children:/elderly: 等）
+    # 背景：LLM 训练数据里 family/character schema 常用英文键
+    # 当 LLM 收到中文 system prompt 时，仍可能"翻译"成英文输出
+    # 这些键名出现在叙事里破坏沉浸感
+    # 模式：英文 key: value（整行删除，因为这些 schema 行本身无叙事价值）
+    # 例：spouse: 陈氏（27岁...） / children: ['阿大', '二丫头'] / elderly: 老娘沈王氏
+    # 兼容 key 后跟 [..] 列表 / (..) 元组 / 字符串 / 数字
+    re.compile(
+        r"^[ \t]*\b(spouse|children|elderly|household|family|background|age|gender|role|name|occupation|class|status|location|address)\s*:\s*"
+        r"(?:\[[^\]]*\]|\([^)]*\)|[^\n]*)"
+        r"\n?",
+        re.MULTILINE | re.IGNORECASE,
+    ),
 ]
+
+
+# 🆕 v1.7.7 英文 family key → 中文标签
+# 用于 LLM 输出含 [family] 段时，把英文 key 翻译为中文标签再插入正文
+EN_FAMILY_KEY_TO_CN = {
+    "spouse": "配偶",
+    "children": "子女",
+    "elderly": "老人",
+    "household": "家口",
+    "family": "家人",
+    "background": "出身",
+    "age": "年岁",
+    "gender": "性别",
+    "role": "身份",
+    "name": "姓名",
+    "occupation": "营生",
+    "class": "身份",
+    "status": "现状",
+    "location": "住处",
+    "address": "住址",
+}
 
 # JSON 提取模式（用于 LLM 在 markdown 中包裹 JSON 的情况）
 JSON_BLOCK_PATTERN = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
