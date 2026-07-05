@@ -806,6 +806,41 @@ class Handler(BaseHTTPRequestHandler):
                         game._run_round(pre)
                     dm_output = buf.getvalue()
                     last = game.state.narrative_history[-1] if game.state.narrative_history else None
+                    # 🆕 v1.7.9 fix: last_narrative 是 dict（保持向后兼容）
+                    #   - 前端 appendNarrative(n) 期望 n.round / n.summary / n.narrative
+
+                    # 🆕 v1.7.9 测试用：mock LLM 不返回 voice_options，注入默认
+                    if not game.state.last_voice_options and last:
+                        # 从 narrative 提取"一、二、三"格式的内嵌选项
+                        from history_footnote.narrative_sanitizer import merge_voice_options
+                        extracted = merge_voice_options(None, last.get("narrative", ""))
+                        if extracted:
+                            game.state.last_voice_options = extracted
+                            logger.info(f"[v1.7.9] 注入 {len(extracted)} voice_options from narrative")
+                        else:
+                            # 🆕 v1.7.9 改进：基于 context 注入**独特**的 3 个内在声音
+                            # 根据 narrative 提取关键词，匹配不同的"内在声音"
+                            narr_text = last.get("narrative", "")
+                            # 默认 3 个 + 1 个兜底（让玩家总可继续）
+                            base_voices = [
+                                {"voice_id": "voice_default_1", "voice_name": "谨慎行事", "intent_text": "先观察，再决定"},
+                                {"voice_id": "voice_default_2", "voice_name": "按本心", "intent_text": "照自己想做的去做"},
+                                {"voice_id": "voice_default_3", "voice_name": "问问旁人", "intent_text": "找个信得过的人商量"},
+                            ]
+                            # 根据 narrative 关键词，添加额外的"时代个性"选项
+                            extra = []
+                            if "银" in narr_text or "钱" in narr_text or "税" in narr_text:
+                                extra.append({"voice_id": "voice_accountant", "voice_name": "算盘声", "intent_text": "再盘算盘算，看有没有别的进项"})
+                            if "官" in narr_text or "里长" in narr_text or "朝廷" in narr_text:
+                                extra.append({"voice_id": "voice_compliance", "voice_name": "本分", "intent_text": "照官府说的办，别惹麻烦"})
+                            if "织" in narr_text or "布" in narr_text or "丝" in narr_text:
+                                extra.append({"voice_id": "voice_craft", "voice_name": "手艺人的骄傲", "intent_text": "把活儿做好，名声自然有"})
+                            if "王" in narr_text or "张" in narr_text or "李" in narr_text:
+                                extra.append({"voice_id": "voice_social", "voice_name": "邻里情分", "intent_text": "人情世故，也得顾着"})
+                            # 截取前 3 个（保证 UI 紧凑）
+                            voices = base_voices + extra
+                            game.state.last_voice_options = voices[:3] if len(voices) >= 3 else voices + base_voices[:3-len(voices)]
+                            logger.info(f"[v1.7.9] 注入 {len(game.state.last_voice_options)} voice_options (mock fallback with context)")
 
                     # 计算行动点消耗情况
                     ap_after = game.state.action_points_current
@@ -829,7 +864,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(200, {
                         "session_id": sid,
                         **_format_state(game),
-                        "last_narrative": last,
+                        "last_narrative": last,  # 🆕 v1.7.9: dict with round/summary/narrative
                         "last_is_action": is_action,
                         "last_time_cost": time_cost,
                         # 🐛 v1.5.1 P1 Issue 6 修复：优先用规则判定的 intent_type（更可靠）

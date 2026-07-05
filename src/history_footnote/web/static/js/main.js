@@ -920,6 +920,10 @@ nh.forEach(n => appendNarrative(n, null));
 function appendNarrative(n, lastMeta) {
 const div = document.createElement("div");
 div.className = "narrative";
+// 🆕 v1.7.9 兼容：n 可能是 string（last_narrative 纯文本）或 object（recent_narratives dict）
+if (typeof n === "string") {
+  n = { round: lastMeta?.round || "?", summary: lastMeta?.summary || "", narrative: n };
+}
 let tag = `<div class="round-tag">第${n.round}回合 · ${n.summary || ""}</div>`;
 if (lastMeta && lastMeta.player_input) {
   tag = `<div class="player-echo">> ${escapeHtml(lastMeta.player_input)}</div>` + tag;
