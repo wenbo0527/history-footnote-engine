@@ -340,6 +340,53 @@ def _apply_discover_event(state, event: dict, logger=None) -> bool:
 _HANDLERS["discover"] = _apply_discover_event
 
 
+# ============= 🆕 v1.7.30 evt.* 处理器（重大历史事件） =============
+
+# evt.* 事件 ID → fin.* 内部路由（事件落地）
+EVT_ROUTING = {
+    # evt.tax.* → fin.*
+    "evt.tax.weaving_machine": ("fin.pay_tax", "织机加征 0.3两/机"),
+    "evt.tax.silk_per_pi": ("fin.pay_tax", "绸缎加税 0.03-0.05两/匹"),
+    "evt.tax.checkpoint": ("fin.pay_tax", "关卡重税"),
+    "evt.tax.liao_taxes": ("fin.pay_tax", "辽饷加征"),
+    # evt.flood.* → fin.* + state
+    "evt.flood.mulberry_loss": ("fin.pay_tax", "桑叶涨价（缺叶年）"),
+    "evt.flood.rice_price_spike": ("fin.pay_tax", "米价飞涨"),
+    "evt.flood.silk_price_down": ("fin.sell_silk", "丝价跌（被压价）"),
+    # evt.war.* → fin.*
+    "evt.war.silver_outflow": ("fin.pay_tax", "白银外流（银根紧缩）"),
+    "evt.war.transit_disrupted": ("fin.pay_tax", "运河征用（运费涨）"),
+    "evt.war.army_demand": ("fin.sell_silk", "军需物资涨价（松江棉布受益）"),
+    # evt.chaos.* → fin.* / state
+    "evt.chaos.worker_revolt": ("fin.gift_out", "葛贤抗税（织工暴动）"),
+    "evt.chaos.armed_conflict": ("fin.pay_tax", "武装冲突"),
+}
+
+
+def _apply_evt_event(state, event: dict, logger=None) -> bool:
+    """evt.* 事件 → fin.* 路由（重大历史事件落地）
+
+    例：evt.tax.weaving_machine → fin.pay_tax 写入 state.financial_log
+    """
+    eid = event.get("id", "")
+    if eid not in EVT_ROUTING:
+        return False
+    type_, default_note = EVT_ROUTING[eid]
+    try:
+        amount = float(event.get("amount", 0))
+    except (ValueError, TypeError):
+        amount = 0
+    note = event.get("note", default_note)
+    location = event.get("location", state.current_city)
+    # 路由到 apply_financial_change
+    state.apply_financial_change(amount, type_, note, location)
+    return True
+
+
+# 扩展 HANDLERS
+_HANDLERS["evt"] = _apply_evt_event
+
+
 # ============= Layer 2: 模糊匹配 fallback =============
 
 # 常用动作动词

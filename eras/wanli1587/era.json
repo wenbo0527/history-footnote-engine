@@ -5541,5 +5541,315 @@
         }
       ]
     }
+  },
+  "era": {
+    "major_events": [
+      {
+        "id": "evt.mining_tax",
+        "rank": "P0",
+        "name": "矿税之祸",
+        "year": 1596,
+        "year_end": 1620,
+        "category": "taxation",
+        "summary": "万历派宦官到全国开矿征税。万历二十七年（1599）孙隆到苏州加征：每张织机税银三钱（0.3两/机），每匹绸缎税银三分至五分（0.03-0.05两/匹），各处设卡重税。",
+        "impact": "织户年减收 3-5 两 + 卖不出货。灾年月入 < 1 两的织户直接被推到生存线以下。",
+        "trigger_conditions": [
+          "player in suzhou/hangzhou/songjiang",
+          "current_date.year >= 1599"
+        ],
+        "evt_ids": [
+          "evt.tax.weaving_machine",
+          "evt.tax.silk_per_pi",
+          "evt.tax.checkpoint"
+        ],
+        "narrative_hook": "织造局在阊门设了税卡，绸缎布匹进城都要重税。"
+      },
+      {
+        "id": "evt.ge_xian_uprising",
+        "rank": "P0",
+        "name": "葛贤抗税（织工暴动）",
+        "year": 1601,
+        "category": "taxation",
+        "summary": "万历二十九年（1601）夏苏州连月阴雨，孙隆加税。织工葛贤（葛成）打死税棍黄建节，两千多织工包围税署，孙隆逃杭州。葛贤自首坐牢 13 年。",
+        "impact": "短期：税监被赶走，织户暂缓口气。中期：部分税监撤回但孙隆又回来。长期：最早工人运动之一，参与者付出惨重代价。",
+        "trigger_conditions": [
+          "current_date.year == 1601",
+          "player in suzhou"
+        ],
+        "evt_ids": [
+          "evt.chaos.worker_revolt"
+        ],
+        "narrative_hook": "税棍黄建节围打卖瓜农民，葛贤一呼百应，群众涌到税卡。"
+      },
+      {
+        "id": "evt.three_campaigns",
+        "rank": "P1",
+        "name": "万历三大征",
+        "year": 1592,
+        "year_end": 1600,
+        "category": "war",
+        "summary": "宁夏之役（1592）200 万两 + 朝鲜之役（1592-1598）700 万两 + 播州之役（1599-1600）200-300 万两。总花费超 1100 万两白银。",
+        "impact": "加税借口 / 白银外流 / 运河征用 / 丝价波动。军需棉布需求增加（松江棉布受益）。",
+        "trigger_conditions": [
+          "1592 <= current_date.year <= 1600"
+        ],
+        "evt_ids": [
+          "evt.war.silver_outflow",
+          "evt.war.transit_disrupted"
+        ],
+        "narrative_hook": "听说朝鲜那边打起来了。运河被征用运军粮，丝价又跌了。"
+      },
+      {
+        "id": "evt.little_ice_age",
+        "rank": "P1",
+        "name": "小冰河期与江南水灾",
+        "year": 1587,
+        "year_end": 1620,
+        "category": "disaster",
+        "summary": "万历十五年（1587）江南大水；万历十七年（1589）湖州特大洪灾；万历二十九年（1601）苏州连月阴雨；万历三十六年（1608）江南特大水灾。",
+        "impact": "桑田被淹蚕茧减产；缺叶年桑叶从 0.03-0.1 涨到 0.3 两/担；米价 0.5→2-3 两/石。",
+        "trigger_conditions": [
+          "current_date in disaster months (4-9月)"
+        ],
+        "evt_ids": [
+          "evt.flood.mulberry_loss",
+          "evt.flood.rice_price_spike",
+          "evt.flood.silk_price_down"
+        ],
+        "narrative_hook": "连下了五天大雨，运河水涨得比码头还高。蚕房里的蚕宝宝孵出来了，可没有桑叶喂它们。"
+      },
+      {
+        "id": "evt.liaodong_taxes",
+        "rank": "P1",
+        "name": "辽东战事与辽饷加征",
+        "year": 1618,
+        "year_end": 1620,
+        "category": "war",
+        "summary": "万历四十六年（1618）努尔哈赤发布七大恨反明；万历四十七年（1619）萨尔浒之战明军惨败，损失 5 万精锐。辽饷加征每亩 3 厘 5 毫，全国加征 520 万两。",
+        "impact": "赋税负担加重 / 运河征用 / 军需物资涨价 / 民间恐慌。",
+        "trigger_conditions": [
+          "current_date.year >= 1618"
+        ],
+        "evt_ids": [
+          "evt.war.liao_taxes",
+          "evt.war.army_demand"
+        ],
+        "narrative_hook": "听说辽东打了大败仗，几万人都没了。朝廷又要加税了。"
+      },
+      {
+        "id": "evt.zhang_juzheng_aftermath",
+        "rank": "P2",
+        "name": "张居正改革余波",
+        "year": 1582,
+        "category": "politics",
+        "summary": "万历十年（1582）张居正去世，被清算。一条鞭法保留但考成法废除。",
+        "impact": "赋税折银制度持续（织户必须卖绸换银）；贪腐加剧；打点成本上升。",
+        "trigger_conditions": [
+          "current_date.year >= 1582"
+        ],
+        "evt_ids": [],
+        "narrative_hook": "老织户回忆：'张相公在的时候，日子还好过些。'"
+      },
+      {
+        "id": "evt.guoben_dispute",
+        "rank": "P2",
+        "name": "国本之争与万历怠政",
+        "year": 1586,
+        "year_end": 1601,
+        "category": "politics",
+        "summary": "万历十四年（1586）郑贵妃生子朱常洵，万历欲立为太子，违背立长不立幼祖制，僵持 15 年。万历以怠政报复：缺官、地方治理真空。",
+        "impact": "地方治理真空 / 太监肆无忌惮 / 党争加剧。",
+        "trigger_conditions": [
+          "current_date.year between 1586-1601"
+        ],
+        "evt_ids": [],
+        "narrative_hook": "知县空缺三年了，只有书吏在管事。跟谁打交道？"
+      },
+      {
+        "id": "evt.silver_inflow",
+        "rank": "P2",
+        "name": "白银流入与海贸波动",
+        "year": 1567,
+        "year_end": 1620,
+        "category": "economy",
+        "summary": "隆庆元年（1567）月港开海，每年约数百万两白银流入。葡萄牙人每年从广州运出 53 万匹丝缎。",
+        "impact": "白银流入多丝价涨收入增；倭寇/朝鲜之役海路受阻丝价跌；一条鞭法后赋税全折银。",
+        "trigger_conditions": [
+          "current_date.year >= 1567"
+        ],
+        "evt_ids": [],
+        "narrative_hook": "洋船到港季丝价又涨了。"
+      },
+      {
+        "id": "evt.weaving_eunuch",
+        "rank": "P2",
+        "name": "织造太监征用",
+        "year": 0,
+        "year_end": 0,
+        "category": "taxation",
+        "summary": "织造太监（孙隆等）兼管织造征用和加征，权力不受地方官管辖。",
+        "impact": "可强制征用织户，工钱只市价一半；随时加征。",
+        "trigger_conditions": [
+          "player in suzhou/hangzhou/nanjing"
+        ],
+        "evt_ids": [],
+        "narrative_hook": "织造局要征用织户为官府织造，工钱只有市价的一半。"
+      },
+      {
+        "id": "evt.donglin_academy",
+        "rank": "P2",
+        "name": "东林书院与党争",
+        "year": 1604,
+        "year_end": 0,
+        "category": "politics",
+        "summary": "万历三十二年（1604）顾宪成等修复东林书院。东林党以江南士大夫为主，主张改良时政。",
+        "impact": "东林党人既反矿税也剥削织户；党争加剧政策摇摆。",
+        "trigger_conditions": [
+          "current_date.year >= 1604"
+        ],
+        "evt_ids": [],
+        "narrative_hook": "东林书院那帮人又上书了。本地士绅组织反对矿税。"
+      },
+      {
+        "id": "evt.nurhaci_rise",
+        "rank": "P2",
+        "name": "努尔哈赤崛起",
+        "year": 1583,
+        "year_end": 1619,
+        "category": "war",
+        "summary": "万历十一年（1583）努尔哈赤十三副铠甲起兵；万历四十四年（1616）建后金；万历四十七年（1619）萨尔浒之战明军惨败。",
+        "impact": "辽东战事开始 / 辽饷加征 / 民间恐慌。",
+        "trigger_conditions": [
+          "current_date.year >= 1583"
+        ],
+        "evt_ids": [],
+        "narrative_hook": "建州女真要打过来了？"
+      }
+    ],
+    "timeline_overview": [
+      {
+        "year": 1567,
+        "event": "月港开海",
+        "rank": "P2",
+        "impact": "白银流入开始"
+      },
+      {
+        "year": 1582,
+        "event": "张居正去世",
+        "rank": "P2",
+        "impact": "改革红利消退"
+      },
+      {
+        "year": 1583,
+        "event": "努尔哈赤起兵",
+        "rank": "P2",
+        "impact": "远方威胁"
+      },
+      {
+        "year": 1586,
+        "event": "国本之争开始",
+        "rank": "P2",
+        "impact": "朝廷内斗"
+      },
+      {
+        "year": 1587,
+        "event": "江南大水",
+        "rank": "P1",
+        "impact": "桑田被淹"
+      },
+      {
+        "year": 1589,
+        "event": "湖州洪灾",
+        "rank": "P2",
+        "impact": "丝价波动"
+      },
+      {
+        "year": 1592,
+        "event": "三大征开始",
+        "rank": "P1",
+        "impact": "加税/白银外流"
+      },
+      {
+        "year": 1596,
+        "event": "矿税开始",
+        "rank": "P0",
+        "impact": "太监搜刮"
+      },
+      {
+        "year": 1599,
+        "event": "孙隆到苏州",
+        "rank": "P0",
+        "impact": "每机三钱/每匹三分"
+      },
+      {
+        "year": 1601,
+        "event": "葛贤抗税",
+        "rank": "P0",
+        "impact": "织工暴动"
+      },
+      {
+        "year": 1604,
+        "event": "东林书院重建",
+        "rank": "P2",
+        "impact": "士绅重组"
+      },
+      {
+        "year": 1608,
+        "event": "江南特大水灾",
+        "rank": "P1",
+        "impact": "太湖泛滥"
+      },
+      {
+        "year": 1616,
+        "event": "努尔哈赤建后金",
+        "rank": "P2",
+        "impact": "远方威胁升级"
+      },
+      {
+        "year": 1618,
+        "event": "努尔哈赤反明",
+        "rank": "P1",
+        "impact": "辽东战事"
+      },
+      {
+        "year": 1619,
+        "event": "萨尔浒之战",
+        "rank": "P1",
+        "impact": "辽饷加征"
+      },
+      {
+        "year": 1620,
+        "event": "万历驾崩",
+        "rank": "P2",
+        "impact": "历史结束"
+      }
+    ],
+    "design_principles": [
+      "P0 事件必须做：矿税之祸和葛贤抗税直接决定玩家生存",
+      "P1 事件做触发器：三大征/水灾/辽饷作为周期性触发事件",
+      "P2 事件做背景：国本之争/东林党/努尔哈赤作为茶馆闲谈素材",
+      "时间线不锁定：玩家不一定要按历史时间线走，但 DM 应知道 1601 葛贤抗税必发生",
+      "大事件传导链：三大征→矿税→孙隆加税→水灾→葛贤抗税（万历年间最核心叙事线）"
+    ],
+    "event_id_namespaces": {
+      "evt.*": {
+        "name": "重大历史事件",
+        "purpose": "由 era.calendar / rule_engine 触发的'宏观大事件'——区别于 14 类结构性 EventId（fin/city/fam/...）",
+        "domains": {
+          "evt.tax.*": "税务事件（weaving_machine 织机加征 / silk_per_pi 绸缎加税 / checkpoint 关卡重税 / liao_taxes 辽饷）",
+          "evt.flood.*": "水灾事件（mulberry_loss 桑田损失 / rice_price_spike 米价飞涨 / silk_price_down 丝价跌）",
+          "evt.war.*": "战争事件（silver_outflow 白银外流 / transit_disrupted 运河征用 / army_demand 军需涨价）",
+          "evt.chaos.*": "动乱事件（worker_revolt 织工暴动 / armed_conflict 武装冲突）"
+        },
+        "examples": [
+          "evt.tax.weaving_machine (每张织机加 0.3 两)",
+          "evt.tax.silk_per_pi (每匹绸加 0.03-0.05 两)",
+          "evt.flood.mulberry_loss (桑叶价 0.03→0.3 两/担)",
+          "evt.war.silver_outflow (白银外流导致银根紧缩)",
+          "evt.chaos.worker_revolt (葛贤抗税)"
+        ],
+        "routing": "evt.* 事件 → rule_engine 判定 + apply_event → state.variables / state.financial_log 写入"
+      }
+    }
   }
 }

@@ -313,7 +313,7 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - 城市用 id（"suzhou"，不要"苏州"）
 - 如果本回合无结构化变更 → 输出 `<events/>`（空块，不要省略）
 
-**14 类事件 id 前缀**（13 原 + 1 新）：
+**15 类事件 id 前缀**（14 原 + 1 新）：
 - `fin.*` 财务（sell_silk/buy_thread/pay_tax/borrow/repay/...）
 - `city.*` 城市（arrive.{city_id} / leave.{city_id}）
 - `fam.*` 家人（meet / health / death / relationship）
@@ -328,6 +328,7 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - `reln.*` 人际网络（broker_wife/hanger_on/kindness_repaid/guild_hall）
 - `dis.*` 灾祸天命（plague/fire/flood/little_ice_age）
 - `discover.*` 本次发现（place/person/item/letter/event/fact）
+- `evt.*` 重大历史事件（tax/flood/war/chaos 4 类）
 
 **🆕 discover.* 主动创建指引**：
 - 玩家获得/借/赠物品时 → 输 `discover.item`（name/type/owner/description）
@@ -337,6 +338,32 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - 玩家听到/学到硬知识 → 输 `discover.fact`（text/heard_from/reliability）
 - **每回合 discover.* 最多 3 条**（避免生成过多冗余数据）
 - **已有发现**会通过 sidebar 展示给 LLM（下次不要重复生成）
+
+**🆕 evt.* 重大历史事件**：
+
+由 `era.calendar` / `rule_engine` 触发的"宏观大事件"——区别于 14 类结构性 EventId。
+evt.* 事件 → 内部路由到 fin.* → 写入 state.financial_log
+
+**4 类 evt.* 子域**：
+- `evt.tax.*` —— 税务事件（weaving_machine 织机加征 / silk_per_pi 绸缎加税 / checkpoint 关卡重税 / liao_taxes 辽饷）
+- `evt.flood.*` —— 水灾事件（mulberry_loss 桑田损失 / rice_price_spike 米价飞涨 / silk_price_down 丝价跌）
+- `evt.war.*` —— 战争事件（silver_outflow 白银外流 / transit_disrupted 运河征用 / army_demand 军需涨价）
+- `evt.chaos.*` —— 动乱事件（worker_revolt 织工暴动 / armed_conflict 武装冲突）
+
+**关键 P0 大事件**（v1.7.30 设计）：
+- **万历二十七年（1599）孙隆到苏州** → evt.tax.weaving_machine + evt.tax.silk_per_pi
+- **万历二十九年（1601）葛贤抗税** → evt.chaos.worker_revolt
+- **万历十五年（1587）/ 万历三十六年（1608）江南大水** → evt.flood.*
+- **万历四十七年（1619）辽东战事** → evt.war.liao_taxes
+
+**DM 决策树**（核心传导链）：
+三大征（1592-1600）→ 矿税之祸（1596）→ 孙隆加税（1599）→ 水灾（1601）→ 葛贤抗税（1601）
+
+如果玩家活到 1601 年，葛贤抗税必发生（不可跳过）。玩家可选：参与/旁观/远离/告密。
+
+**evt.* vs fin.* 区别**：
+- `fin.*`：玩家**行动**触发的财务变更（卖绸/买丝/借钱）
+- `evt.*`：**历史事件**触发的财务影响（税/灾/战/乱）
 
 **触发模式库**：参考 [TriggerPatterns.md](../../../../docs/architecture/TriggerPatterns.md)（27 个明清小说情节模式）
 **为什么必须输出**：后端用 event_parser 解析 events 块 → 写入 GameState 持久化
