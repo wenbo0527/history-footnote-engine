@@ -955,6 +955,8 @@ class DMAgent(MockHelpersMixin):
             plausibility_rules=[f"{i+1}. {rule}" for i, rule in enumerate(plausibility_rules)],
             # 🆕 v1.7.1 wiki 摘要（无 NPC 时为空）
             character_wiki_summary=wiki_summary,
+            # 🆕 v1.7.30 城市 sensory 注入
+            current_city=self._build_current_city_section(),
         )
 
     def _load_dm_persona(self) -> str | None:
@@ -964,6 +966,49 @@ class DMAgent(MockHelpersMixin):
         if persona_path.exists():
             return persona_path.read_text(encoding="utf-8")
         return None
+
+    # 🆕 v1.7.30: 城市 sensory 注入段
+    def _build_current_city_section(self) -> str:
+        """根据玩家当前所在城市，从 era.world.cities 注入 sensory 描述
+
+        玩家在盛泽时：返回空字符串（不输出该段）
+        玩家在 4 城市之一：返回该城市的 sensory + 差异描述
+        """
+        cities = self.era_config.get("world", {}).get("cities", {})
+        # 玩家当前所在城市（从 state.current_city 取）
+        current_city_id = getattr(self.state, "current_city", "") or ""
+        if not current_city_id or current_city_id not in cities:
+            return ""
+        city = cities[current_city_id]
+        arrival = city.get("narrative_arrival", "")
+        sensory = city.get("sensory", {})
+        functions = city.get("functions", [])
+        danger = city.get("danger_level", 0)
+        opportunity = city.get("opportunity_level", 0)
+        lines = [
+            f"## 🏙️ 当前所在城市：{city.get('name', current_city_id)}",
+            f"距离盛泽：{city.get('distance_from_shengze', '?')}  船资：{city.get('travel_cost', '?')}",
+            "",
+        ]
+        if arrival:
+            lines.append(f"**到达时**：{arrival}")
+            lines.append("")
+        if sensory:
+            senses = []
+            for k in ("sight", "sound", "smell"):
+                v = sensory.get(k, "")
+                if v:
+                    cn = {"sight": "👁️ 视觉", "sound": "👂 听觉", "smell": "👃 嗅觉"}[k]
+                    senses.append(f"- {cn}：{v}")
+            if senses:
+                lines.append("**感官细节**：")
+                lines.extend(senses)
+                lines.append("")
+        if functions:
+            lines.append(f"**可做事项**（{len(functions)} 项）：{', '.join(functions)}")
+            lines.append("")
+        lines.append(f"**危险等级**：{danger}/5  **机会等级**：{opportunity}/5")
+        return "\n".join(lines)
 
     def _build_recent_context_for_prompt(self) -> str:
         """🆕 v1.6.4 P0 Bug 修复：构建最近叙事上下文

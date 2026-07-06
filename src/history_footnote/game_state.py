@@ -32,6 +32,10 @@ class GameState:
     selected_identity: str = ""  # 选中的identity id（如"weaving_male"）
     player_gender: str = ""  # male/female（冗余字段便于快速访问）
 
+    # === 🆕 v1.7.30 当前位置 ===
+    # 玩家当前所在城市（"shengze" 表示在盛泽；"suzhou"/"hangzhou"/"songjiang"/"nanjing" 表示离乡）
+    current_city: str = "shengze"  # 城市 id（对应 era.world.cities 中的 key）
+
     # === 时间进度 ===
     round_number: int = 1
     current_date: str = ""   # 月级时间（如"1587年1月"）

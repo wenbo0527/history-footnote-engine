@@ -25,6 +25,7 @@
     "extract_narrative_node_src_lines": 55,
     "state_confirmation_node_src_lines": 3,
     "DMAgent_public_methods": [
+      "_build_current_city_section",
       "_build_graph",
       "_build_recent_context_for_prompt",
       "_build_system_prompt",
@@ -38,6 +39,7 @@
       "run"
     ],
     "DMAgent_private_methods": [
+      "_build_current_city_section",
       "_build_graph",
       "_build_recent_context_for_prompt",
       "_build_system_prompt",
@@ -48,7 +50,7 @@
       "_load_dm_persona",
       "_make_view_state_dict"
     ],
-    "dm_agent_py_lines": 1596
+    "dm_agent_py_lines": 2417
   },
   "pure_functions": {
     "_make_view_state_dict": {
