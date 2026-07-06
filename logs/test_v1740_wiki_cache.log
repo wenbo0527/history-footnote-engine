@@ -1,0 +1,39 @@
+============================================================
+v1.7.40 真实 LLM 跑 5 轮（Wiki cache 长期数据）
+============================================================
+✅ LLM: minimax-anthropic
+
+--- Round 1: 我搭船去苏州阊门码头。 ---
+  city=suzhou, cash=5.01
+  Wiki cache: size=1, hit_rate=0%
+
+--- Round 2: 我回家告诉沈氏这事。 ---
+  city=suzhou, cash=0.00
+  Wiki cache: size=2, hit_rate=0%
+
+--- Round 3: 我又搭船去苏州听人聊行情。 ---
+  city=shengze, cash=0.00
+  Wiki cache: size=2, hit_rate=33%
+
+--- Round 4: 我又回家。 ---
+  city=hangzhou, cash=0.30
+  Wiki cache: size=3, hit_rate=25%
+
+--- Round 5: 我回苏州。 ---
+  city=shengze, cash=0.30
+  Wiki cache: size=3, hit_rate=25%
+
+============================================================
+📊 Wiki cache 长期数据
+============================================================
+  Round 1: size=1, hit=0%
+  Round 2: size=2, hit=0%
+  Round 3: size=2, hit=33%
+  Round 4: size=3, hit=25%
+  Round 5: size=3, hit=25%
+
+最终:
+  cache_size: 3
+  cache_max: 100
+  hit_rate: 25%
+  耗时: 172.3s

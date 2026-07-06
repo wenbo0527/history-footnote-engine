@@ -56,6 +56,27 @@ class GameEngineFacade:
         # Wiki 检索 cache
         self._wiki_cache: dict = {}  # {(verb, target, city): fragments}
         self._wiki_cache_max = 100  # 最多缓存 100 条
+        # 🆕 v1.7.40 Sub-Facades（5 个子门面）
+        from history_footnote.sub_facades import (
+            QuestFacade, DramaFacade, WikiFacade, EventFacade, StateFacade,
+        )
+        self._sub_facades = None  # 延迟初始化
+
+    @property
+    def sub_facades(self) -> dict:
+        """🆕 v1.7.40 Sub-Facades 懒初始化"""
+        if self._sub_facades is None:
+            from history_footnote.sub_facades import (
+                QuestFacade, DramaFacade, WikiFacade, EventFacade, StateFacade,
+            )
+            self._sub_facades = {
+                "quest": QuestFacade(self.state, self.event_bus, self.quest_system),
+                "drama": DramaFacade(self.state, self.drama_manager),
+                "wiki": WikiFacade(self.wiki_retriever),
+                "event": EventFacade(self.event_bus),
+                "state": StateFacade(self.state),
+            }
+        return self._sub_facades
 
     # ============= 子系统访问器 =============
 
@@ -359,6 +380,41 @@ class GameEngineFacade:
         """保存所有子系统状态"""
         self.quest_system.save()
         self.drama_manager.save()
+
+    def process_full_round(self, player_input: str, game_loop=None) -> dict:
+        """🆕 v1.7.40 封装完整一轮（替代 game_loop._run_round 调用）
+
+        Args:
+            player_input: 玩家输入文本
+            game_loop: GameLoop 实例（如果提供则用 _run_round，否则只走 facade）
+
+        Returns:
+            {
+                "player_input": str,
+                "process_result": dict,  # process_player_input 结果
+                "perf_stats": dict,  # 性能监控
+            }
+        """
+        if game_loop is not None:
+            # 用 game_loop._run_round
+            try:
+                game_loop._run_round(player_input)
+            except Exception as e:
+                from history_footnote import logger as game_logger
+                game_logger.error(f"process_full_round 失败: {e}")
+                return {"error": str(e)}
+        # 收集结果
+        result = self.process_player_input(player_input) if game_loop is None else {
+            "player_action": None,
+            "action_result": None,
+            "wiki_fragments": [],
+            "drama_hint": "",
+        }
+        return {
+            "player_input": player_input,
+            "process_result": result,
+            "perf_stats": self.get_performance_stats(),
+        }
 
     # ============= Wiki cache =============
 
