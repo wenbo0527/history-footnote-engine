@@ -180,6 +180,67 @@ body {
   margin-bottom: 12px;
   letter-spacing: 1px;
 }
+
+/* 🆕 v1.7.29 折叠按钮：移动端紧凑条 */
+.voice-options-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+.voice-options-toggle:hover { background: rgba(139, 111, 71, 0.1); }
+.voice-options-toggle:focus-visible {
+  outline: 2px solid #c4a878;
+  outline-offset: 2px;
+}
+.voice-options-toggle-icon {
+  display: inline-block;
+  width: 12px;
+  transition: transform 0.2s ease;
+}
+.voice-options-collapsed .voice-options-toggle-icon { transform: rotate(-90deg); }
+
+/* 折叠态：grid 隐藏 + 整条变窄 */
+.voice-options-grid.collapsed {
+  display: none;
+}
+
+.voice-options-collapsed .voice-options-header {
+  margin-bottom: 0;
+  padding: 4px 0;
+}
+
+/* 当前回合标签 */
+.voice-options-round-tag {
+  background: rgba(196, 168, 120, 0.25);
+  color: #5a3e1f;
+  font-size: 11px;
+  font-weight: normal;
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+
+/* 🆕 v1.7.29 新回合到达时给折叠条一个脉冲一次 */
+@keyframes voice-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(196, 168, 120, 0.55); }
+  60% { box-shadow: 0 0 0 8px rgba(196, 168, 120, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(196, 168, 120, 0); }
+}
+.voice-options-new-round .voice-options-toggle {
+  animation: voice-pulse 0.9s ease-out 1;
+  border-radius: 6px;
+}
 .voice-options-hint {
   color: #a08858;
   font-size: 12px;
@@ -824,6 +885,17 @@ body {
     font-size: 15px;
   }
   .round-tag { font-size: 13px; padding: 4px 8px; }
+  /* 🆕 v1.7.29 移动端折叠按钮字号小化 + 紧凑 */
+  .voice-options-toggle { font-size: 13px; }
+  .voice-options-toggle-icon { font-size: 14px; }
+  .voice-options-round-tag { font-size: 10px; padding: 0 5px; }
+  /* 折叠态时，整块只占 32px（保留屏高给 narrative） */
+  .voice-options-collapsed {
+    padding: 8px 10px;
+    background: rgba(245, 230, 200, 0.6);
+    border: 1px solid rgba(139, 111, 71, 0.25);
+    border-radius: 6px;
+  }
 }
 
 /* 🆕 v1.6.2 iOS 键盘弹出时自适应 */

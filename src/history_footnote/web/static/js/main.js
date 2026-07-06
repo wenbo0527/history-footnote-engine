@@ -1305,19 +1305,18 @@ function appendVoiceOptions(voiceOptions) {
 // 🆕 v1.7.7 改：插入到 action-area 内（input-area 之前），形成"行动区"
 // 🆕 v1.7.9 改："其他" 按钮更突出（拆分样式 + 明确文案），强调"自由输入"是次要路径
 // 🆕 v1.7.21 改：即使 voiceOptions 为空也必须显示"自由输入"按钮
-// 背景：之前 if (empty) return → 玩家看不到任何 UI → 死局
-// 修复：移除 early return，至少显示"自由输入"按钮
+// 🆕 v1.7.29 改：移动端默认折叠（节省屏高），点击/双击展开；用 localStorage 记住用户偏好
 voiceOptions = voiceOptions || [];
 const div = document.createElement("div");
 div.className = "voice-options";
 div.id = "voice-options";
 // 🆕 v1.7.22 修复：如果后端已经注入了 voice_freetext 占位，前端不要再加 "自由输入" 按钮
-// 否则会出现 2 个 "自由输入" 按钮（重复）
 const hasFreetext = voiceOptions.some(v => v.is_freetext);
 // 🆕 v1.7.21: 如果 voiceOptions 为空，header 文案变化
 const headerHint = voiceOptions.length > 0
   ? '<span class="voice-options-hint">或点下方"自由输入"</span>'
   : '<span class="voice-options-hint">DM 没生成选项——直接描述你想做什么</span>';
+
 const gridItems = voiceOptions.map((opt, i) => {
   // 🆕 v1.7.21: is_freetext 标记的选项，点它直接展开自由输入框
   const onclick = opt.is_freetext
@@ -1337,18 +1336,66 @@ const freetextButton = hasFreetext
       <span class="voice-name">✍️ 自由输入</span>
       <span class="voice-intent">都不对？自己描述要做什么</span>
     </button>`;
+
+// 🆕 v1.7.29 移动端折叠：默认隐藏 grid，只显示一条"🎭 N 个声音 ▾"小按钮
+// 用户点 / 点 header 后展开（保存偏好到 localStorage）
+const PREF_KEY = "hfe_voice_options_collapsed";
+const isMobile = window.matchMedia("(max-width: 768px)").matches;
+const storage = window.__VOICE_PREFS__ || JSON.parse(localStorage.getItem(PREF_KEY) || "null");
+let userPref = storage;
+// 没有偏好时：移动端默认折叠，桌面端默认展开
+if (userPref === null || userPref === undefined) {
+  userPref = isMobile;
+}
+window.__VOICE_PREFS__ = userPref;
+const savePref = (collapsed) => {
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(collapsed)); } catch (_) {}
+  window.__VOICE_PREFS__ = collapsed;
+};
+const initialCollapsed = userPref;
+// 当前回合数（用于高亮）；从 state.round 取不到时用 -1
+const currentRound = (typeof state !== "undefined" && state.round_number) || 0;
+const voiceCount = voiceOptions.filter(v => !v.is_freetext).length || 1;
 div.innerHTML = `
   <div class="voice-options-header">
-    🎭 你脑海中的声音——选择按哪个行动
-    ${headerHint}
+    <button class="voice-options-toggle" aria-expanded="${!initialCollapsed}" aria-controls="voice-options-grid">
+      <span class="voice-options-toggle-icon">${initialCollapsed ? "▸" : "▾"}</span>
+      <span class="voice-options-title">🎭 ${initialCollapsed ? voiceCount + " 个声音" : "你脑海中的声音"}</span>
+      ${currentRound > 0 ? `<span class="voice-options-round-tag" title="当前回合">R${currentRound}</span>` : ""}
+    </button>
+    <span class="voice-options-hint">${initialCollapsed ? "点开选行动" : headerHint.replace(/<[^>]+>/g, "")}</span>
   </div>
-  <div class="voice-options-grid">
+  <div class="voice-options-grid ${initialCollapsed ? "collapsed" : ""}" id="voice-options-grid" role="region">
     ${gridItems}
     ${freetextButton}
   </div>
 `;
+// 折叠状态：如果默认展开，反向给折叠按钮取消 collapsed class（已经有 expanded class）
+if (!initialCollapsed) div.classList.add("voice-options-expanded");
+
+// 🆕 绑定折叠按钮
+const $toggle = div.querySelector(".voice-options-toggle");
+if ($toggle) {
+  $toggle.addEventListener("click", () => {
+    const isCollapsed = div.classList.toggle("voice-options-collapsed");
+    savePref(isCollapsed);
+    const $grid = div.querySelector(".voice-options-grid");
+    if ($grid) $grid.classList.toggle("collapsed", isCollapsed);
+    const $icon = div.querySelector(".voice-options-toggle-icon");
+    const $title = div.querySelector(".voice-options-toggle-title, .voice-options-title");
+    const $hint = div.querySelector(".voice-options-hint");
+    if ($icon) $icon.textContent = isCollapsed ? "▸" : "▾";
+    if ($title) $title.textContent = isCollapsed
+      ? `🎭 ${voiceCount} 个声音`
+      : "你脑海中的声音";
+    if ($hint) $hint.textContent = isCollapsed
+      ? "点开选行动"
+      : (voiceOptions.length > 0 ? '或点下方"自由输入"' : "DM 没生成选项——直接描述你想做什么");
+    $toggle.setAttribute("aria-expanded", String(!isCollapsed));
+  });
+}
+
 // 🆕 v1.7.7 改：插到 action-area 内部 input-area 之前
-// 视觉上"声音 + 输入"是一个整体
 const $actionArea = document.getElementById("action-area");
 const $inputArea = document.getElementById("input-area");
 if ($actionArea && $inputArea && $actionArea.contains($inputArea)) {
@@ -1358,6 +1405,12 @@ if ($actionArea && $inputArea && $actionArea.contains($inputArea)) {
 } else {
   $main.appendChild(div);
 }
+
+// 🆕 v1.7.29 新回合到达时，一次性脉冲（动画后移除 class）
+requestAnimationFrame(() => {
+  div.classList.add("voice-options-new-round");
+  setTimeout(() => div.classList.remove("voice-options-new-round"), 1000);
+});
 }
 
 function showFreeInputTab() {
