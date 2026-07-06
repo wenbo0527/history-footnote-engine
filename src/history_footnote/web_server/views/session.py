@@ -7,6 +7,7 @@ _new_session(era_id, identity, gender, custom_character) — 启动新游戏
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from history_footnote.concurrency import SESSION_POOL
 from history_footnote.resource_cache import (
@@ -14,6 +15,15 @@ from history_footnote.resource_cache import (
     load_era_config,
 )
 from history_footnote.game_loop import GameLoop
+from history_footnote.storage.save_manager import DEFAULT_SAVE_ROOT
+
+
+def _storage_root_for_account() -> Path:
+    """🆕 v1.7.30 账户系统的存储根目录
+    默认使用 saves/（与现有 SaveManager 共用）
+    后续可改为专门的 accounts_root
+    """
+    return Path(DEFAULT_SAVE_ROOT)
 
 
 def session_get(sid: str):

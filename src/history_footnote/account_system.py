@@ -1,0 +1,374 @@
+"""🆕 v1.7.30 账户体系 + 邀请码系统
+
+数据结构（JSON 存储）：
+- accounts/accounts.json: 账户列表
+- accounts/invite_codes.json: 邀请码列表
+- accounts/saves/{account_id}/{save_id}.json: 存档
+
+Account:
+- account_id: uuid
+- username: str
+- email: str (optional)
+- invite_code_used: str
+- created_at: str
+- role: admin / user / guest
+- bound_at: str
+
+InviteCode:
+- code: str (格式: INV-XXXX-XXXX)
+- account_id: str or None (使用了)
+- max_uses: int (默认 1，可多)
+- used_count: int
+- created_at: str
+- expires_at: str (optional)
+- label: str (描述用途)
+"""
+from __future__ import annotations
+
+import json
+import re
+import secrets
+import string
+import threading
+from dataclasses import dataclass, field, asdict
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+
+ACCOUNTS_DIR_NAME = "accounts"
+SAVES_DIR_NAME = "saves"
+
+
+def _now() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def _generate_invite_code() -> str:
+    """生成 INV-XXXX-XXXX 格式的邀请码"""
+    alphabet = string.ascii_uppercase + string.digits
+    part1 = "".join(secrets.choice(alphabet) for _ in range(4))
+    part2 = "".join(secrets.choice(alphabet) for _ in range(4))
+    return f"INV-{part1}-{part2}"
+
+
+def _generate_account_id() -> str:
+    """生成账户 ID (8 字符)"""
+    return secrets.token_hex(4)
+
+
+def _generate_save_id() -> str:
+    """生成存档 ID (12 字符)"""
+    return secrets.token_hex(6)
+
+
+def _atomic_write(path: Path, data: dict) -> None:
+    """原子写 JSON 文件"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    tmp.replace(path)
+
+
+# ============= 账户 =============
+
+@dataclass
+class Account:
+    account_id: str
+    username: str
+    email: str = ""
+    invite_code_used: str = ""
+    created_at: str = field(default_factory=_now)
+    role: str = "user"  # admin / user / guest
+    bound_at: str = field(default_factory=_now)
+    last_login_at: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Account":
+        return cls(**{k: v for k, v in data.items() if k in cls.__annotations__})
+
+
+# ============= 邀请码 =============
+
+@dataclass
+class InviteCode:
+    code: str
+    account_id: str = ""  # 使用者（空 = 有效）
+    max_uses: int = 1
+    used_count: int = 0
+    created_at: str = field(default_factory=_now)
+    expires_at: str = ""
+    label: str = ""  # 用途描述
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "InviteCode":
+        return cls(**{k: v for k, v in data.items() if k in cls.__annotations__})
+
+    def is_valid(self) -> tuple[bool, str]:
+        """验证邀请码是否可用
+        Returns: (valid, reason)
+        """
+        if self.used_count >= self.max_uses:
+            return False, f"邀请码已用完（{self.used_count}/{self.max_uses}）"
+        if self.expires_at:
+            try:
+                exp = datetime.fromisoformat(self.expires_at)
+                if datetime.now() > exp:
+                    return False, f"邀请码已过期（{self.expires_at}）"
+            except ValueError:
+                pass
+        return True, "有效"
+
+
+# ============= 账户系统 =============
+
+class AccountSystem:
+    """账户系统（线程安全）
+
+    存储位置：
+    - {storage_root}/accounts/accounts.json
+    - {storage_root}/accounts/invite_codes.json
+    - {storage_root}/accounts/saves/{account_id}/{save_id}.json
+    """
+
+    def __init__(self, storage_root: Path):
+        self.storage_root = Path(storage_root)
+        self.accounts_dir = self.storage_root / ACCOUNTS_DIR_NAME
+        self.saves_dir = self.accounts_dir / SAVES_DIR_NAME
+        self.accounts_file = self.accounts_dir / "accounts.json"
+        self.invite_codes_file = self.accounts_dir / "invite_codes.json"
+        # 线程锁
+        self._lock = threading.RLock()
+        # 初始化
+        self.accounts_dir.mkdir(parents=True, exist_ok=True)
+        self.saves_dir.mkdir(parents=True, exist_ok=True)
+        if not self.accounts_file.exists():
+            _atomic_write(self.accounts_file, {"accounts": []})
+        if not self.invite_codes_file.exists():
+            _atomic_write(self.invite_codes_file, {"codes": []})
+
+    # ----- 邀请码管理 -----
+
+    def _load_invite_codes(self) -> list[InviteCode]:
+        data = json.loads(self.invite_codes_file.read_text(encoding="utf-8"))
+        return [InviteCode.from_dict(c) for c in data.get("codes", [])]
+
+    def _save_invite_codes(self, codes: list[InviteCode]) -> None:
+        _atomic_write(
+            self.invite_codes_file,
+            {"codes": [c.to_dict() for c in codes]},
+        )
+
+    def create_invite_code(
+        self, label: str = "", max_uses: int = 1, expires_at: str = ""
+    ) -> InviteCode:
+        """创建邀请码"""
+        with self._lock:
+            code = _generate_invite_code()
+            inv = InviteCode(
+                code=code,
+                max_uses=max_uses,
+                label=label,
+                expires_at=expires_at,
+            )
+            codes = self._load_invite_codes()
+            codes.append(inv)
+            self._save_invite_codes(codes)
+            return inv
+
+    def verify_invite_code(self, code: str) -> tuple[bool, str, Optional[InviteCode]]:
+        """验证邀请码
+        Returns: (valid, reason, invite_code_obj)
+        """
+        with self._lock:
+            codes = self._load_invite_codes()
+            for inv in codes:
+                if inv.code == code:
+                    valid, reason = inv.is_valid()
+                    return valid, reason, inv if valid else None
+            return False, "邀请码不存在", None
+
+    def use_invite_code(self, code: str, account_id: str) -> bool:
+        """使用邀请码（绑定账户）"""
+        with self._lock:
+            codes = self._load_invite_codes()
+            for inv in codes:
+                if inv.code == code:
+                    valid, _ = inv.is_valid()
+                    if not valid:
+                        return False
+                    inv.used_count += 1
+                    if inv.account_id:
+                        inv.account_id = inv.account_id + "," + account_id
+                    else:
+                        inv.account_id = account_id
+                    self._save_invite_codes(codes)
+                    return True
+            return False
+
+    def list_invite_codes(self) -> list[InviteCode]:
+        with self._lock:
+            return self._load_invite_codes()
+
+    # ----- 账户管理 -----
+
+    def _load_accounts(self) -> list[Account]:
+        data = json.loads(self.accounts_file.read_text(encoding="utf-8"))
+        return [Account.from_dict(a) for a in data.get("accounts", [])]
+
+    def _save_accounts(self, accounts: list[Account]) -> None:
+        _atomic_write(
+            self.accounts_file,
+            {"accounts": [a.to_dict() for a in accounts]},
+        )
+
+    def create_account(
+        self, username: str, invite_code: str, email: str = "", role: str = "user"
+    ) -> tuple[Optional[Account], str]:
+        """创建账户
+        Returns: (account, error_msg)
+        """
+        with self._lock:
+            # 验证邀请码
+            valid, reason, inv = self.verify_invite_code(invite_code)
+            if not valid:
+                return None, reason
+            # 检查用户名重复
+            accounts = self._load_accounts()
+            if any(a.username == username for a in accounts):
+                return None, f"用户名已存在：{username}"
+            # 验证用户名格式
+            if not re.match(r"^[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}$", username):
+                return None, "用户名需 2-20 字符（中文/字母/数字/下划线）"
+            # 创建账户
+            account = Account(
+                account_id=_generate_account_id(),
+                username=username,
+                email=email,
+                invite_code_used=invite_code,
+                role=role,
+            )
+            accounts.append(account)
+            self._save_accounts(accounts)
+            # 标记邀请码已用
+            self.use_invite_code(invite_code, account.account_id)
+            return account, ""
+
+    def get_account(self, account_id: str) -> Optional[Account]:
+        with self._lock:
+            for a in self._load_accounts():
+                if a.account_id == account_id:
+                    return a
+            return None
+
+    def get_account_by_username(self, username: str) -> Optional[Account]:
+        with self._lock:
+            for a in self._load_accounts():
+                if a.username == username:
+                    return a
+            return None
+
+    def list_accounts(self) -> list[Account]:
+        with self._lock:
+            return self._load_accounts()
+
+    def update_last_login(self, account_id: str) -> None:
+        with self._lock:
+            accounts = self._load_accounts()
+            for a in accounts:
+                if a.account_id == account_id:
+                    a.last_login_at = _now()
+                    self._save_accounts(accounts)
+                    return
+
+    # ----- 存档绑定 -----
+
+    def bind_save(self, account_id: str, save_id: str) -> bool:
+        """把存档绑定到账户（按 account_id 目录）"""
+        account = self.get_account(account_id)
+        if account is None:
+            return False
+        # 保存目录: {storage_root}/accounts/saves/{account_id}/{save_id}.json
+        save_path = self._save_path(account_id, save_id)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        # 绑定元数据
+        meta = {
+            "account_id": account_id,
+            "username": account.username,
+            "save_id": save_id,
+            "bound_at": _now(),
+        }
+        meta_path = save_path.parent / f"{save_id}.meta.json"
+        _atomic_write(meta_path, meta)
+        return True
+
+    def unbind_save(self, account_id: str, save_id: str) -> bool:
+        """解绑存档（不删除文件，只删 meta）"""
+        meta_path = self._save_path(account_id, save_id).parent / f"{save_id}.meta.json"
+        if meta_path.exists():
+            meta_path.unlink()
+            return True
+        return False
+
+    def list_saves(self, account_id: str) -> list[dict]:
+        """列出账户的所有存档
+        Returns: [{save_id, account_id, username, bound_at, save_path}, ...]
+        """
+        with self._lock:
+            account = self.get_account(account_id)
+            if account is None:
+                return []
+            account_dir = self.saves_dir / account_id
+            if not account_dir.exists():
+                return []
+            results = []
+            for meta_path in account_dir.glob("*.meta.json"):
+                try:
+                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                    results.append(meta)
+                except (json.JSONDecodeError, OSError):
+                    continue
+            # 按 bound_at 倒序
+            results.sort(key=lambda x: x.get("bound_at", ""), reverse=True)
+            return results
+
+    def get_save_path(self, account_id: str, save_id: str) -> Path:
+        """获取存档实际路径（由调用方负责写入）"""
+        return self._save_path(account_id, save_id)
+
+    def _save_path(self, account_id: str, save_id: str) -> Path:
+        return self.saves_dir / account_id / f"{save_id}.json"
+
+    # ----- 管理员 -----
+
+    def ensure_default_admin(self, admin_code: str | None = None) -> InviteCode | None:
+        """确保至少有一个 admin 邀请码（系统初始化用）"""
+        with self._lock:
+            codes = self._load_invite_codes()
+            admin_codes = [c for c in codes if c.role if hasattr(c, 'role') or c.label == "admin"]
+            # 简单通过 label 判断
+            admin_codes = [c for c in codes if "admin" in c.label.lower()]
+            if admin_codes:
+                return None
+            # 创建
+            inv = self.create_invite_code(
+                label="admin-initial",
+                max_uses=10,
+            )
+            # 标记为 admin
+            inv.label = "admin-bootstrap"
+            codes = self._load_invite_codes()
+            for c in codes:
+                if c.code == inv.code:
+                    c.label = "admin-bootstrap"
+            self._save_invite_codes(codes)
+            return inv

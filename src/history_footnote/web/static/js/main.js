@@ -7,6 +7,10 @@ session_id: null,
 identity: null,
 gender: null,
 era_id: "wanli1587",
+// 🆕 v1.7.30 账户体系
+account_id: null,
+account_username: null,
+account_role: "user",
 };
 
 const $main = document.getElementById("main");
@@ -91,8 +95,12 @@ const SHENGZE_LOCATIONS = [
 ];
 
 function renderStart() {
-wizard.step = 1;
-renderWizard();
+// 🆕 v1.7.30：如果已登录，直接显示存档列表；否则显示账户登录
+if (restoreAccountFromStorage()) {
+  showSavesList();
+} else {
+  showAccountLogin();
+}
 }
 
 function renderWizard() {
@@ -1828,6 +1836,198 @@ function toggleSbSection(name) {
 function openMyProfile(tab = "cash") {
   // 简单实现：提示后续 commit 完善
   alert(`👤 我的档案\n\n即将上线：${tab} 标签页\n\n当前在 sidebar 已有 6 折叠区。\n弹层"全部"功能 v1.7.30 后续 commit 完善。`);
+}
+
+// 🆕 v1.7.30 账户登录/注册 UI
+function showAccountLogin() {
+  if (state.account_id) {
+    showSavesList();
+    return;
+  }
+  $main.innerHTML = `
+    <div class="start-screen">
+      <h2>👤 账户登录</h2>
+      <p style="color:#8b6f47;font-size:14px;line-height:1.7">
+        v1.7.30 引入邀请码注册。请输入您的邀请码和用户名。
+      </p>
+      <div style="background:#faf3e0;padding:16px;border:1px solid #c4a878;border-radius:6px;margin:16px 0;max-width:480px">
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:13px;color:#5a3e1f;margin-bottom:4px">邀请码</label>
+          <input id="invite-code-input" type="text" placeholder="INV-XXXX-XXXX"
+                 style="width:100%;padding:8px;border:1px solid #c4a878;border-radius:4px;font-family:monospace;font-size:14px"/>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:13px;color:#5a3e1f;margin-bottom:4px">用户名（2-20 字符）</label>
+          <input id="username-input" type="text" placeholder="例如：施润泽"
+                 style="width:100%;padding:8px;border:1px solid #c4a878;border-radius:4px;font-size:14px"/>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:13px;color:#5a3e1f;margin-bottom:4px">邮箱（可选）</label>
+          <input id="email-input" type="email" placeholder="example@email.com"
+                 style="width:100%;padding:8px;border:1px solid #c4a878;border-radius:4px;font-size:14px"/>
+        </div>
+        <button onclick="registerAccount()" style="width:100%;padding:10px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px">
+          🎫 注册并登录
+        </button>
+        <div id="account-error" style="color:#c0392b;margin-top:8px;font-size:13px"></div>
+      </div>
+      <p style="font-size:12px;color:#a08858">
+        💡 已有账户？
+        <a href="javascript:showAccountSwitch()" style="color:#5a3e1f;text-decoration:underline">使用 account_id 登录</a>
+      </p>
+    </div>
+  `;
+}
+
+async function registerAccount() {
+  const inviteCode = document.getElementById("invite-code-input").value.trim();
+  const username = document.getElementById("username-input").value.trim();
+  const email = document.getElementById("email-input").value.trim();
+  const $err = document.getElementById("account-error");
+  if (!inviteCode || !username) {
+    $err.textContent = "邀请码和用户名必填";
+    return;
+  }
+  try {
+    const data = await api("/api/account/register", "POST", {
+      invite_code: inviteCode,
+      username: username,
+      email: email,
+    });
+    if (data.error) {
+      $err.textContent = data.error;
+      return;
+    }
+    state.account_id = data.account_id;
+    state.account_username = data.username;
+    state.account_role = data.role;
+    localStorage.setItem("hfe_account_id", data.account_id);
+    localStorage.setItem("hfe_account_username", data.username);
+    showSavesList();
+  } catch (e) {
+    $err.textContent = "网络错误：" + e.message;
+  }
+}
+
+function showAccountSwitch() {
+  $main.innerHTML = `
+    <div class="start-screen">
+      <h2>👤 使用 account_id 登录</h2>
+      <div style="background:#faf3e0;padding:16px;border:1px solid #c4a878;border-radius:6px;margin:16px 0;max-width:480px">
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:13px;color:#5a3e1f;margin-bottom:4px">account_id</label>
+          <input id="account-id-input" type="text" placeholder="8 字符 ID"
+                 style="width:100%;padding:8px;border:1px solid #c4a878;border-radius:4px;font-family:monospace;font-size:14px"/>
+        </div>
+        <button onclick="loginByAccountId()" style="width:100%;padding:10px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px">
+          🔑 登录
+        </button>
+        <div id="login-error" style="color:#c0392b;margin-top:8px;font-size:13px"></div>
+      </div>
+      <p style="font-size:12px;color:#a08858">
+        <a href="javascript:showAccountLogin()" style="color:#5a3e1f;text-decoration:underline">← 返回注册</a>
+      </p>
+    </div>
+  `;
+}
+
+async function loginByAccountId() {
+  const accountId = document.getElementById("account-id-input").value.trim();
+  const $err = document.getElementById("login-error");
+  if (!accountId) {
+    $err.textContent = "account_id 必填";
+    return;
+  }
+  try {
+    const data = await api("/api/account/login", "POST", {account_id: accountId});
+    if (data.error) {
+      $err.textContent = data.error;
+      return;
+    }
+    state.account_id = data.account_id;
+    state.account_username = data.username;
+    state.account_role = data.role;
+    localStorage.setItem("hfe_account_id", data.account_id);
+    localStorage.setItem("hfe_account_username", data.username);
+    showSavesList();
+  } catch (e) {
+    $err.textContent = "网络错误：" + e.message;
+  }
+}
+
+async function showSavesList() {
+  try {
+    const data = await api(`/api/account/saves?account_id=${state.account_id}`);
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+    const saves = data.saves || [];
+    $main.innerHTML = `
+      <div class="start-screen">
+        <h2>👤 ${escapeHtml(state.account_username)} 的存档</h2>
+        <p style="color:#8b6f47;font-size:14px;line-height:1.7">
+          共 ${saves.length} 个存档
+        </p>
+        <div id="saves-list" style="margin:16px 0;max-width:600px">
+          ${saves.length > 0 ? saves.map(s => `
+            <div class="archive-item" onclick="loadAccountSave('${s.save_id}')">
+              <div class="ar-session">💾 ${escapeHtml(s.save_id)}</div>
+              <div class="ar-meta">${escapeHtml(s.bound_at || '')}</div>
+            </div>
+          `).join("") : "<p style='color:#a08858;font-size:13px'>尚无存档</p>"}
+        </div>
+        <button onclick="createAccountSave()" style="padding:10px 20px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px;margin-top:8px">
+          ✨ 创建新存档
+        </button>
+        <button onclick="logoutAccount()" style="padding:10px 20px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:14px;margin-top:8px;margin-left:8px">
+          退出登录
+        </button>
+      </div>
+    `;
+  } catch (e) {
+    alert("网络错误：" + e.message);
+  }
+}
+
+async function createAccountSave() {
+  try {
+    const data = await api("/api/account/saves", "POST", {account_id: state.account_id});
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+    // 创建完存档后用这个存档启动游戏
+    state.session_id = data.save_path;
+    alert(`✨ 存档创建成功：${data.save_id}\n请继续选择身份启动游戏`);
+    showSavesList();
+  } catch (e) {
+    alert("网络错误：" + e.message);
+  }
+}
+
+function loadAccountSave(saveId) {
+  alert(`加载存档 ${saveId}（v1.7.31 实施具体逻辑）`);
+}
+
+function logoutAccount() {
+  state.account_id = null;
+  state.account_username = null;
+  localStorage.removeItem("hfe_account_id");
+  localStorage.removeItem("hfe_account_username");
+  showAccountLogin();
+}
+
+// 页面加载时自动恢复
+function restoreAccountFromStorage() {
+  const accountId = localStorage.getItem("hfe_account_id");
+  const username = localStorage.getItem("hfe_account_username");
+  if (accountId && username) {
+    state.account_id = accountId;
+    state.account_username = username;
+    return true;
+  }
+  return false;
 }
 
 

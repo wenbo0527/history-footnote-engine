@@ -232,6 +232,26 @@ class GameLoop:
         # 每回合自动结算
         settlements = self.rule_engine.settle_round(view)
 
+        # 🆕 v1.7.30：检查历法（按时间触发重大历史事件）
+        calendar_events = self.rule_engine.check_calendar(view)
+        if calendar_events:
+            # 写入 state.triggered_events
+            for cal_evt in calendar_events:
+                # triggered_events 是 list[str]
+                if cal_evt["event_id"] not in self.state.triggered_events:
+                    self.state.triggered_events.append(cal_evt["event_id"])
+                # 如果有 evt_ids，构造 evt.* events 给 DM 用
+                if cal_evt.get("evt_ids"):
+                    logger.info(
+                        f"📅 历法触发：{cal_evt['name']} ({cal_evt['year']}, {cal_evt['rank']})"
+                    )
+            # 注入到 DM context（让 DM 在 narrative 中体现）
+            calendar_text = "\n".join([
+                f"- [{e['rank']}] {e['name']}（{e['year']}年）：{e['narrative_hook']}"
+                for e in calendar_events
+            ])
+            self.set_calendar_events_for_dm(calendar_text)
+
         # === 步骤4：多路召回 ===
         recent_events = self.memory.get_recent(rounds=3, current_round=self.state.round_number)
 
@@ -833,6 +853,17 @@ class GameLoop:
         if hasattr(self.dm.llm, "_state_ref_slot_ref"):
             current_ref = self.dm.llm._state_ref_slot_ref[0]
             current_ref["random_events"] = triggered
+
+    def set_calendar_events_for_dm(self, calendar_text: str) -> None:
+        """🆕 v1.7.30 把历法触发的大事件注入到 DM LLM state_ref
+
+        calendar_text: 多行字符串，每行一个触发事件
+        """
+        if not calendar_text:
+            return
+        if hasattr(self.dm.llm, "_state_ref_slot_ref"):
+            current_ref = self.dm.llm._state_ref_slot_ref[0]
+            current_ref["calendar_events"] = calendar_text
 
     # === 身份切换机制 ===
 

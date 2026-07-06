@@ -139,6 +139,14 @@ class GameStateView:
     def player_gender(self) -> str:
         return self._state.player_gender
 
+    @property
+    def current_date(self) -> str:
+        return self._state.current_date
+
+    @property
+    def current_city(self) -> str:
+        return self._state.current_city
+
 
 @dataclass
 class ForcedEvent:
@@ -305,6 +313,118 @@ class RuleEngine:
                 )
             )
         return forced
+
+    # === 🆕 v1.7.30 历法检查（按时间触发大事件）===
+
+    def check_calendar(self, view: GameStateView) -> list[dict]:
+        """按当前日期匹配 era.major_events.trigger_conditions
+
+        Returns:
+            触发的 evt.* 事件列表
+            [{event_id, name, rank, category, narrative_hook, triggered_at}, ...]
+
+        触发逻辑：
+        1. 从 view.current_date 提取年份（万历X年 → 公历X+1572年）
+        2. 遍历 era.major_events，检查 trigger_conditions
+        3. 检查 evt_ids 是否已触发（避免重复）
+        4. 返回匹配的事件
+        """
+        try:
+            current_year = self._parse_current_year(view.current_date)
+        except (ValueError, TypeError):
+            return []
+        if not current_year:
+            return []
+        major_events = self.config.get("era", {}).get("major_events", [])
+        triggered = []
+        for event in major_events:
+            year = event.get("year", 0)
+            year_end = event.get("year_end", year) or year
+            if year == 0:
+                continue
+            if not (year <= current_year <= year_end):
+                continue
+            # 检查已触发
+            evt_ids = event.get("evt_ids", [])
+            already_triggered = any(
+                eid in view.triggered_events for eid in evt_ids
+            )
+            if already_triggered:
+                continue
+            # 检查城市（如果有 city 限制）
+            conditions = event.get("trigger_conditions", [])
+            # 简化：检查 player 在不在指定城市（conditions 字符串解析）
+            if conditions:
+                in_target_city = self._check_city_condition(view, conditions)
+                if not in_target_city:
+                    continue
+            triggered.append({
+                "event_id": event.get("id", ""),
+                "name": event.get("name", ""),
+                "rank": event.get("rank", "P2"),
+                "category": event.get("category", ""),
+                "year": year,
+                "year_end": year_end,
+                "narrative_hook": event.get("narrative_hook", ""),
+                "evt_ids": evt_ids,
+                "impact": event.get("impact", ""),
+                "triggered_at": view.current_date,
+            })
+        return triggered
+
+    def _parse_current_year(self, current_date: str) -> int | None:
+        """把"万历X年" / "1587年" 解析为公历年"""
+        if not current_date:
+            return None
+        # "1587年3月" / "万历十五年"
+        import re
+        m = re.match(r"(\d+)\s*年", current_date)
+        if m:
+            return int(m.group(1))
+        # 中文年份
+        cn_map = {"万历": 1573}  # 万历元年 = 1573
+        for prefix, base in cn_map.items():
+            if current_date.startswith(prefix):
+                cn_num = current_date.replace(prefix, "").split("年")[0]
+                return self._cn_to_int(cn_num) + base - 1
+        return None
+
+    def _cn_to_int(self, cn: str) -> int:
+        """中文数字 → 阿拉伯数字（简单版）"""
+        cn_map = {
+            "零": 0, "一": 1, "二": 2, "三": 3, "四": 4,
+            "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+        }
+        if not cn:
+            return 0
+        if cn in cn_map:
+            return cn_map[cn]
+        if cn.startswith("十"):
+            rest = cn[1:]
+            if rest in cn_map:
+                return 10 + cn_map[rest]
+            return 10
+        if cn.endswith("十"):
+            return cn_map.get(cn[0], 0) * 10
+        if "十" in cn:
+            parts = cn.split("十")
+            return cn_map.get(parts[0], 0) * 10 + cn_map.get(parts[1], 0)
+        return cn_map.get(cn, 0)
+
+    def _check_city_condition(self, view, conditions: list) -> bool:
+        """检查玩家所在城市是否匹配条件
+        简化：如果 conditions 含 'player in suzhou'，检查 current_city == 'suzhou'
+        """
+        current_city = getattr(view, "current_city", "shengze") if hasattr(view, "current_city") else "shengze"
+        for cond in conditions:
+            cond_low = cond.lower()
+            # 提取城市 id
+            for city in ("suzhou", "hangzhou", "songjiang", "nanjing", "shengze"):
+                if city in cond_low:
+                    if "in " + city in cond_low or "player in " + city in cond_low:
+                        if current_city != city:
+                            return False
+        return True
 
     # === 3. 触发条件检查 ===
 

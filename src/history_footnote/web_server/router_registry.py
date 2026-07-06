@@ -17,6 +17,7 @@ from __future__ import annotations
 from urllib.parse import parse_qs
 
 from history_footnote.web_server.routers import (
+    account as _account,
     character as _character,
     eras as _eras,
     glossary as _glossary,
@@ -53,6 +54,10 @@ GET_ROUTES = {
     "/api/monitor/stats": _observability.handle_GET_monitor_stats,
     "/api/archives": _session_router.handle_GET_archives,
     "/api/character_wiki": _character.handle_GET_character_wiki,
+    # 🆕 v1.7.30 账户系统
+    "/api/account/saves": _account.handle_GET_account_saves,
+    "/api/account/info": _account.handle_GET_account_info,
+    "/api/account/invite_codes": _account.handle_GET_account_invite_codes,
 }
 
 # POST 路由
@@ -82,6 +87,10 @@ POST_ROUTES = {
     "/api/archives/clear": _session_router.handle_POST_archives_clear,
     "/api/input_stream": _input.handle_POST_input_stream,
     "/api/voice_options/suggest": _voice_suggest.handle_POST_voice_options_suggest,
+    # 🆕 v1.7.30 账户系统
+    "/api/account/register": _account.handle_POST_account_register,
+    "/api/account/login": _account.handle_POST_account_login,
+    "/api/account/saves": _account.handle_POST_account_create_save,
 }
 
 
