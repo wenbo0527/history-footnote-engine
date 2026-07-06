@@ -125,6 +125,9 @@ class GameEngineFacade:
               "drama_hint": str,  # Drama 干预 hint
             }
         """
+        # 🆕 v1.7.42 性能监控包裹
+        import time as _time
+        _t0 = _time.time()
         # 1. 解析 + 解析动作
         action = parse_player_input(player_input)
         result = resolve_action(self.state, action, self.era_config)
@@ -171,6 +174,8 @@ class GameEngineFacade:
                 priority=70,
             ))
 
+        # 🆕 v1.7.42 记录 process_call 性能
+        self.record_perf("process_call", (_time.time() - _t0) * 1000)
         return {
             "player_action": action,
             "action_result": result,
@@ -436,6 +441,63 @@ class GameEngineFacade:
         """保存所有子系统状态"""
         self.quest_system.save()
         self.drama_manager.save()
+
+    def save_to_disk(self, path: str) -> bool:
+        """🆕 v1.7.42 整个 engine 状态保存到磁盘
+
+        Args:
+            path: JSON 文件路径
+
+        Returns:
+            True 成功 / False 失败
+        """
+        import json
+        try:
+            data = {
+                "perf": self._perf,
+                "wiki_cache": dict(self._wiki_cache),
+                "state": {
+                    "cash": self.state.cash,
+                    "debt": self.state.debt,
+                    "current_city": self.state.current_city,
+                    "round_number": self.state.round_number,
+                },
+                "drama_interventions": list(self.drama_manager.intervention_history),
+            }
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            from history_footnote import logger as _logger
+            _logger.error(f"save_to_disk 失败: {e}")
+            return False
+
+    def load_from_disk(self, path: str) -> bool:
+        """🆕 v1.7.42 从磁盘加载 engine 状态
+
+        Args:
+            path: JSON 文件路径
+
+        Returns:
+            True 成功 / False 失败
+        """
+        import json
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self._perf = data.get("perf", self._perf)
+            self._wiki_cache = data.get("wiki_cache", {})
+            state = data.get("state", {})
+            if state:
+                self.state.cash = state.get("cash", self.state.cash)
+                self.state.debt = state.get("debt", self.state.debt)
+                self.state.current_city = state.get("current_city", self.state.current_city)
+                self.state.round_number = state.get("round_number", self.state.round_number)
+            return True
+        except Exception as e:
+            from history_footnote import logger as _logger
+            _logger.error(f"load_from_disk 失败: {e}")
+            return False
 
     def process_full_round(self, player_input: str, game_loop=None) -> dict:
         """🆕 v1.7.40 封装完整一轮（替代 game_loop._run_round 调用）
