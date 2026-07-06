@@ -132,6 +132,21 @@ class GameState:
     city_properties: dict = field(default_factory=dict)  # dict[city_id] -> list[property]
     inventory: dict = field(default_factory=dict)  # dict[city_id] -> list[item]
 
+    # === 🆕 v1.7.30 本次发现层（discoveries）===
+    # 与 era-level 知识库分离：玩家和 LLM 在游戏中创建的"地点/人物/物品/信件/事实"
+    # source 标签: "era"（标准）/ "save"（LLM 自由生成）/ "player"（玩家主动标注）
+    # 用 add_discovery() 添加，可被前端 Wiki 弹层展示
+    discoveries: dict = field(default_factory=dict)
+    # 结构：
+    # {
+    #   "places": {place_id: {id, name, city, description, source, created_round, ...}},
+    #   "persons": {person_id: {id, name, role, city, description, source, ...}},
+    #   "items": {item_id: {id, name, type, owner, qty, source, ...}},
+    #   "letters": {letter_id: {id, from, to, date, content, urgency, status, source, ...}},
+    #   "events": {event_id: {id, name, date, place, description, source, ...}},
+    #   "facts": [{id, text, source, heard_from, reliability, created_round}],
+    # }
+
     # === 🆕 v1.7.1 Per-Save Character Wiki ===
     # 人物知识图谱：仅本存档，删除/重置存档时清空
     # 用于 LLM 上下文 + 侧边栏 UI + 支线一致性
@@ -379,6 +394,98 @@ class GameState:
             total_qty = sum(it.get("qty", 0) for it in items)
             total_value = sum(it.get("qty", 0) * it.get("unit_value", 0) for it in items)
             out[city] = {"items": len(items), "total_qty": total_qty, "total_value": total_value}
+        return out
+
+    # 🆕 v1.7.30：discoveries CRUD（单次游戏中创建"地点/人物/物品/信件/事实"）
+    def add_discovery(self, kind: str, data: dict, source: str = "save") -> dict:
+        """添加一条发现
+
+        Args:
+            kind: 类别（place/person/item/letter/event/fact）
+            data: 数据 dict
+            source: 来源（era / save / player）
+
+        Returns:
+            添加后的对象
+
+        Raises:
+            ValueError: kind 非法或缺必填字段
+        """
+        valid_kinds = {"place", "person", "item", "letter", "event", "fact"}
+        if kind not in valid_kinds:
+            raise ValueError(f"discovery kind 非法: {kind}，需为 {valid_kinds} 中的一个")
+        # 自动填充元数据
+        data.setdefault("source", source)
+        data.setdefault("created_round", self.round_number)
+        data.setdefault("created_at", self.current_date)
+        # facts 是 list，其他是 dict
+        if kind == "fact":
+            self.discoveries.setdefault("facts", []).append(data)
+            return data
+        # dict[kind + 's']
+        bucket = self.discoveries.setdefault(f"{kind}s", {})
+        obj_id = data.get("id") or f"{kind[:3]}_{len(bucket) + 1:03d}_{self.round_number}"
+        data["id"] = obj_id
+        bucket[obj_id] = data
+        return data
+
+    def update_discovery(self, kind: str, obj_id: str, **updates) -> dict | None:
+        """更新一条发现（按 kind + id 定位）
+
+        Returns:
+            更新后的对象；找不到返回 None
+        """
+        if kind == "fact":
+            # facts 是 list，按 id 找
+            for f in self.discoveries.get("facts", []):
+                if f.get("id") == obj_id:
+                    f.update(updates)
+                    return f
+            return None
+        bucket = self.discoveries.get(f"{kind}s", {})
+        obj = bucket.get(obj_id)
+        if obj is None:
+            return None
+        obj.update(updates)
+        return obj
+
+    def get_discoveries(self, kind: str | None = None, source: str | None = None) -> list[dict]:
+        """获取发现列表
+
+        Args:
+            kind: 类别过滤（None=全部）
+            source: 来源过滤（None=全部）
+
+        Returns:
+            发现列表
+        """
+        results = []
+        if kind is None:
+            # 返回所有
+            for k, v in self.discoveries.items():
+                if k == "facts":
+                    results.extend(v)
+                else:
+                    results.extend(v.values())
+        else:
+            if kind == "fact":
+                results = list(self.discoveries.get("facts", []))
+            else:
+                results = list(self.discoveries.get(f"{kind}s", {}).values())
+        if source is not None:
+            results = [r for r in results if r.get("source") == source]
+        return results
+
+    def get_discoveries_summary(self) -> dict:
+        """按 source 标签统计发现数"""
+        out = {"era": 0, "save": 0, "player": 0, "total": 0}
+        for r in self.get_discoveries():
+            src = r.get("source", "save")
+            out[src] = out.get(src, 0) + 1
+            out["total"] += 1
+        out["by_kind"] = {}
+        for k in ("place", "person", "item", "letter", "event", "fact"):
+            out["by_kind"][k] = len(self.get_discoveries(k))
         return out
 
     def save(self, path: Path) -> None:

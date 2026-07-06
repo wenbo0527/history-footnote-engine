@@ -300,6 +300,8 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
   <event id="fin.sell_silk" amount="0.7" location="盛泽" note="卖湖绫一匹给吴掌柜"/>
   <event id="city.arrive.suzhou" note="阊门码头登岸"/>
   <event id="fam.meet.fm_wife" location="shengze"/>
+  <event id="discover.place" name="明远楼茶馆" city="suzhou" description="三层木楼可看运河"/>
+  <event id="discover.fact" text="苏州织造局每年加税3钱/张织机" heard_from="王二叔"/>
 </events>
 ```
 
@@ -311,7 +313,7 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - 城市用 id（"suzhou"，不要"苏州"）
 - 如果本回合无结构化变更 → 输出 `<events/>`（空块，不要省略）
 
-**13 类事件 id 前缀**（6 类原 + 7 类新）：
+**14 类事件 id 前缀**（13 原 + 1 新）：
 - `fin.*` 财务（sell_silk/buy_thread/pay_tax/borrow/repay/...）
 - `city.*` 城市（arrive.{city_id} / leave.{city_id}）
 - `fam.*` 家人（meet / health / death / relationship）
@@ -325,8 +327,18 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - `relig.*` 宗教超自然（nun_trap/monk_call/omen/temple_fair）
 - `reln.*` 人际网络（broker_wife/hanger_on/kindness_repaid/guild_hall）
 - `dis.*` 灾祸天命（plague/fire/flood/little_ice_age）
+- `discover.*` 本次发现（place/person/item/letter/event/fact）
 
-**触发模式库**：参考 [TriggerPatterns.md](../../../../docs/architecture/TriggerPatterns.md)（24 个明清小说情节模式）
+**🆕 discover.* 主动创建指引**：
+- 玩家获得/借/赠物品时 → 输 `discover.item`（name/type/owner/description）
+- 玩家收到信件（家书/邀约/传票）→ 输 `discover.letter`（from/to/date/content/urgency）
+- 玩家遇到新人物（非 era 标准）→ 输 `discover.person`（name/role/city/description）
+- 玩家进入新地点（非 era 标准）→ 输 `discover.place`（name/city/description）
+- 玩家听到/学到硬知识 → 输 `discover.fact`（text/heard_from/reliability）
+- **每回合 discover.* 最多 3 条**（避免生成过多冗余数据）
+- **已有发现**会通过 sidebar 展示给 LLM（下次不要重复生成）
+
+**触发模式库**：参考 [TriggerPatterns.md](../../../../docs/architecture/TriggerPatterns.md)（27 个明清小说情节模式）
 **为什么必须输出**：后端用 event_parser 解析 events 块 → 写入 GameState 持久化
 （cash / family_members / current_city / city_properties / inventory），
 玩家在 sidebar 看到的就是这些数据。LLM 自由写 narrative 不会自动同步。

@@ -77,6 +77,7 @@ def format_state(game) -> dict:
         "action_points_max": s.action_points_max,
         "selected_identity": s.selected_identity,
         "player_gender": s.player_gender,
+        "current_city": getattr(s, "current_city", "shengze"),
         "unlocked_insights": sorted(s.unlocked_insights),
         "triggered_events": sorted(s.triggered_events),
         "variables": dict(s.variables),
@@ -90,6 +91,20 @@ def format_state(game) -> dict:
         "sidebar_data": build_sidebar_data(s, recent_narr),
         # 🆕 v1.7.28：已完成任务计数（前端展示 + 弹层入口）
         "completed_tasks_count": len(getattr(s, "completed_tasks", []) or []),
+        # 🆕 v1.7.30 财务结构化字段
+        "cash": getattr(s, "cash", 0.0),
+        "rice": getattr(s, "rice", 0.0),
+        "debt": getattr(s, "debt", 0.0),
+        "monthly_burn": getattr(s, "monthly_burn", 0.0),
+        "financial_log": list(getattr(s, "financial_log", []) or []),
+        # 🆕 v1.7.30 家人 + 谱系
+        "family_members": list(getattr(s, "family_members", []) or []),
+        "genealogy": list(getattr(s, "genealogy", []) or []),
+        # 🆕 v1.7.30 城市财产 + 跨城库存
+        "city_properties": dict(getattr(s, "city_properties", {}) or {}),
+        "inventory": dict(getattr(s, "inventory", {}) or {}),
+        # 🆕 v1.7.30 本次发现层（discoveries）
+        "discoveries": dict(getattr(s, "discoveries", {}) or {}),
     }
     # 兜底注入（如果空）
     if not result["last_voice_options"]:

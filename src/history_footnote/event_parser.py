@@ -20,9 +20,9 @@ EVENT_BLOCK_RE = re.compile(
     re.DOTALL,
 )
 
-# 单事件正则
+# 单事件正则（attrs 接受 / 因为属性值可能含 /）
 EVENT_RE = re.compile(
-    r'<event\s+id="(?P<id>[^"]+)"\s+(?P<attrs>[^/]*?)/>',
+    r'<event\s+id="(?P<id>[^"]+)"\s+(?P<attrs>.*?)\s*/>',
     re.DOTALL,
 )
 
@@ -312,6 +312,32 @@ _HANDLERS: dict[str, Callable] = {
     "prop": _apply_prop_event,
     "inv": _apply_inv_event,
 }
+
+
+# ============= 🆕 v1.7.30 discover.* 处理器 =============
+
+def _apply_discover_event(state, event: dict, logger=None) -> bool:
+    """discover.* 事件 → state.discoveries（place/person/item/letter/event/fact）"""
+    parts = event["id"].split(".")
+    if len(parts) < 2:
+        return False
+    kind = parts[1]
+    valid_kinds = {"place", "person", "item", "letter", "event", "fact"}
+    if kind not in valid_kinds:
+        return False
+    # 提取 data 字段（排除 id / source）
+    data = {k: v for k, v in event.items() if k not in ("id", "source")}
+    source = event.get("source", "save")
+    try:
+        state.add_discovery(kind, data, source)
+        return True
+    except ValueError as e:
+        _log(logger, f"discover.* failed: {e}")
+        return False
+
+
+# 扩展 HANDLERS
+_HANDLERS["discover"] = _apply_discover_event
 
 
 # ============= Layer 2: 模糊匹配 fallback =============

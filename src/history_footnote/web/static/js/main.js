@@ -1799,6 +1799,21 @@ const RELATION_DISPLAY = {
 };
 
 // 🆕 v1.7.30 折叠区切换
+// 🆕 v1.7.30 把 discoveries 展开成顶层字段（前端用）
+function flattenDiscoveries(data) {
+  const d = data.discoveries || {};
+  // facts 是 list
+  data.facts = d.facts || [];
+  // 其他是 dict[kind]={id: obj, ...}
+  for (const k of ["place", "person", "item", "letter", "event"]) {
+    const bucket = d[`${k}s`] || {};
+    data[`${k}s`] = Object.values(bucket);
+  }
+  // 简写：letters / places / persons / items / events
+  data.letters = data.letters || [];
+  return data;
+}
+
 function toggleSbSection(name) {
   const $body = document.querySelector(`[data-body="${name}"]`);
   const $header = document.querySelector(`[data-section="${name}"] .sb-section-toggle`);
@@ -2018,6 +2033,8 @@ state._submitting = false;
 }
 
 function renderSidebar(data) {
+// 🆕 v1.7.30 展开 discoveries → 顶层字段
+flattenDiscoveries(data);
 const v = data.variables || {};
 const apCur = data.action_points_current ?? 3;
 const apMax = data.action_points_max ?? 3;
@@ -2175,6 +2192,38 @@ $side.innerHTML = `
       }
       <div class="sb-section-actions">
         <button class="sb-section-more" onclick="openMyProfile('inventory')">📊 全部</button>
+      </div>
+    </div>
+  </div>
+  <div class="sb-section sb-section-letters" data-section="letters">
+    <div class="sb-section-header" onclick="toggleSbSection('letters')">
+      📜 信件 (${(data.letters || []).length}) <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="letters">
+      ${(data.letters || []).slice(0, 3).map(l => `
+        <div class="sb-item">
+          <span class="sb-item-name">${escapeHtml(l.from || "?")} → ${escapeHtml(l.to || "我")}</span>
+          <span class="sb-item-meta">${escapeHtml(l.date || "")} · ${l.status === "unread" ? "🔴 未读" : "✓"}</span>
+        </div>
+      `).join("") || "<div style='color:#5a4a30;font-size:12px'>尚无信件</div>"}
+      <div class="sb-section-actions">
+        <button class="sb-section-more" onclick="openMyProfile('letters')">📊 全部</button>
+      </div>
+    </div>
+  </div>
+  <div class="sb-section sb-section-facts" data-section="facts">
+    <div class="sb-section-header" onclick="toggleSbSection('facts')">
+      💡 知识 (${(data.facts || []).length}) <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="facts">
+      ${(data.facts || []).slice(0, 3).map(f => `
+        <div class="sb-item">
+          <span class="sb-item-name">${escapeHtml((f.text || "").slice(0, 18))}${f.text && f.text.length > 18 ? "…" : ""}</span>
+          <span class="sb-item-meta">${f.heard_from ? "👤 " + escapeHtml(f.heard_from) : ""}</span>
+        </div>
+      `).join("") || "<div style='color:#5a4a30;font-size:12px'>尚无</div>"}
+      <div class="sb-section-actions">
+        <button class="sb-section-more" onclick="openMyProfile('facts')">📊 全部</button>
       </div>
     </div>
   </div>
