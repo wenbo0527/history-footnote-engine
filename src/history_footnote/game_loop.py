@@ -365,26 +365,11 @@ class GameLoop:
             event_summary,
         )
 
-        # 🆕 v1.7.1 Per-Save Character Wiki 自动提取
-        # 从 narrative 自动提取 NPC + 事件 + 承诺，更新 wiki
-        from history_footnote.character_wiki import CharacterWiki
-        if not self.state.character_wiki:
-            self.state.character_wiki = CharacterWiki(save_id=self.state.session_id or "").to_dict()
-        wiki = CharacterWiki.from_dict(self.state.character_wiki)
-        # 玩家选项（用于决策记录）
-        voice_options = structured_voice_options if 'structured_voice_options' in dir() else []
-        wiki.auto_extract_from_narrative(
-            narrative=narrative,
-            round=self.state.round_number,
-            player_input=player_input,
-            player_options=[opt.get("intent_text", "") for opt in voice_options] if voice_options else None,
-        )
-        self.state.character_wiki = wiki.to_dict()
-
         # 🐛 v1.5.1 P1 Issue 5 修复：持久化 voice_options（供存档/前端复用）
         # 🆕 v1.6.9 P0 修复：当 LLM 把选项写进 narrative 而未通过 voice_options 返回时，
         # 自动从 narrative 文本提取"一、二、三"等内嵌选项
-        structured_voice_options = dm_response.get("voice_options", [])
+        # 🆕 v1.7.28 P0 修复：声明提前到 wiki 提取前，避免 dir() 兜底分支
+        structured_voice_options = dm_response.get("voice_options", []) or []
         if not structured_voice_options and narrative:
             from history_footnote.narrative_sanitizer import merge_voice_options
             structured_voice_options = merge_voice_options(None, narrative)
@@ -393,6 +378,21 @@ class GameLoop:
                     f"[v1.6.9] inline options extracted: {len(structured_voice_options)} 个"
                 )
         self.state.last_voice_options = structured_voice_options
+
+        # 🆕 v1.7.1 Per-Save Character Wiki 自动提取
+        # 从 narrative 自动提取 NPC + 事件 + 承诺，更新 wiki
+        from history_footnote.character_wiki import CharacterWiki
+        if not self.state.character_wiki:
+            self.state.character_wiki = CharacterWiki(save_id=self.state.session_id or "").to_dict()
+        wiki = CharacterWiki.from_dict(self.state.character_wiki)
+        # 玩家选项（用于决策记录）—— 现在 structured_voice_options 已必有值
+        wiki.auto_extract_from_narrative(
+            narrative=narrative,
+            round=self.state.round_number,
+            player_input=player_input,
+            player_options=[opt.get("intent_text", "") for opt in structured_voice_options] or None,
+        )
+        self.state.character_wiki = wiki.to_dict()
 
         # === 步骤9：呈现给玩家 ===
         # 先回显玩家输入（明确告知"这是你做的事"）
@@ -410,7 +410,8 @@ class GameLoop:
         is_action = dm_response.get("is_action", True)
         time_cost = int(dm_response.get("time_cost", 1))
         intent_type = dm_response.get("intent_type", "action")  # 🆕 v1.5+
-        voice_options = dm_response.get("voice_options", [])  # 🆕 v1.5+
+        # 🆕 v1.7.28：复用上方已计算好的 structured_voice_options（已含 fallback）
+        voice_options = structured_voice_options
 
         # 🆕 v1.5+：打印 voice_options（DE 风格）
         if voice_options:
