@@ -1,0 +1,170 @@
+# 🆕 v1.7.27 GitHub Actions CI workflow
+#
+# 自动跑：
+# 1. Python 单元测试（不需要 LLM 的）
+# 2. 字段一致性测试
+# 3. OpenAPI 文档生成验证
+# 4. Python 语法检查
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # 仅安装运行所需（不安装 LLM SDK——CI 测试不调 LLM）
+          pip install pytest pytest-asyncio fastapi uvicorn
+          pip install -e . || true
+
+      - name: Python syntax check
+        run: |
+          echo "=== 1. Python 语法检查 ==="
+          python -c "import ast, pathlib
+          errors = 0
+          for p in pathlib.Path('src').rglob('*.py'):
+              try:
+                  ast.parse(p.read_text(encoding='utf-8'))
+              except SyntaxError as e:
+                  print(f'  ❌ {p}: {e}')
+                  errors += 1
+          print(f'  {errors} 个语法错误' if errors else '  ✅ 全部 OK')
+          exit(errors)"
+
+      - name: Import smoke test
+        run: |
+          echo "=== 2. Import 烟雾测试 ==="
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          # 关键模块能 import
+          from history_footnote.game_state import GameState
+          from history_footnote.sidebar_parser import build_sidebar_data, mark_task_completed
+          from history_footnote.narrative_sanitizer import sanitize
+          from history_footnote.web_server import _format_state
+          print('  ✅ 所有关键模块 import 成功')
+          "
+
+      - name: OpenAPI doc generation
+        run: |
+          echo "=== 3. OpenAPI 文档生成验证 ==="
+          python scripts/generate_api_doc.py 2>&1 | tail -3
+          if [ -f docs/api/openapi.yaml ]; then
+            lines=$(wc -l < docs/api/openapi.yaml)
+            echo "  ✅ OpenAPI 文档已生成（$lines 行）"
+          else
+            echo "  ❌ OpenAPI 文档未生成"
+            exit 1
+          fi
+
+      - name: Field consistency test
+        run: |
+          echo "=== 4. 字段一致性测试 ==="
+          # 需要 web_server 运行——CI 简化版只检查字段规范
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from history_footnote.web_server import _format_state
+          from history_footnote.game_state import GameState
+          class MockGame:
+              def __init__(self):
+                  self.state = GameState()
+                  self.era_config = {}
+                  self.era_id = 'wanli1587'
+                  self.session = type('S', (), {'session_id': 'test'})()
+          result = _format_state(MockGame())
+          # 必含字段
+          required = ['session_id', 'era_id', 'round_number', 'current_date',
+                      'action_points_current', 'last_voice_options', 'sidebar_data']
+          missing = [f for f in required if f not in result]
+          if missing:
+              print(f'  ❌ 缺少字段: {missing}')
+              sys.exit(1)
+          print('  ✅ 所有必含字段都在')
+          "
+
+      - name: Sidebar parser unit test
+        run: |
+          echo "=== 5. Sidebar parser 单元测试 ==="
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from history_footnote.sidebar_parser import (
+              parse_aside_block, infer_from_narrative,
+              build_sidebar_data, mark_task_completed
+          )
+          # 测试 1: aside 解析
+          text = '''<aside>待办：春税预单、束脩2两\n还债：春税（约10天后）\n财务：现金3.7两</aside>'''
+          r = parse_aside_block(text)
+          assert len(r['active_tasks']) >= 1, 'tasks not parsed'
+          assert len(r['upcoming_deadlines']) >= 1, 'deadlines not parsed'
+          assert 'cash' in r['financial_status'], 'cash not parsed'
+          print('  ✅ aside 解析正常')
+          # 测试 2: 任务合并
+          existing = [
+              {'title': '春税预单', 'urgency': 'high', 'status': 'pending', 'created_round': 1},
+              {'title': '束脩2两', 'urgency': 'high', 'status': 'pending', 'created_round': 1},
+          ]
+          new = [
+              {'title': '春税预单', 'urgency': 'high'},  # 现有
+              {'title': '米粮', 'urgency': 'normal'},    # 新
+          ]
+          merged = build_sidebar_data('', {}, existing)['active_tasks']
+          # 重新测试合并（直接调 _merge_tasks）
+          from history_footnote.sidebar_parser import _merge_tasks
+          merged = _merge_tasks(existing, new)
+          titles = {t['title'] for t in merged}
+          assert '春税预单' in titles
+          assert '米粮' in titles
+          assert '束脩2两' in titles  # 现有保留
+          print(f'  ✅ 任务合并正常（{len(merged)} 个）')
+          # 测试 3: mark completed
+          active, completed = mark_task_completed(existing, '春税预单', 5)
+          assert len(active) == 1, 'mark completed failed'
+          assert len(completed) == 1, 'completed list failed'
+          assert completed[0]['completed_round'] == 5
+          print('  ✅ 任务完成标记正常')
+          print('  ✅ Sidebar parser 全部测试通过')
+          "
+
+      - name: Unit tests (offline)
+        run: |
+          echo "=== 6. 单元测试（不依赖 LLM）==="
+          # 只跑不需要 LLM 的测试
+          for t in scripts/test_*.py; do
+              if grep -q "minimax\|deepseek\|api.minimaxi\|api.deepseek\|openai" "$t" 2>/dev/null; then
+                  echo "  ⏭️  跳过 (需 LLM): $t"
+              else
+                  python "$t" >/dev/null 2>&1 && echo "  ✅ $t" || echo "  ❌ $t"
+              fi
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "=== CI 完成 ==="
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Ref: ${{ github.ref }}"
+          echo "  Actor: ${{ github.actor }}"

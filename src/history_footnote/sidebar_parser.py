@@ -160,8 +160,16 @@ def infer_from_narrative(narrative: str, variables: dict) -> dict[str, Any]:
     return result
 
 
-def build_sidebar_data(narrative: str, variables: dict) -> dict[str, Any]:
-    """🆕 v1.7.26: 主入口 — 解析 + 推断 + 合并"""
+def build_sidebar_data(narrative: str, variables: dict, existing_tasks: list = None) -> dict[str, Any]:
+    """🆕 v1.7.26: 主入口 — 解析 + 推断 + 合并
+    🆕 v1.7.27: 任务合并（持久化防丢）
+
+    合并策略:
+    - 现有任务（existing_tasks）保留 pending 状态
+    - 新解析的任务如果 title 匹配现有，则更新（不覆盖 status）
+    - 新任务追加为 pending
+    - 现有 completed 任务从 active 移到 completed_tasks
+    """
     # 1. 尝试解析 <aside> 块
     parsed = parse_aside_block(narrative)
     # 2. 推断（补充 parsed 空缺的部分）
@@ -170,4 +178,72 @@ def build_sidebar_data(narrative: str, variables: dict) -> dict[str, Any]:
     for k in parsed:
         if not parsed[k]:
             parsed[k] = inferred[k]
+    # 🆕 v1.7.27: 任务合并（防丢）
+    if existing_tasks:
+        parsed["active_tasks"] = _merge_tasks(
+            existing_tasks, parsed["active_tasks"]
+        )
     return parsed
+
+
+def _merge_tasks(existing: list, new: list) -> list:
+    """🆕 v1.7.27: 合并任务列表（保留状态 + 防丢）
+
+    Args:
+        existing: state.active_tasks（已有任务，含 status/created_round）
+        new: 从 narrative 解析的新任务
+    Returns:
+        合并后的任务列表
+    """
+    # 用 title 作为 key
+    existing_map = {t.get("title"): t for t in existing if t.get("title")}
+    new_map = {t.get("title"): t for t in new if t.get("title")}
+    merged = []
+    # 1. 现有任务保留
+    for title, t in existing_map.items():
+        if t.get("status") == "completed":
+            continue  # 已完成的移到 completed_tasks
+        if title in new_map:
+            # 新数据补充（保留 status）
+            new_data = new_map[title]
+            merged.append({
+                **new_data,  # 新解析的 urgency 等
+                "status": t.get("status", "pending"),  # 保留状态
+                "created_round": t.get("created_round"),
+                "completed_round": t.get("completed_round"),
+            })
+        else:
+            # 现有任务不在新数据中 → 保留
+            merged.append(t)
+    # 2. 新任务追加为 pending
+    for title, t in new_map.items():
+        if title not in existing_map:
+            merged.append({
+                **t,
+                "status": "pending",
+                "created_round": None,
+                "completed_round": None,
+            })
+    return merged
+
+
+def mark_task_completed(tasks: list, title: str, current_round: int) -> tuple[list, list, bool]:
+    """🆕 v1.7.27: 标记任务完成
+
+    Returns:
+        (active_tasks, completed_tasks, found) — 新 active 列表 + 新 completed 列表 + 是否找到
+    """
+    new_active = []
+    completed = []
+    found = False
+    for t in tasks:
+        if t.get("title") == title and t.get("status") != "completed":
+            completed.append({
+                **t,
+                "status": "completed",
+                "completed_round": current_round,
+            })
+            found = True
+        else:
+            new_active.append(t)
+    return new_active, completed, found

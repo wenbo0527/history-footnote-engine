@@ -93,7 +93,11 @@ def _build_sidebar_data(state, recent_narratives: list) -> dict:
     if recent_narratives:
         latest = recent_narratives[-1].get("narrative", "")
         from history_footnote.sidebar_parser import build_sidebar_data as _parse_sidebar
-        return _parse_sidebar(latest, state.variables)
+        # 🆕 v1.7.27: 传入 existing_tasks 实现持久化（防丢）
+        result = _parse_sidebar(latest, state.variables, state.active_tasks)
+        # 🆕 v1.7.27: 解析结果写回 state（持久化）
+        state.active_tasks = result.get("active_tasks", state.active_tasks)
+        return result
     return {
         "active_tasks": [],
         "upcoming_deadlines": [],
@@ -412,6 +416,32 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, stats)
             except Exception as e:
                 logger.exception(f"[/api/llm/stats] 失败: {e}")
+                self._json(500, {"error": str(e)})
+            return
+        if path == "/api/monitor/health":
+            # 🆕 v1.7.27: 健康检查端点
+            try:
+                from history_footnote.monitor import get_monitor
+                from history_footnote.issue_reporter import VERSION
+                monitor = get_monitor()
+                status = "healthy" if monitor.is_healthy() else "degraded"
+                self._json(200, {
+                    "status": status,
+                    "uptime_seconds": round(time.time() - monitor.start_time, 1),
+                    "version": VERSION,
+                })
+            except Exception as e:
+                logger.exception(f"[/api/monitor/health] 失败: {e}")
+                self._json(500, {"status": "unhealthy", "error": str(e)})
+            return
+        if path == "/api/monitor/stats":
+            # 🆕 v1.7.27: 监控统计（端点调用/慢请求/错误）
+            try:
+                from history_footnote.monitor import get_monitor
+                monitor = get_monitor()
+                self._json(200, monitor.get_stats())
+            except Exception as e:
+                logger.exception(f"[/api/monitor/stats] 失败: {e}")
                 self._json(500, {"error": str(e)})
             return
         if path == "/api/llm/reset_stats":
@@ -749,6 +779,85 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.exception(f"[dilemma] failed: {e}")
                     self._json(500, {"error": "dilemma extraction failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/task/complete":
+                # 🆕 v1.7.27: 玩家标记任务完成
+                # 玩家主动决策"这事儿办完了"——状态从 pending → completed
+                # 防丢：completed_tasks 列表保留历史（不删除）
+                sid = data.get("session_id")
+                title = data.get("title", "").strip()
+                if not sid or not title:
+                    self._json(400, {"error": "session_id and title required"})
+                    return
+                game = _get_or_load_session(sid)
+                if not game:
+                    self._json(404, {"error": "session not found"})
+                    return
+                try:
+                    from history_footnote.sidebar_parser import mark_task_completed
+                    new_active, completed, found = mark_task_completed(
+                        game.state.active_tasks, title, game.state.round_number
+                    )
+                    if not found:
+                        self._json(404, {
+                            "session_id": sid,
+                            "title": title,
+                            "status": "not_found",
+                            "message": "任务不存在或已完成",
+                        })
+                        return
+                    game.state.active_tasks = new_active
+                    game.state.completed_tasks.extend(completed)
+                    self._json(200, {
+                        "session_id": sid,
+                        "title": title,
+                        "status": "completed",
+                        "completed_round": game.state.round_number,
+                        "active_count": len(new_active),
+                        "completed_count": len(game.state.completed_tasks),
+                    })
+                except Exception as e:
+                    logger.exception(f"[task/complete] failed: {e}")
+                    self._json(500, {"error": "task complete failed", "error_id": str(uuid.uuid4())[:8]})
+                return
+
+            if path == "/api/task/add":
+                # 🆕 v1.7.27: 玩家手动添加任务（剧情未提及的）
+                sid = data.get("session_id")
+                title = data.get("title", "").strip()
+                urgency = data.get("urgency", "normal")
+                if not sid or not title:
+                    self._json(400, {"error": "session_id and title required"})
+                    return
+                game = _get_or_load_session(sid)
+                if not game:
+                    self._json(404, {"error": "session not found"})
+                    return
+                # 去重（title 相同则不重复添加）
+                existing_titles = {t.get("title") for t in game.state.active_tasks}
+                if title in existing_titles:
+                    self._json(200, {
+                        "session_id": sid,
+                        "title": title,
+                        "status": "duplicate",
+                        "message": "任务已存在，未重复添加",
+                    })
+                    return
+                game.state.active_tasks.append({
+                    "title": title,
+                    "urgency": urgency,
+                    "status": "pending",
+                    "created_round": game.state.round_number,
+                    "completed_round": None,
+                })
+                self._json(200, {
+                    "session_id": sid,
+                    "title": title,
+                    "status": "added",
+                    "created_round": game.state.round_number,
+                    "active_count": len(game.state.active_tasks),
+                })
                 return
 
             if path == "/api/sanitize_patterns":

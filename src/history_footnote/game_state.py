@@ -72,9 +72,12 @@ class GameState:
     # === 🆕 v1.7.26 侧边栏固化面板数据 ===
     # 从 LLM 输出（narrative 的 <aside> 块）解析，或后端兜底生成
     # 玩家右侧栏常驻：任务 / 还债日 / 财务
-    active_tasks: list[dict] = field(default_factory=list)        # [{"title":"春税预单","urgency":"high","days_left":10}, ...]
-    upcoming_deadlines: list[dict] = field(default_factory=list)  # [{"name":"夏税","date":"1587年6月","days_estimate":90,"amount":"约1.5两"}, ...]
+    # 🆕 v1.7.27 状态：active_tasks 加 status + created_at + completed_at（持久化防丢）
+    # 玩家可标记完成；旧任务只删不丢（completed_tasks 保留）
+    active_tasks: list[dict] = field(default_factory=list)        # [{"title":"春税预单","urgency":"high","status":"pending","created_round":1,"completed_round":null}, ...]
+    upcoming_deadlines: list[dict] = field(default_factory=list)  # [{"name":"夏税","date":"1587年6月","days_estimate":90,"amount":"约1.5两","status":"pending"}, ...]
     financial_status: dict = field(default_factory=dict)          # {"cash":3.7,"rice_days":7,"monthly_burn":1.2,...}
+    completed_tasks: list[dict] = field(default_factory=list)     # 🆕 v1.7.27 已完成任务历史（玩家可查看）
 
     # === 🆕 v1.7.1 Per-Save Character Wiki ===
     # 人物知识图谱：仅本存档，删除/重置存档时清空
