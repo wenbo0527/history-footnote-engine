@@ -1,0 +1,184 @@
+============================================================
+v1.7.35 真实 LLM 跑 10 轮（EventBus + Drama + Quest）
+============================================================
+✅ LLM: minimax-anthropic
+
+初始: cash=5.00, rice=5.0, debt=1.00
+QuestSystem 启动: 4 个任务
+
+--- Round 1 ---
+  input: 我织了一匹湖绫，丝光莹润。
+  cash=5.50, debt=0.50, city=shengze
+  discoveries: items=4, persons=0
+  triggered_events: 5 个
+  bus: published=7, handled=14, failed=0
+  quest: completed=1, active=3
+    ✅ 初次织绸
+  drama: ir=100%, focus=CRAFT
+
+--- Round 2 ---
+  input: 我去镇上牙行卖这匹湖绫。
+  cash=6.20, debt=0.50, city=shengze
+  discoveries: items=6, persons=0
+  triggered_events: 5 个
+  bus: published=11, handled=22, failed=0
+  quest: completed=2, active=2
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+  drama: ir=100%, focus=SELL
+
+--- Round 3 ---
+  input: 我又织了一匹湖绫，纬线均匀。
+  cash=6.20, debt=0.50, city=shengze
+  discoveries: items=7, persons=0
+  triggered_events: 5 个
+  bus: published=13, handled=26, failed=0
+  quest: completed=2, active=2
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+  drama: ir=100%, focus=CRAFT
+
+--- Round 4 ---
+  input: 我又去牙行卖第二匹。
+  cash=7.31, debt=0.50, city=suzhou
+  discoveries: items=7, persons=0
+  triggered_events: 5 个
+  bus: published=15, handled=30, failed=0
+  quest: completed=2, active=2
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+  drama: ir=100%, focus=SELL
+
+--- Round 5 ---
+  input: 我搭船去苏州阊门码头。
+  cash=7.31, debt=0.20, city=suzhou
+  discoveries: items=8, persons=0
+  triggered_events: 5 个
+  bus: published=18, handled=36, failed=0
+  quest: completed=3, active=1
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+  drama: ir=100%, focus=TRAVEL
+
+--- Round 6 ---
+  input: 在苏州，我找了家茶馆坐坐。
+  cash=7.31, debt=0.20, city=nanjing
+  discoveries: items=9, persons=0
+  triggered_events: 5 个
+  bus: published=19, handled=38, failed=0
+  quest: completed=3, active=1
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+  drama: ir=100%, focus=MEET
+
+--- Round 7 ---
+  input: 我回家告诉沈氏这事。
+  cash=7.31, debt=0.20, city=suzhou
+  discoveries: items=11, persons=1
+  triggered_events: 6 个
+  bus: published=23, handled=46, failed=0
+  quest: completed=4, active=0
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+    ✅ 家人团圆
+  drama: ir=100%, focus=MEET
+
+--- Round 8 ---
+  input: 我算了算账。
+  cash=7.31, debt=0.00, city=suzhou
+  discoveries: items=11, persons=1
+  triggered_events: 6 个
+  bus: published=24, handled=48, failed=0
+  quest: completed=4, active=0
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+    ✅ 家人团圆
+  drama: ir=100%, focus=IDLE
+
+--- Round 9 ---
+  input: 我又织了一匹湖绫。
+  cash=7.31, debt=0.00, city=suzhou
+  discoveries: items=12, persons=1
+  triggered_events: 6 个
+  bus: published=26, handled=52, failed=0
+  quest: completed=4, active=0
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+    ✅ 家人团圆
+  drama: ir=80%, focus=CRAFT
+
+--- Round 10 ---
+  input: 我又去牙行卖第三匹。
+  cash=9.44, debt=0.00, city=suzhou
+  discoveries: items=12, persons=1
+  triggered_events: 6 个
+  bus: published=28, handled=56, failed=0
+  quest: completed=4, active=0
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+    ✅ 家人团圆
+  drama: ir=80%, focus=SELL
+
+
+============================================================
+📊 评估报告
+============================================================
+
+[1] action_resolver 命中率: 100%（parse_player_input 全部命中 verb）
+
+[2] QuestSystem 自动完成度
+  任务总数: 4
+  完成: 4 / 4
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+    ✅ 家人团圆
+  完成率: 100%
+
+[3] DramaManager 评估
+  玩家总动作: 10
+  主动比例: 80%
+  当前关注: SELL
+  行动分布: {'CRAFT': 3, 'SELL': 3, 'TRAVEL': 1, 'MEET': 2, 'IDLE': 1}
+  干预历史: 10 条
+    - Round 1: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 1: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 1: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 3: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 3: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 3: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 5: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 5: drama_pause (玩家太紧张（initiative=100%）)
+    - Round 5: drama_pause (玩家太紧张（initiative=80%）)
+    - Round 7: drama_pause (玩家太紧张（initiative=80%）)
+
+[4] EventBus 吞吐量
+  总发布: 28
+  总处理: 56
+  失败: 0
+  死信: 0
+  订阅者: 2
+  按类型: {'quest': 8, 'discover': 5, 'drama': 10, 'fin': 3, 'city': 1, 'fam': 1}
+
+[5] 财务
+  cash: 5.00 → 9.44
+  debt: 1.00 → 0.00
+  rice: 5.0 → 4.4
+  financial_log: 16 条
+
+[6] 耗时
+  总耗时: 434.1s
+  平均/轮: 43.4s
+
+[7] 优化方向（详见评测）
+  1. action_resolver 100% 命中 → ✅ 完成
+  2. QuestSystem 自动完成 → 4/4（看完成率）
+  3. DramaManager 干预 → 10 次触发
+  4. EventBus 事件流 → 28 events / 10 rounds
+  5. LLM narrative 质量 → 需人工评估（见 logs）

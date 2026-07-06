@@ -129,6 +129,18 @@ class GameLoop:
             for ev_dict in load_state_data.get("event_log", []):
                 self.memory.save_event(GameEvent.from_dict(ev_dict))
 
+        # 🆕 v1.7.35 集成 EventBus / DramaManager / QuestSystem
+        from history_footnote.event_bus import get_event_bus
+        from history_footnote.drama_manager import DramaManager
+        from history_footnote.quest_system import QuestSystem, WANLI_QUESTS
+        self.event_bus = get_event_bus()
+        self.drama_manager = DramaManager(self.state, era_config)
+        self.quest_system = QuestSystem(self.state, self.event_bus, WANLI_QUESTS)
+        # 默认接受所有可接任务
+        for q in list(self.quest_system.quests.values()):
+            if q.status == "available":
+                self.quest_system.accept_quest(q.id)
+
         self.knowledge_base = KnowledgeBase(
             entries=era_config.get("knowledge", {}).get("entries", []),
             snippets=era_config.get("knowledge", {}).get("narrative_snippets", []),
@@ -284,9 +296,40 @@ class GameLoop:
             apply_action_result(self.state, action_result)
             # 把 PlayerAction + narrative_hints 注入 DM context
             self.set_action_context_for_dm(player_action, action_result)
+            # 🆕 v1.7.35 发布事件到 EventBus（QuestSystem/DM/Log 订阅）
+            from history_footnote.event_bus import GameEvent
+            for ev in action_result.events:
+                self.event_bus.publish(GameEvent(
+                    id=ev.get("id", ""),
+                    type=ev.get("id", "").split(".")[0] if ev.get("id") else "unknown",
+                    data=ev,
+                    source="action_resolver",
+                    priority=50,
+                ))
+            # DramaManager 记录动作
+            self.drama_manager.record_player_action(
+                verb=player_action.verb,
+                obj=player_action.object,
+                is_initiative=player_action.verb not in ("IDLE",),
+            )
         else:
             # 失败（UNKNOWN / 现金不足等）→ 让 LLM 自由发挥
             self.set_action_context_for_dm(player_action, action_result, failed=True)
+
+        # 🆕 v1.7.35 DramaManager 评估（每回合注入 LLM context）
+        interventions = self.drama_manager.evaluate()
+        if interventions:
+            hint = self.drama_manager.build_llm_intervention_hint(interventions)
+            self.set_drama_hint_for_dm(hint)
+            # 发布 drama 事件
+            from history_footnote.event_bus import GameEvent
+            self.event_bus.publish(GameEvent(
+                id="drama.intervention",
+                type="drama",
+                data={"interventions": [{"type": iv.type, "reason": iv.reason, "action": iv.action} for iv in interventions]},
+                source="drama_manager",
+                priority=70,
+            ))
 
         # === 步骤5：DM Agent生成叙事 ===
 
@@ -882,6 +925,14 @@ class GameLoop:
         if hasattr(self.dm.llm, "_state_ref_slot_ref"):
             current_ref = self.dm.llm._state_ref_slot_ref[0]
             current_ref["calendar_events"] = calendar_text
+
+    def set_drama_hint_for_dm(self, hint: str) -> None:
+        """🆕 v1.7.35 把 DramaManager 干预 hint 注入到 DM LLM state_ref"""
+        if not hint:
+            return
+        if hasattr(self.dm.llm, "_state_ref_slot_ref"):
+            current_ref = self.dm.llm._state_ref_slot_ref[0]
+            current_ref["drama_hint"] = hint
 
     def set_action_context_for_dm(self, player_action, action_result, failed: bool = False) -> None:
         """🆕 v1.7.33 把 PlayerAction + ActionResult 注入到 DM LLM state_ref
