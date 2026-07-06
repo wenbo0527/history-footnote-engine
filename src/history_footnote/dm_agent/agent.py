@@ -45,6 +45,8 @@ from history_footnote.rule_engine import (
 )
 from history_footnote.game_memory import GameMemory, GameEvent
 
+from history_footnote.dm_agent.mock_helpers import MockHelpersMixin
+
 
 # === State Schema ===
 
@@ -796,7 +798,7 @@ def state_confirmation_node(state: DMState) -> dict:
 
 # === DM Agent主类 ===
 
-class DMAgent:
+class DMAgent(MockHelpersMixin):
     """DM Agent——LangGraph StateGraph编排
 
     Usage:
@@ -1367,68 +1369,3 @@ class DMAgent:
                 "_regeneration_failed": True,
             }
 
-    # === Mock模式辅助方法 ===
-
-    def _make_view_state_dict(self) -> dict:
-        return {
-            "round_number": self.state.round_number,
-            "current_date": self.state.current_date,
-            "variables": dict(self.state.variables),
-            "triggered_events": list(self.state.triggered_events),
-            "unlocked_insights": list(self.state.unlocked_insights),
-            "npc_levels": dict(self.state.npc_levels),
-            "value_shifts": dict(self.state.value_shifts),
-            "player_idle_rounds": self.state.player_idle_rounds,
-            "selected_identity": self.state.selected_identity,
-            "player_gender": self.state.player_gender,
-        }
-
-    def _get_forced_events_for_mock(self) -> list[dict]:
-        view = self.rule_engine.make_view(self.state)
-        forced = self.rule_engine.check_forced_events(view)
-        return [
-            {
-                "event_id": fe.event_id,
-                "event_name": fe.event_name,
-                "description": fe.description,
-                "narrative_mandatory": fe.narrative_mandatory,
-            }
-            for fe in forced
-        ]
-
-    def _get_pacing_for_mock(self) -> list[dict]:
-        view = self.rule_engine.make_view(self.state)
-        pacing = self.rule_engine.check_pacing(view)
-        return [
-            {
-                "id": pd.id,
-                "direction": pd.direction,
-                "hint": pd.hint,
-            }
-            for pd in pacing
-        ]
-
-    def _get_triggers_for_mock(self) -> list[dict]:
-        view = self.rule_engine.make_view(self.state)
-        triggers = self.rule_engine.check_triggers(view)
-        return [
-            {
-                "id": tr.id,
-                "narrative_hint": tr.narrative_hint,
-                "effect": tr.effect,
-            }
-            for tr in triggers
-        ]
-
-    def _get_insights_for_mock(self) -> list[dict]:
-        view = self.rule_engine.make_view(self.state)
-        insights = self.rule_engine.check_insights(view, player_input=self.state._last_player_input or "")
-        return [
-            {
-                "id": ic.id,
-                "topic": ic.topic,
-                "confirm_needed": ic.confirm_needed,
-                "narrative_hint": ic.narrative_hint,
-            }
-            for ic in insights
-        ]

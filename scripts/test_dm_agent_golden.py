@@ -111,9 +111,18 @@ def gather_snapshot() -> dict:
         m for m in dir(DMAgent) if m.startswith("_") and not m.startswith("__")
     )
 
-    # 5. dm_agent.py 总行数
-    src_file = ROOT / "src" / "history_footnote" / "dm_agent.py"
-    snapshot["signatures"]["dm_agent_py_lines"] = sum(1 for _ in src_file.open(encoding="utf-8"))
+    # 5. dm_agent 总行数（兼容单文件与子包两种形态）
+    single_path = ROOT / "src" / "history_footnote" / "dm_agent.py"
+    package_path = ROOT / "src" / "history_footnote" / "dm_agent"
+    if single_path.exists():
+        total_lines = sum(1 for _ in single_path.open(encoding="utf-8"))
+    elif package_path.is_dir():
+        total_lines = 0
+        for sub in package_path.rglob("*.py"):
+            total_lines += sum(1 for _ in sub.open(encoding="utf-8"))
+    else:
+        total_lines = 0
+    snapshot["signatures"]["dm_agent_py_lines"] = total_lines
 
     # 6. 关键纯函数输出（_make_view_state_dict 等）
     # 用一个最小 DMAgent 不调 LLM 跑纯函数
@@ -194,22 +203,41 @@ def check_golden(current: dict) -> tuple[bool, list[str]]:
     saved = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))
     diffs = []
 
-    # 对比关键字段
-    for key in ["schema_version", "signatures", "pure_functions"]:
-        if saved.get(key) != current.get(key):
-            diffs.append(f"字段不匹配: {key}")
+    # === 强不变量（行为/接口层面） ===
+    # 这些必须 100% 严格一致（任何不一致 = 行为变更 = 阻断）
+    strict_fields = ["dm_state_fields", "DMAgent_public_methods", "DMAgent_private_methods",
+                     "_make_view_state_dict", "_get_forced_events_for_mock",
+                     "_get_pacing_for_mock", "_get_triggers_for_mock",
+                     "_get_insights_for_mock"]
+    for f in strict_fields:
+        if f in ["dm_state_fields", "DMAgent_public_methods", "DMAgent_private_methods"]:
+            s = saved.get("signatures", {}).get(f)
+            c = current.get("signatures", {}).get(f)
+        else:
+            s = saved.get("pure_functions", {}).get(f)
+            c = current.get("pure_functions", {}).get(f)
+        if s != c:
+            diffs.append(f"  [强] {f}: saved={s!r} != current={c!r}")
 
-    # 报告具体差异
-    for key in ["signatures", "pure_functions"]:
-        for sub_key in set((saved.get(key) or {}).keys()) | set((current.get(key) or {}).keys()):
-            if saved.get(key, {}).get(sub_key) != current.get(key, {}).get(sub_key):
-                diffs.append(
-                    f"  {key}.{sub_key}: saved={saved.get(key, {}).get(sub_key)!r} "
-                    f"!= current={current.get(key, {}).get(sub_key)!r}"
-                )
+    # === 弱不变量（行数指标，结构层面） ===
+    # 拆分后行数会变（每个子模块加 docstring + imports）— 只 warning，不阻断
+    weak_fields = ["make_tools_src_lines", "make_dm_nodes_src_lines",
+                   "extract_narrative_node_src_lines", "state_confirmation_node_src_lines",
+                   "dm_agent_py_lines"]
+    weak_warnings = []
+    for f in weak_fields:
+        s = saved.get("signatures", {}).get(f)
+        c = current.get("signatures", {}).get(f)
+        if s != c:
+            weak_warnings.append(f"  [弱] {f}: saved={s} != current={c}（行数会随拆分变化，不阻断）")
 
     if diffs:
         return False, diffs
+    if weak_warnings:
+        # 弱不变量只打印 warning，不视为失败
+        print("  ⚠️  弱不变量变化（行数指标，不阻断）：")
+        for w in weak_warnings:
+            print(w)
     return True, []
 
 
