@@ -197,10 +197,92 @@ class GameEngineFacade:
         """获取 Drama 干预历史"""
         return list(self.drama_manager.intervention_history)
 
-    def search_wiki(self, query: str, intent: str = "", city: str = "",
-                    top_k: int = 3) -> list:
-        """检索 Wiki 片段（带 cache）"""
-        return self._search_wiki_cached(query=query, intent=intent, city=city, top_k=top_k)
+    def search_wiki(self, query: str = "", action_verb: str = "", target: str = "",
+                    city: str = "", intent: str = "", top_k: int = 3) -> list:
+        """检索 Wiki 片段（带 cache）
+
+        Args:
+            query: 检索词（可省略）
+            action_verb: 玩家动作（TRAVEL/SELL/MEET），如指定则自动选 intent
+            target: 目标（城市/人物/物品）
+            city: 城市过滤
+            intent: 意图分类
+            top_k: 返回几个片段
+
+        Returns:
+            list of fragments
+        """
+        if action_verb and not intent:
+            # 从 action_verb 推断 intent
+            verb_intent_map = {
+                "TRAVEL": "route",
+                "MEET": "gossip",
+                "SELL": "gossip",
+                "BUY": "gossip",
+                "CRAFT": "gossip",
+                "IDLE": "gossip",
+            }
+            intent = verb_intent_map.get(action_verb, "")
+        # 构造检索词
+        if not query and action_verb:
+            query = f"{action_verb} {target}".strip()
+        return self._search_wiki_cached(
+            action_verb=action_verb, target=target, city=city,
+            query=query, intent=intent, top_k=top_k,
+        )
+
+    def summarize_fragments(self, fragments: list, query: str = "",
+                            llm_callable=None) -> list:
+        """🆕 v1.7.39 Wiki 片段 LLM 总结
+
+        当 Wiki 片段过长（>500 字）时，让 LLM 总结成短片段，
+        避免 prompt 爆炸。
+
+        Args:
+            fragments: Wiki 片段列表
+            query: 检索词（提示 LLM 重点）
+            llm_callable: LLM 调用函数（可选），如不传则用简单截断
+
+        Returns:
+            总结后的片段（content 已缩短）
+        """
+        summarized = []
+        for f in fragments:
+            content = f.get("content", "")
+            title = f.get("title", "")
+            if len(content) <= 500:
+                summarized.append(f)
+                continue
+            if llm_callable is None:
+                # 简单截断（保留首尾关键信息）
+                head = content[:300]
+                tail = content[-100:]
+                summarized.append({
+                    **f,
+                    "content": f"{head}\n...\n{tail}",
+                    "_summarized": True,
+                    "_original_length": len(content),
+                })
+            else:
+                # LLM 总结
+                try:
+                    summary_text = llm_callable(
+                        f"用 200 字内总结以下内容，重点保留：{query or '史实细节'}。\n\n{title}\n{content}"
+                    )
+                    summarized.append({
+                        **f,
+                        "content": f"{title}\n{summary_text}",
+                        "_summarized": True,
+                        "_original_length": len(content),
+                    })
+                except Exception:
+                    # 失败回退到截断
+                    summarized.append({
+                        **f,
+                        "content": content[:500] + "...",
+                        "_summarized": True,
+                    })
+        return summarized
 
     def get_wiki_cache_stats(self) -> dict:
         """获取 Wiki cache 统计"""
@@ -208,6 +290,69 @@ class GameEngineFacade:
             "cache_size": len(self._wiki_cache),
             "cache_max": self._wiki_cache_max,
             "hit_rate": getattr(self, "_wiki_hits", 0) / max(getattr(self, "_wiki_total", 1), 1),
+        }
+
+    def process_narrative_input(self, llm_output: str) -> dict:
+        """🆕 v1.7.39 处理 LLM narrative 输出
+
+        解析 <narrative> + <events>（如有）块：
+        - 提取 narrative 文本
+        - 解析 events（fallback 模糊匹配）
+        - 写入 state.discoveries
+        - 发布事件到 EventBus
+
+        Returns:
+            {
+                "narrative": str,
+                "events_applied": int,
+                "fallback_used": int,
+            }
+        """
+        from history_footnote.event_parser import process_llm_output
+        result = process_llm_output(self.state, llm_output)
+        # 发布到 EventBus
+        for ev in self.state.discoveries.get("items", {}).values():
+            self.event_bus.publish(GameEvent(
+                id="discover.item",
+                type="discover",
+                data=ev,
+                source="narrative_parser",
+                priority=40,
+            ))
+        return {
+            "narrative": self._extract_narrative(llm_output),
+            "events_applied": result.get("events_applied", 0),
+            "fallback_used": result.get("fallback_used", 0),
+        }
+
+    def _extract_narrative(self, llm_output: str) -> str:
+        """从 LLM 输出提取 narrative 文本"""
+        import re
+        m = re.search(r"<narrative>(.*?)</narrative>", llm_output, re.DOTALL)
+        if m:
+            return m.group(1).strip()
+        return llm_output[:1000]  # 截断
+
+    def get_performance_stats(self) -> dict:
+        """🆕 v1.7.39 性能监控统计
+
+        Returns:
+            {
+                "wiki_cache": {...},
+                "drama": {"interventions": int, "ir": float},
+                "event_bus": {...},
+                "quest": {"completed": int, "active": int},
+            }
+        """
+        return {
+            "wiki_cache": self.get_wiki_cache_stats(),
+            "drama": {
+                "interventions": len(self.drama_manager.intervention_history),
+                "ir": self.drama_manager.player_model.initiative_ratio,
+                "total_rounds": self.drama_manager.player_model.total_rounds,
+            },
+            "event_bus": self.event_bus.get_stats(),
+            "quest": self.quest_system.get_progress_summary(),
         }
 
     def save_all(self) -> None:

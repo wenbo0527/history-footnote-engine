@@ -318,17 +318,17 @@ class GameLoop:
                 obj=player_action.object,
                 is_initiative=player_action.verb not in ("IDLE",),
             )
-            # 🆕 v1.7.37 Wiki 检索（按 action + target + city）
+            # 🆕 v1.7.39 Wiki 检索（通过 facade，cache 生效）
             try:
-                from history_footnote.wiki_tools import search_wiki_by_action
-                wiki_result = search_wiki_by_action(
+                wiki_fragments = self.engine.search_wiki(
+                    query=player_action.raw_text,
                     action_verb=player_action.verb,
                     target=player_action.target or "",
                     city=self.state.current_city or "",
                     top_k=2,
                 )
-                if wiki_result.get("fragments"):
-                    self.set_wiki_hint_for_dm(wiki_result["fragments"])
+                if wiki_fragments:
+                    self.set_wiki_hint_for_dm(wiki_fragments)
             except Exception as e:
                 logger.debug(f"Wiki 检索失败: {e}")
         else:

@@ -107,8 +107,8 @@ def test_game_loop_integration():
     print("\n[6/7] game_loop 集成")
     src = GL.read_text(encoding="utf-8")
     return _step(
-        "  game_loop 调 search_wiki_by_action + set_wiki_hint_for_dm",
-        "search_wiki_by_action" in src
+        "  game_loop 调 self.engine.search_wiki（v1.7.39）",
+        "self.engine.search_wiki" in src
         and "set_wiki_hint_for_dm" in src
         and "wiki_hint" in src,
     )
