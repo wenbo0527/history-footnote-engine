@@ -398,6 +398,37 @@ ACTION_VERBS = {
     "缴": "pay", "纳": "pay", "交": "pay", "缴纳": "pay", "交纳": "pay",
 }
 
+# 🆕 v1.7.30 城市模糊匹配（vague 模式，无显式 events 时兜底）
+CITY_PATTERNS = [
+    (r"去?苏州|赴苏州|入苏州|到苏州|搭船去苏州|在苏州", "suzhou"),
+    (r"去?杭州|赴杭州|入杭州|到杭州|在杭州", "hangzhou"),
+    (r"去?松江|赴松江|到松江|在松江", "songjiang"),
+    (r"去?南京|赴南京|入南京|到南京|进京|在南京", "nanjing"),
+    (r"回[到]?盛泽|回乡|回家|返[回]?盛泽|在盛泽", "shengze"),
+]
+
+# 🆕 v1.7.30 物品模糊匹配（narrative 中提到物品 → discover.item）
+ITEM_PATTERNS = [
+    # (pattern, name_hint, type_hint)
+    (r"一?匹[湖]?绫[丝]?|绸缎[子匹]?|丝绸|绢", "绸缎", "silk_bolt"),
+    (r"一?件[衣裳衣服]+|长衫|短褂", "衣物", "clothing"),
+    (r"[玉]?佩|玉[器镯]?", "玉佩", "jewelry"),
+    (r"织机|梭子|经线|纬线", "织机", "loom"),
+    (r"[一]?[个]?[米粮谷糙]?[粮]?[饭]?[米]+|米[粮]?", "米", "rice"),
+    (r"银[子两钱]|白银", "银两", "silver"),
+    (r"信|家书|书信|书[一封]?", "信件", "letter"),
+    (r"酒|黄酒|米酒", "酒", "alcohol"),
+]
+
+# 🆕 v1.7.30 家人模糊匹配
+FAMILY_PATTERNS = [
+    (r"沈氏|妻子|娘子|老婆|内人", "fm_wife"),
+    (r"老娘|母亲|娘亲|妈|母", "fm_mother"),
+    (r"老父|父亲|爹|父", "fm_father"),
+    (r"儿子|娃|孩子|小儿", "fm_son"),
+    (r"女儿|闺女|小女", "fm_daughter"),
+]
+
 # 金额正则（支持阿拉伯数字 + 简单中文数字）
 CN_DIGITS = {"零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "半": 0.5}
 
@@ -502,4 +533,95 @@ def process_llm_output(state, llm_output: str, logger=None) -> dict:
             if apply_event(state, ev, logger):
                 result["events_applied"] += 1
                 result["fallback_used"] += 1
+    # 🆕 v1.7.30 Layer 2 扩展：city.* / discover.* / fam.* 模糊匹配
+    # 仅当 Layer 1 没有解析到对应类型时才触发（避免重复）
+    has_city = any(e.get("id", "").startswith("city.") for e in events)
+    has_discover = any(e.get("id", "").startswith("discover.") for e in events)
+    has_fam = any(e.get("id", "").startswith("fam.") for e in events)
+    narrative = re.sub(r"<events>.*?</events>", "", llm_output, flags=re.DOTALL)
+    if not has_city:
+        for ev in fuzzy_match_cities(narrative):
+            if apply_event(state, ev, logger):
+                result["events_applied"] += 1
+                result["fallback_used"] += 1
+    if not has_discover:
+        for ev in fuzzy_match_discoveries(narrative, state):
+            if apply_event(state, ev, logger):
+                result["events_applied"] += 1
+                result["fallback_used"] += 1
+    if not has_fam:
+        for ev in fuzzy_match_family(narrative):
+            if apply_event(state, ev, logger):
+                result["events_applied"] += 1
+                result["fallback_used"] += 1
     return result
+
+
+# ============= 🆕 v1.7.30 Layer 2 扩展函数 =============
+
+def fuzzy_match_cities(narrative: str) -> list[dict]:
+    """从 narrative 模糊匹配 city.arrive.* 事件"""
+    if not narrative:
+        return []
+    results = []
+    seen = set()
+    for pattern, city_id in CITY_PATTERNS:
+        if city_id in seen:
+            continue
+        if re.search(pattern, narrative):
+            seen.add(city_id)
+            results.append({
+                "id": f"city.arrive.{city_id}",
+                "note": f"模糊匹配：narrative 提到 {city_id}",
+                "_fuzzy": True,
+            })
+    return results
+
+
+def fuzzy_match_discoveries(narrative: str, state) -> list[dict]:
+    """从 narrative 模糊匹配 discover.item 事件（物品）"""
+    if not narrative:
+        return []
+    results = []
+    seen = set()
+    # 物品（限制：每个物品最多 1 次）
+    for pattern, name_hint, type_hint in ITEM_PATTERNS:
+        if name_hint in seen:
+            continue
+        m = re.search(pattern, narrative)
+        if not m:
+            continue
+        # 已有该物品就不重复添加
+        existing_items = [it.get("name") for it in state.discoveries.get("items", {}).values()]
+        if name_hint in existing_items:
+            seen.add(name_hint)
+            continue
+        seen.add(name_hint)
+        results.append({
+            "id": "discover.item",
+            "name": name_hint,
+            "type": type_hint,
+            "owner": getattr(state, "current_city", "shengze"),
+            "description": f"narrative 中提到（{m.group(0)}）",
+            "_fuzzy": True,
+        })
+    return results
+
+
+def fuzzy_match_family(narrative: str) -> list[dict]:
+    """从 narrative 模糊匹配 fam.meet.* 事件（家人）"""
+    if not narrative:
+        return []
+    results = []
+    seen = set()
+    for pattern, family_id in FAMILY_PATTERNS:
+        if family_id in seen:
+            continue
+        if re.search(pattern, narrative):
+            seen.add(family_id)
+            results.append({
+                "id": f"fam.meet.{family_id}",
+                "note": "narrative 中提到",
+                "_fuzzy": True,
+            })
+    return results

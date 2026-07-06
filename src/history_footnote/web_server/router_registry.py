@@ -28,6 +28,7 @@ from history_footnote.web_server.routers import (
     session as _session_router,
     state as _state,
     tasks as _tasks,
+    trial as _trial,
     voice_suggest as _voice_suggest,
 )
 
@@ -64,6 +65,12 @@ GET_ROUTES = {
     "/api/admin/saves": _admin.handle_GET_admin_saves,
     "/api/admin/tokens": _admin.handle_GET_admin_tokens,
     "/api/admin/config": _admin.handle_GET_admin_config,
+    # 🆕 v1.7.30 体验版
+    "/api/trial/current": _trial.handle_GET_trial_current,
+    "/api/trial/feedback_required": _trial.handle_GET_trial_feedback_required,
+    "/api/trial/history": _trial.handle_GET_trial_history,
+    # 🆕 v1.7.30 体验版管理（admin）
+    "/api/admin/trials": _admin.handle_GET_admin_trials,
 }
 
 # POST 路由
@@ -102,6 +109,13 @@ POST_ROUTES = {
     "/api/admin/users/role": _admin.handle_POST_admin_user_role,
     "/api/admin/users/delete": _admin.handle_DELETE_admin_user,
     "/api/admin/saves/delete": _admin.handle_DELETE_admin_save,
+    # 🆕 v1.7.30 体验版
+    "/api/trial/start": _trial.handle_POST_trial_start,
+    "/api/trial/increment": _trial.handle_POST_trial_increment,
+    "/api/trial/feedback": _trial.handle_POST_trial_feedback,
+    "/api/trial/end": _trial.handle_POST_trial_end,
+    # 🆕 v1.7.30 体验版管理（admin）
+    "/api/admin/grant_trial_invite": _admin.handle_POST_admin_grant_trial_invite,
 }
 
 

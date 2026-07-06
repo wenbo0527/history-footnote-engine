@@ -373,3 +373,80 @@ def handle_DELETE_admin_save(handler, body: dict) -> bool:
         logger.exception(f"[/api/admin/saves DELETE] 失败: {e}")
         handler._json(500, {"error": str(e)})
     return True
+
+
+# ============= 🆕 v1.7.30 体验版管理 =============
+
+def handle_GET_admin_trials(handler, query: str) -> bool:
+    """GET /api/admin/trials?account_id=xxx
+    列出所有 trial 记录（current + history）
+    """
+    admin_id = _admin_get_account_id(handler, query)
+    if not admin_id:
+        handler._json(400, {"error": "account_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    try:
+        trial = sys_inst._load_trial()
+        current = trial.get("current")
+        history = trial.get("history", [])
+        # 简化（隐藏 contact 详情）
+        summary_history = [
+            {
+                "trial_id": h.get("trial_id"),
+                "round": h.get("round"),
+                "feedback": h.get("feedback"),
+                "has_contact": bool(h.get("contact")),
+                "submitted_at": h.get("submitted_at"),
+                "ended_at": h.get("ended_at"),
+            }
+            for h in history
+        ]
+        handler._json(200, {
+            "current": current,
+            "history": summary_history,
+            "total": len(summary_history),
+            "current_active": current is not None,
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/trials] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_POST_admin_grant_trial_invite(handler, body: dict) -> bool:
+    """POST /api/admin/grant_trial_invite
+    Body: {admin_id, contact}
+    给某个 trial user 奖励邀请码（被采纳意见时调用）
+    """
+    admin_id = body.get("admin_id", "")
+    contact = body.get("contact", "")
+    if not admin_id:
+        handler._json(400, {"error": "admin_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    try:
+        inv = sys_inst.grant_invite_code_for_trial(contact)
+        if inv is None:
+            handler._json(500, {"error": "生成邀请码失败"})
+            return True
+        handler._json(200, {
+            "ok": True,
+            "invite_code": inv.code,
+            "max_uses": inv.max_uses,
+            "label": inv.label,
+            "contact": contact,
+            "message": f"邀请码 {inv.code} 已生成，请发给用户 {contact}",
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/grant_trial_invite] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True

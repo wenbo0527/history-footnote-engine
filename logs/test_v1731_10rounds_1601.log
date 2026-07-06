@@ -1,0 +1,122 @@
+============================================================
+v1.7.31 真实 LLM 跑 10 轮 + 1601 葛贤抗税 + token 报告
+============================================================
+✅ LLM: minimax-anthropic
+
+初始: cash=5.00, rice=5.0, debt=1.00
+
+初始日期: 1587年1月
+
+--- Round 1 ---
+  input: 我织了一匹湖绫，丝光莹润。
+  cash=5.00, debt=1.00, rice=5.0
+  discoveries: items=2, persons=0, places=0, facts=0
+  financial_log: 0 条
+  triggered_events: 5 个
+  monthly_settle: 0 次
+  current_city: shengze
+  current_date: 1587年1月
+
+--- Round 2 ---
+  input: 我去镇上牙行卖这匹湖绫。
+  cash=7.00, debt=1.00, rice=5.0
+  discoveries: items=2, persons=0, places=0, facts=0
+  financial_log: 2 条
+  triggered_events: 5 个
+  monthly_settle: 0 次
+  current_city: shengze
+  current_date: 1587年1月
+
+--- Round 3 ---
+  input: 我搭船去苏州。
+  cash=7.00, debt=1.00, rice=5.0
+  discoveries: items=3, persons=0, places=0, facts=0
+  financial_log: 2 条
+  triggered_events: 5 个
+  monthly_settle: 0 次
+  current_city: shengze
+  current_date: 1587年3月
+
+--- Round 4 ---
+  input: 在苏州阊门码头，我找了家茶馆坐坐。
+  cash=6.10, debt=1.00, rice=4.4
+  discoveries: items=5, persons=0, places=0, facts=0
+  financial_log: 7 条
+  triggered_events: 5 个
+  monthly_settle: 1 次
+  current_city: shengze
+  current_date: 1587年3月
+
+--- Round 5 ---
+  input: 苏州的丝绸生意不好做，我回盛泽。
+  cash=4.10, debt=1.00, rice=4.4
+  discoveries: items=6, persons=0, places=0, facts=0
+  financial_log: 9 条
+  triggered_events: 5 个
+  monthly_settle: 1 次
+  current_city: shengze
+  current_date: 1587年3月
+
+--- Round 6 ---
+  input: 我回盛泽后，沈氏在灶上热米汤。
+  cash=4.10, debt=1.00, rice=4.4
+  discoveries: items=6, persons=0, places=0, facts=0
+  financial_log: 9 条
+  triggered_events: 5 个
+  monthly_settle: 1 次
+  current_city: suzhou
+  current_date: 1587年5月
+
+--- Round 7 ---
+  input: 我算算家里的账。
+  cash=4.10, debt=1.00, rice=4.4
+  discoveries: items=6, persons=0, places=0, facts=0
+  financial_log: 9 条
+  triggered_events: 6 个
+  monthly_settle: 1 次
+  current_city: suzhou
+  current_date: 1587年5月
+
+--- Round 8 ---
+  input: 我织了第二匹湖绫。
+  ❌ 失败: 'NoneType' object is not iterable
+
+--- Round 9 ---
+  input: 我又去牙行卖了第二匹。
+  cash=15.10, debt=1.00, rice=4.4
+  discoveries: items=6, persons=0, places=0, facts=0
+  financial_log: 14 条
+  triggered_events: 6 个
+  monthly_settle: 1 次
+  current_city: songjiang
+  current_date: 1587年5月
+  🔄 Round 10 强制推进日期到 1601年6月（葛贤抗税）
+
+--- Round 10 ---
+  input: 时间过了好几年，到 1601 年了，听说织工在闹事。
+  cash=15.10, debt=1.00, rice=4.4
+  discoveries: items=6, persons=0, places=0, facts=0
+  financial_log: 14 条
+  triggered_events: 6 个
+  monthly_settle: 1 次
+  current_city: suzhou
+  current_date: 1587年7月
+
+=== 1601 葛贤抗税检查 ===
+  narrative 含'葛贤': False
+  triggered_events: ['evt.guoben_dispute', 'evt.little_ice_age', 'evt.nurhaci_rise', 'evt.silver_inflow', 'he_01', 'he_02']
+
+=== Token 消耗报告 ===
+  总调用: 0
+  总 token: 0
+  输入 token: 0
+  输出 token: 0
+  错误: 0
+  耗时: 214.8s
+  实时: 0 token/s
+
+=== Layer 2 增强验证 ===
+  items 总数: 6（应至少 2-3 个）
+  persons 总数: 0（应至少 1 个）
+  places 总数: 0（应至少 1 个）
+  facts 总数: 0（应至少 0-1 个）

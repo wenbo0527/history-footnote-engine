@@ -1330,10 +1330,14 @@ const gridItems = voiceOptions.map((opt, i) => {
   const onclick = opt.is_freetext
     ? 'showFreeInputTab()'
     : `submitVoiceOption(${i}, ${JSON.stringify(opt).replace(/"/g, '&quot;')})`;
+  // 🆕 v1.7.30 选项智能分析：在按钮下显示会触发的事件
+  const optionText = opt.intent_text || opt.voice_name || "";
+  const preview = renderOptionPreview(optionText);
   return `
     <button class="voice-option-btn ${opt.is_freetext ? 'other' : ''}" onclick="${onclick}">
       <span class="voice-name">${escapeHtml(opt.voice_name || '?')}</span>
       <span class="voice-intent">${escapeHtml(opt.intent_text || '都不对？自己描述要做什么')}</span>
+      ${preview}
     </button>
   `;
 }).join("");
@@ -1822,6 +1826,65 @@ function flattenDiscoveries(data) {
   return data;
 }
 
+// 🆕 v1.7.30 选项智能分析（前端）—— 复用后端 option_analyzer 逻辑
+const OPTION_KEYWORD_EVENTS = [
+  // 财务
+  { pattern: /卖[了]?一?匹?|售出|出售/, event: "fin.sell_silk", text: "💰 卖绸", conf: 0.8 },
+  { pattern: /买[了]?一?匹?|买入|购入/, event: "fin.buy_thread", text: "🛒 买丝", conf: 0.7 },
+  { pattern: /缴[纳]?[了]?税|交[纳]?税/, event: "fin.pay_tax", text: "💸 缴税", conf: 0.9 },
+  { pattern: /借[了]?[一二三四五六七八九十两钱]?|借款|借贷/, event: "fin.borrow", text: "🏦 借钱", conf: 0.7 },
+  { pattern: /还[了]?[一二三四五六七八九十两钱]?|还款|归还/, event: "fin.repay", text: "🏦 还钱", conf: 0.7 },
+  { pattern: /送礼|赠予|给.+送[钱礼]|行贿|打点/, event: "fin.gift_out", text: "🎁 送礼", conf: 0.6 },
+  // 城市
+  { pattern: /回[到]?盛泽|回乡|回家/, event: "city.arrive.shengze", text: "📍 回盛泽", conf: 0.8 },
+  { pattern: /去苏州|赴苏州|入苏州|到苏州/, event: "city.arrive.suzhou", text: "📍 去苏州", conf: 0.9 },
+  { pattern: /去杭州|赴杭州|到杭州/, event: "city.arrive.hangzhou", text: "📍 去杭州", conf: 0.9 },
+  { pattern: /去松江|到松江/, event: "city.arrive.songjiang", text: "📍 去松江", conf: 0.9 },
+  { pattern: /去南京|进京|到南京/, event: "city.arrive.nanjing", text: "📍 去南京", conf: 0.9 },
+  // 家人
+  { pattern: /沈氏|妻子|娘子|老婆/, event: "fam.meet.fm_wife", text: "👩 见妻子", conf: 0.7 },
+  { pattern: /老娘|母亲|娘亲/, event: "fam.meet.fm_mother", text: "👩 见母亲", conf: 0.7 },
+  // 商业
+  { pattern: /牙行|经纪/, event: "comm.broker_lowball", text: "🤝 牙行", conf: 0.6 },
+  { pattern: /合伙|合股/, event: "comm.partnership_trap", text: "🤝 合伙", conf: 0.5 },
+  // 官府
+  { pattern: /打官司|见官|起诉|告状/, event: "gov.false_case", text: "⚖️ 官司", conf: 0.7 },
+  { pattern: /行贿|打点|送[礼钱]给[县官书吏]/, event: "gov.bribe_official", text: "🎁 行贿", conf: 0.7 },
+  // 旅途
+  { pattern: /拾[到]?[银钱]|捡[到]?[银钱]/, event: "trv.find_money", text: "🍀 拾遗", conf: 0.8 },
+  { pattern: /遇[到]?[盗贼土匪]|被劫|被抢/, event: "trv.robbed", text: "⚠️ 盗贼", conf: 0.9 },
+  // 灾祸
+  { pattern: /发水|洪水|大水|暴雨/, event: "dis.flood", text: "🌊 水灾", conf: 0.9 },
+  { pattern: /起火|走水|失火/, event: "dis.fire", text: "🔥 火灾", conf: 0.9 },
+];
+
+function analyzeOptionJS(text) {
+  if (!text) return [];
+  const results = [];
+  const seen = new Set();
+  for (const {pattern, event, text: label, conf} of OPTION_KEYWORD_EVENTS) {
+    if (seen.has(event)) continue;
+    if (pattern.test(text)) {
+      seen.add(event);
+      results.push({event_id: event, text: label, conf});
+    }
+  }
+  results.sort((a, b) => b.conf - a.conf);
+  return results;
+}
+
+function renderOptionPreview(optionText) {
+  if (!optionText) return "";
+  const events = analyzeOptionJS(optionText);
+  if (events.length === 0) return "";
+  // 最多显示 2 个最高 confidence 事件
+  const top = events.slice(0, 2);
+  const items = top.map(e =>
+    `<span class="option-preview-tag" style="font-size:10px;color:#8b6f47;margin-right:4px">${e.text} <span style="opacity:0.6">${Math.round(e.conf*100)}%</span></span>`
+  ).join("");
+  return `<div class="option-preview" style="margin-top:4px;font-size:10px;line-height:1.4">${items}</div>`;
+}
+
 function toggleSbSection(name) {
   const $body = document.querySelector(`[data-body="${name}"]`);
   const $header = document.querySelector(`[data-section="${name}"] .sb-section-toggle`);
@@ -1875,8 +1938,38 @@ function showAccountLogin() {
         💡 已有账户？
         <a href="javascript:showAccountSwitch()" style="color:#5a3e1f;text-decoration:underline">使用 account_id 登录</a>
       </p>
+      <div style="margin-top:20px;padding:16px;background:#fff8e8;border:1px dashed #c4a878;border-radius:6px;max-width:480px">
+        <div style="font-size:14px;color:#5a3e1f;margin-bottom:8px;font-weight:500">
+          🎮 没有邀请码？
+        </div>
+        <div style="font-size:12px;color:#8b6f47;line-height:1.6;margin-bottom:12px">
+          体验版可免费玩 30 回合。每 10 回合提交一次建议/评价，结束后留下联系方式。<br>
+          如意见被采纳，会收到正式邀请码。
+        </div>
+        <button onclick="startTrial()" style="width:100%;padding:10px;background:transparent;color:#5a3e1f;border:1px solid #5a3e1f;border-radius:4px;cursor:pointer;font-size:14px">
+          🎮 开始 30 回合体验版
+        </button>
+      </div>
     </div>
   `;
+}
+
+async function startTrial() {
+  try {
+    const data = await api("/api/trial/start", "POST", {});
+    if (data.error) {
+      alert("启动体验版失败：" + data.error);
+      return;
+    }
+    state.trial_id = data.trial_id;
+    localStorage.setItem("hfe_trial_id", data.trial_id);
+    localStorage.setItem("hfe_trial_active", "1");
+    alert(`🎮 体验版开始！\n\ntrial_id: ${data.trial_id}\n可玩 30 回合\n每 10 回合需要提交反馈`);
+    // 直接进入游戏（用 trial 作为会话）
+    showSavesList();  // 显示存档选择（实际进入游戏）
+  } catch (e) {
+    alert("网络错误：" + e.message);
+  }
 }
 
 async function registerAccount() {
