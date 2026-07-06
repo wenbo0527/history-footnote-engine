@@ -3,8 +3,8 @@ info:
   title: 历史脚注引擎 API
   description: |
     明代万历年间沉浸式剧情游戏 HTTP API
-    v1.7.23 - 短期改进版
-  version: 1.7.23
+    v1.7.29 - 自动从 router_registry 生成
+  version: 1.7.29
   contact:
     name: wenbo0527
     url: https://github.com/wenbo0527/history-footnote-engine
@@ -21,618 +21,522 @@ tags:
   - name: archive
     description: 存档/读档/列表
   - name: meta
-    description: 工具/统计/反馈
+    description: 元数据/版本/反馈
+  - name: tools
+    description: 工具/校验/监控
 
 paths:
   /api/archive/delete:
     post:
-      tags: [archive]
-      summary: Delete
+      summary: "删除一个存档"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '400':
-          description: 请求错误
-        '404':
-          description: 未找到
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/archives:
     get:
-      tags: [archive]
-      summary: Archives
+      summary: "列出存档"
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/archives/clear:
     post:
-      tags: [archive]
-      summary: Clear
+      summary: "清空某 era 的所有存档（需 confirm）"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '400':
-          description: 请求错误
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/character_wiki:
-    post:
-      tags: [meta]
-      summary: Character Wiki
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
+    get:
+      summary: "获取本存档的角色 Wiki"
       responses:
-        '400':
-          description: 请求错误
-        '404':
-          description: 未找到
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/character_wiki_update:
     post:
-      tags: [meta]
-      summary: Character Wiki Update
+      summary: "手动编辑某条 wiki entry"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '400':
-          description: 请求错误
-        '404':
-          description: 未找到
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
+
+  /api/dilemma:
+    post:
+      summary: "从 narrative 提取当前困境引导词"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
   /api/eras:
     get:
-      tags: [meta]
-      summary: Eras
+      summary: "列出所有可用时代包"
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/extract_terms:
     post:
-      tags: [meta]
-      summary: Extract Terms
+      summary: "从文本提取名词并标记已读"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '400':
-          description: 请求错误
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/feedback:
     post:
-      tags: [meta]
-      summary: Feedback
+      summary: "提交一条用户反馈"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '400':
-          description: 请求错误
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/feedback_categories:
+    get:
+      summary: "列出反馈分类"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
     post:
-      tags: [meta]
-      summary: Feedback Categories
+      summary: "列出反馈分类"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/generate_character:
     post:
-      tags: [meta]
-      summary: Generate Character
+      summary: "LLM 生成自定义角色人设"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/generate_world_dwell:
     post:
-      tags: [meta]
-      summary: Generate World Dwell
+      summary: "LLM 生成世界画卷"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/glossary:
     post:
-      tags: [meta]
-      summary: Glossary
+      summary: "查询明朝名词解释"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '404':
-          description: 未找到
-        '500':
-          description: 服务器内部错误
 
   /api/identities:
     get:
-      tags: [meta]
-      summary: Identities
+      summary: "列出某时代的可玩身份"
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/input:
     post:
-      tags: [game]
-      summary: Input
+      summary: "玩家输入一行动（DM 调度）"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '429':
-          description: 限流
-        '400':
-          description: 请求错误
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '404':
-          description: 未找到
-        '500':
-          description: 服务器内部错误
 
   /api/input_stream:
     post:
-      tags: [game]
-      summary: Input Stream
+      summary: "玩家输入流式（SSE）"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '429':
-          description: 限流
-        '400':
-          description: 请求错误
-        '404':
-          description: 未找到
-        '500':
-          description: 服务器内部错误
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
   /api/llm/reset_stats:
     get:
-      tags: [meta]
-      summary: Reset Stats
+      summary: "重置 LLM 统计（开发）"
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器内部错误
 
   /api/llm/stats:
     get:
-      tags: [meta]
-      summary: Stats
+      summary: "LLM token 用量统计"
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/load:
     post:
-      tags: [meta]
-      summary: Load
+      summary: "从存档加载 session 到内存"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '404':
-          description: 未找到
-        '500':
-          description: 服务器内部错误
 
   /api/lore:
     post:
-      tags: [meta]
-      summary: Lore
+      summary: "在 lore 知识库查一条历史知识点"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '400':
-          description: 请求错误
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '404':
-          description: 未找到
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/mark_term_seen:
     post:
-      tags: [meta]
-      summary: Mark Term Seen
+      summary: "标记一个名词为已读"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '400':
-          description: 请求错误
-        '404':
-          description: 未找到
-        '500':
-          description: 服务器内部错误
 
   /api/merge_voice_options:
     post:
-      tags: [meta]
-      summary: Merge Voice Options
+      summary: "合并结构化选项与内嵌选项"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
+
+  /api/monitor/health:
+    get:
+      summary: "详细健康检查"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/monitor/stats:
+    get:
+      summary: "监控端点调用统计"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
   /api/recap:
     post:
-      tags: [game]
-      summary: Recap
+      summary: "获取近期剧情回顾"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
-        '400':
-          description: 请求错误
-        '404':
-          description: 未找到
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/render_narrative:
     post:
-      tags: [meta]
-      summary: Render Narrative
+      summary: "渲染 narrative（Markdown → HTML 片段）"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/sanitize:
     post:
-      tags: [meta]
-      summary: Sanitize
+      summary: "清洗 narrative 文本"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/sanitize_patterns:
     post:
-      tags: [meta]
-      summary: Sanitize Patterns
+      summary: "取 sanitizer 的正则模式"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
   /api/start:
     post:
-      tags: [game]
-      summary: Start
+      summary: "启动新游戏会话"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器内部错误
 
   /api/state:
     get:
-      tags: [game]
-      summary: State
+      summary: "获取当前 session 完整 state"
       responses:
-        '400':
-          description: 请求错误
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '404':
-          description: 未找到
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
 
-  /api/version:
+  /api/task/add:
     post:
-      tags: [meta]
-      summary: Version
+      summary: "添加一个手动任务"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
       responses:
         '200':
-          description: 成功
+          description: OK
           content:
             application/json:
               schema:
                 type: object
-        '500':
-          description: 服务器错误
-        '500':
-          description: 服务器内部错误
+
+  /api/task/complete:
+    post:
+      summary: "标记一个任务完成"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/version:
+    post:
+      summary: "查询服务端版本信息"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /health:
+    get:
+      summary: "健康检查（基础）"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /metrics:
+    get:
+      summary: "性能指标（全局 metrics snapshot）"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 

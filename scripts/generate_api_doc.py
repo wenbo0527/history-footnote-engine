@@ -1,84 +1,120 @@
-"""🆕 v1.7.23 自动生成 OpenAPI 文档
+"""🆕 v1.7.29 自动生成 OpenAPI 文档
 
-扫描 web_server.py 的端点 + 端点注释 + Response 字段
-输出 docs/api/openapi.yaml
+v1.7.29 适配：
+- web_server.py 已拆分为 web_server/ 子包与 router_registry.py
+- 本脚本从 router_registry.GET_ROUTES / POST_ROUTES 提取端点
+- 每个端点的 docstring 取其 handler 函数的 docstring
+- 输出 docs/api/openapi.yaml
+
+保留：
+- 自 v1.7.23 起的工作模式：路径列在 OpenAPI，路径对应的描述从 router function
+  的 docstring 一行总览生成
 """
 import ast
-import os
+import importlib.util
+import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-SRC = ROOT / "src" / "history_footnote" / "web_server.py"
+SRC_DIR = ROOT / "src"
 OUT_DIR = ROOT / "docs" / "api"
 OUT_FILE = OUT_DIR / "openapi.yaml"
 
+# 项目内 import 准备
+sys.path.insert(0, str(SRC_DIR))
 
-def extract_endpoints(source: str) -> list[dict]:
-    """从 web_server.py AST 提取所有 API 端点信息"""
-    tree = ast.parse(source)
+
+def extract_endpoints() -> list[dict]:
+    """从 router_registry 提取所有 API 端点信息
+
+    Returns:
+        [{path, method, doc, description, responses}, ...]
+
+    priority:
+    1. handler.__doc__ 第一行
+    2. 否则按 path 推断（heuristic map）
+    """
+    from history_footnote.web_server.router_registry import GET_ROUTES, POST_ROUTES
+
+    # 兜底：路径友好的中文说明
+    FALLBACK_SUMMARY = {
+        "/api/start": "启动新游戏会话",
+        "/api/input": "玩家输入一行动（DM 调度）",
+        "/api/input_stream": "玩家输入流式（SSE）",
+        "/api/state": "获取当前 session 完整 state",
+        "/api/load": "从存档加载 session 到内存",
+        "/api/recap": "获取近期剧情回顾",
+        "/api/archives": "列出存档",
+        "/api/archive/delete": "删除一个存档",
+        "/api/archives/clear": "清空某 era 的所有存档（需 confirm）",
+        "/api/eras": "列出所有可用时代包",
+        "/api/identities": "列出某时代的可玩身份",
+        "/api/character_wiki": "获取本存档的角色 Wiki",
+        "/api/character_wiki_update": "手动编辑某条 wiki entry",
+        "/api/lore": "在 lore 知识库查一条历史知识点",
+        "/api/glossary": "查询明朝名词解释",
+        "/api/extract_terms": "从文本提取名词并标记已读",
+        "/api/mark_term_seen": "标记一个名词为已读",
+        "/api/sanitize": "清洗 narrative 文本",
+        "/api/sanitize_patterns": "取 sanitizer 的正则模式",
+        "/api/dilemma": "从 narrative 提取当前困境引导词",
+        "/api/merge_voice_options": "合并结构化选项与内嵌选项",
+        "/api/render_narrative": "渲染 narrative（Markdown → HTML 片段）",
+        "/api/task/complete": "标记一个任务完成",
+        "/api/task/add": "添加一个手动任务",
+        "/api/version": "查询服务端版本信息",
+        "/api/feedback": "提交一条用户反馈",
+        "/api/feedback_categories": "列出反馈分类",
+        "/api/generate_character": "LLM 生成自定义角色人设",
+        "/api/generate_world_dwell": "LLM 生成世界画卷",
+        "/api/llm/stats": "LLM token 用量统计",
+        "/api/llm/reset_stats": "重置 LLM 统计（开发）",
+        "/api/monitor/health": "详细健康检查",
+        "/api/monitor/stats": "监控端点调用统计",
+        "/metrics": "性能指标（全局 metrics snapshot）",
+        "/health": "健康检查（基础）",
+    }
+
+    def _summary_for(path: str, handler) -> str:
+        doc = (handler.__doc__ or "").strip().split("\n", 1)[0]
+        if doc:
+            return doc
+        return FALLBACK_SUMMARY.get(path, path)
 
     endpoints = []
-    # 找 do_POST / do_GET / do_DELETE
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and node.name in ("do_POST", "do_GET", "do_DELETE", "do_PUT"):
-            method = node.name.split("_")[1]
-            for sub in ast.walk(node):
-                if isinstance(sub, ast.If):
-                    # 找 path == "/api/xxx" 比较
-                    if isinstance(sub.test, ast.Compare):
-                        for comp in sub.test.comparators:
-                            if isinstance(comp, ast.Constant) and isinstance(comp.value, str) and comp.value.startswith("/api/"):
-                                path = comp.value
-                                # 提取该 if 块的注释
-                                try:
-                                    doc = ast.get_docstring(sub) or ""
-                                except TypeError:
-                                    doc = ""
-                                # 提取 200 / 400 / 404 响应信息
-                                responses = extract_responses(sub)
-                                # 提取 description
-                                description = extract_block_comment(sub)
-                                endpoints.append({
-                                    "path": path,
-                                    "method": method,
-                                    "doc": doc,
-                                    "description": description,
-                                    "responses": responses,
-                                })
+    for path, handler in GET_ROUTES.items():
+        endpoints.append({
+            "path": path,
+            "method": "get",
+            "doc": _summary_for(path, handler),
+            "description": "",
+            "responses": _responses_for(handler),
+        })
+    for path, handler in POST_ROUTES.items():
+        endpoints.append({
+            "path": path,
+            "method": "post",
+            "doc": _summary_for(path, handler),
+            "description": "",
+            "responses": _responses_for(handler),
+        })
+    # 按 path 排序
+    endpoints.sort(key=lambda e: (e["path"], e["method"]))
     return endpoints
 
 
-def extract_responses(if_node) -> list[dict]:
-    """提取 self._json(status, {...}) 调用的状态码"""
-    responses = []
-    seen = set()
-    for sub in ast.walk(if_node):
-        if isinstance(sub, ast.Call):
-            # self._json(200, {...}) 或 self._json(404, {...})
-            if (isinstance(sub.func, ast.Attribute) and
-                isinstance(sub.func.value, ast.Name) and
-                sub.func.value.id == "self" and
-                sub.func.attr == "_json"):
-                if sub.args and isinstance(sub.args[0], ast.Constant):
-                    status = sub.args[0].value
-                    if status not in seen:
-                        seen.add(status)
-                        # 尝试解析 body
-                        body_desc = ""
-                        if len(sub.args) > 1:
-                            body_desc = ast.unparse(sub.args[1])[:100]
-                        responses.append({
-                            "status": status,
-                            "body_hint": body_desc,
-                        })
-    return responses
-
-
-def extract_block_comment(if_node) -> str:
-    """提取 if 块上方的注释作为 description"""
-    # 通过源码字符串提取（ast 不直接支持 comments）
-    return ""  # 简化：跳过
+def _responses_for(handler) -> list:
+    """从 docstring 推断常见响应码。默认 200/400。"""
+    doc = (handler.__doc__ or "").lower()
+    codes = {200}
+    if "404" in doc or "not found" in doc:
+        codes.add(404)
+    if "429" in doc or "rate limit" in doc:
+        codes.add(429)
+    if "500" in doc:
+        codes.add(500)
+    return [{"status": c} for c in sorted(codes)]
 
 
 def generate_yaml(endpoints: list[dict]) -> str:
@@ -89,8 +125,8 @@ def generate_yaml(endpoints: list[dict]) -> str:
         "  title: 历史脚注引擎 API",
         "  description: |",
         "    明代万历年间沉浸式剧情游戏 HTTP API",
-        "    v1.7.23 - 短期改进版",
-        "  version: 1.7.23",
+        "    v1.7.29 - 自动从 router_registry 生成",
+        "  version: 1.7.29",
         "  contact:",
         "    name: wenbo0527",
         "    url: https://github.com/wenbo0527/history-footnote-engine",
@@ -107,106 +143,51 @@ def generate_yaml(endpoints: list[dict]) -> str:
         "  - name: archive",
         "    description: 存档/读档/列表",
         "  - name: meta",
-        "    description: 工具/统计/反馈",
+        "    description: 元数据/版本/反馈",
+        "  - name: tools",
+        "    description: 工具/校验/监控",
         "",
         "paths:",
     ]
-
-    # 按 path 分组
-    paths = {}
+    # 按 path 聚合
+    by_path: dict = {}
     for ep in endpoints:
-        path = ep["path"]
-        if path not in paths:
-            paths[path] = []
-        paths[path].append(ep)
-
-    # 路径 → tag 分类
-    def get_tag(path: str) -> str:
-        if path in ("/api/start", "/api/input", "/api/input_stream", "/api/state", "/api/recap"):
-            return "game"
-        if "stream" in path:
-            return "stream"
-        if "archive" in path or "save" in path:
-            return "archive"
-        return "meta"
-
-    for path, eps in sorted(paths.items()):
+        by_path.setdefault(ep["path"], []).append(ep)
+    for path in sorted(by_path.keys()):
         lines.append(f"  {path}:")
-        for ep in eps:
-            method = ep["method"].lower()
-            lines.append(f"    {method}:")
-            lines.append(f"      tags: [{get_tag(path)}]")
-            # summary: 用 path 末段
-            summary = path.split("/")[-1].replace("_", " ").title() or path
-            lines.append(f"      summary: {summary}")
-            if ep["doc"]:
-                lines.append(f"      description: |")
-                for doc_line in ep["doc"].split("\n")[:5]:
-                    lines.append(f"        {doc_line}")
-            # requestBody
-            if method in ("post", "put", "patch"):
+        for ep in by_path[path]:
+            lines.append(f"    {ep['method']}:")
+            lines.append(f"      summary: \"{ep['doc']}\"")
+            if ep['method'] == "post":
                 lines.append("      requestBody:")
-                lines.append("        required: true")
                 lines.append("        content:")
                 lines.append("          application/json:")
                 lines.append("            schema:")
                 lines.append("              type: object")
-            # responses
             lines.append("      responses:")
-            for resp in ep["responses"]:
-                status = resp["status"]
-                status_text = {
-                    200: "成功", 201: "已创建", 400: "请求错误",
-                    401: "未授权", 403: "禁止", 404: "未找到",
-                    429: "限流", 500: "服务器错误",
-                }.get(status, "响应")
+            for r in ep["responses"]:
+                status = r["status"]
                 lines.append(f"        '{status}':")
-                lines.append(f"          description: {status_text}")
-                if "application/json" in str(resp.get("body_hint", "")) or status == 200:
+                lines.append("          description: OK")
+                if status == 200:
                     lines.append("          content:")
                     lines.append("            application/json:")
                     lines.append("              schema:")
                     lines.append("                type: object")
-            # 默认 500 响应
-            lines.append("        '500':")
-            lines.append("          description: 服务器内部错误")
         lines.append("")
 
     return "\n".join(lines) + "\n"
 
 
 def main():
-    if not SRC.exists():
-        print(f"错误：{SRC} 不存在", file=sys.stderr)
-        sys.exit(1)
-
-    print(f"扫描 {SRC} ...")
-    source = SRC.read_text(encoding="utf-8")
-    endpoints = extract_endpoints(source)
-    print(f"找到 {len(endpoints)} 个端点")
-
-    # 按 path 去重
-    seen_paths = set()
-    unique = []
-    for ep in endpoints:
-        key = (ep["path"], ep["method"])
-        if key not in seen_paths:
-            seen_paths.add(key)
-            unique.append(ep)
-    print(f"去重后 {len(unique)} 个端点")
-
-    # 生成 YAML
-    yaml_content = generate_yaml(unique)
-
-    # 写文件
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    OUT_FILE.write_text(yaml_content, encoding="utf-8")
-    print(f"✅ 已生成 {OUT_FILE} ({len(yaml_content)} 字符)")
-
-    # 列出所有端点
-    print("\n发现的端点：")
-    for ep in sorted(unique, key=lambda x: (x["path"], x["method"])):
-        print(f"  {ep['method']:6s} {ep['path']}")
+    if not OUT_DIR.exists():
+        OUT_DIR.mkdir(parents=True)
+    endpoints = extract_endpoints()
+    yaml = generate_yaml(endpoints)
+    OUT_FILE.write_text(yaml, encoding="utf-8")
+    print(f"✅ 写入 {OUT_FILE.relative_to(ROOT)}")
+    print(f"   共 {len(endpoints)} 端点：GET={sum(1 for e in endpoints if e['method']=='get')} / "
+          f"POST={sum(1 for e in endpoints if e['method']=='post')}")
 
 
 if __name__ == "__main__":
