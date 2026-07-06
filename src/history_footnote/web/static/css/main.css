@@ -303,7 +303,7 @@ body {
 .sidebar .stat-line .val { color: #f0d8a0; font-weight: bold; }
 
 /* 🆕 v1.7.26 固化面板：任务 / 还债 / 财务 */
-.sidebar-tasks { margin-bottom: 12px; }
+.sidebar-tasks { margin-bottom: 8px; }
 .sidebar-task {
   display: flex;
   align-items: center;
@@ -315,7 +315,67 @@ body {
 }
 .sidebar-task:last-child { border-bottom: none; }
 .sidebar-task .task-icon { font-size: 11px; flex-shrink: 0; }
-.sidebar-task .task-title { flex: 1; }
+.sidebar-task .task-title { flex: 1; word-break: break-all; }
+.sidebar-task .task-done-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(160, 136, 88, 0.4);
+  color: #a08858;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 1px 6px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+.sidebar-task .task-done-btn:hover {
+  background: rgba(139, 111, 71, 0.3);
+  color: #f5deb3;
+  border-color: #c19a5b;
+}
+.sidebar-task .task-done-btn:active { transform: scale(0.92); }
+
+/* 🆕 v1.7.28：手动添加任务 */
+.sidebar-task-add {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.sidebar-task-add input {
+  flex: 1;
+  background: rgba(60, 40, 20, 0.3);
+  border: 1px solid rgba(160, 136, 88, 0.3);
+  color: #f0d8a0;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  outline: none;
+}
+.sidebar-task-add input:focus { border-color: #c19a5b; }
+.sidebar-task-add input::placeholder { color: #8a7048; font-style: italic; }
+.sidebar-task-add button {
+  background: rgba(139, 111, 71, 0.25);
+  border: 1px solid rgba(160, 136, 88, 0.3);
+  color: #f0d8a0;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 13px;
+  width: 28px;
+  padding: 0;
+  line-height: 1;
+}
+.sidebar-task-add button:hover {
+  background: rgba(139, 111, 71, 0.45);
+}
+.sidebar-task-history {
+  font-size: 11px;
+  color: #8a7048;
+  text-align: right;
+  margin-bottom: 8px;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.sidebar-task-history:hover { color: #c19a5b; }
 
 .sidebar-deadlines { margin-bottom: 12px; }
 .sidebar-deadline {

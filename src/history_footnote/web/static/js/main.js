@@ -1727,7 +1727,15 @@ const fin = sb.financial_status || {};
 const tasksHtml = tasks.length > 0
   ? tasks.map(t => {
       const icon = t.urgency === "high" ? "🔴" : "🟡";
-      return `<div class="sidebar-task"><span class="task-icon">${icon}</span><span class="task-title">${escapeHtml(t.title || "")}</span></div>`;
+      // 🆕 v1.7.28：每个任务加 ✓ 完成按钮 + 紧急度 badge
+      const safeTitle = escapeHtml(t.title || "");
+      const tid = `task-${escapeHtml((t.title || "").replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "-"))}`;
+      return `
+        <div class="sidebar-task" id="${tid}">
+          <span class="task-icon">${icon}</span>
+          <span class="task-title">${safeTitle}</span>
+          <button class="task-done-btn" data-title="${escapeHtml(t.title || "")}" title="标记完成">✓</button>
+        </div>`;
     }).join("")
   : "<div style='color:#5a4a30;font-size:12px'>暂无待办</div>";
 
@@ -1771,6 +1779,15 @@ $side.innerHTML = `
   <h3>📋 待办 (${tasks.length})</h3>
   <div class="sidebar-tasks">${tasksHtml}</div>
 
+  <!-- 🆕 v1.7.28：手动添加任务（剧情未提及的） -->
+  <div class="sidebar-task-add">
+    <input id="new-task-input" type="text" placeholder="+ 添加待办…" maxlength="40" />
+    <button id="new-task-btn">＋</button>
+  </div>
+  <div class="sidebar-task-history" onclick="toggleCompleted()" title="点击查看已完成">
+    已完成 ${data.completed_tasks_count || 0}
+  </div>
+
   <h3>⏰ 还债日 (${deadlines.length})</h3>
   <div class="sidebar-deadlines">${deadlinesHtml}</div>
 
@@ -1803,6 +1820,79 @@ $side.innerHTML = `
     </button>
   </div>
 `;
+
+  // 🆕 v1.7.28：挂接任务完成按钮 + 添加按钮（render 后绑定，避免 XSS 内嵌 on*）
+  document.querySelectorAll(".task-done-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const title = btn.dataset.title;
+      if (title) completeTask(title);
+    });
+  });
+  const addBtn = document.getElementById("new-task-btn");
+  const addInput = document.getElementById("new-task-input");
+  if (addBtn && addInput) {
+    addBtn.addEventListener("click", () => addTaskFromInput(addInput));
+    addInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") addTaskFromInput(addInput);
+    });
+  }
+}
+
+// 🆕 v1.7.28：任务完成 API 调用
+async function completeTask(title) {
+  if (!currentSessionId) return;
+  try {
+    const data = await api("/api/task/complete", "POST", {
+      session_id: currentSessionId,
+      title,
+    });
+    if (data.status === "completed") {
+      // 重新拉取 state
+      await refreshSidebar();
+    } else if (data.status === "not_found") {
+      console.warn("任务未找到:", title);
+    }
+  } catch (e) {
+    console.error("completeTask failed:", e);
+  }
+}
+
+// 🆕 v1.7.28：手动添加任务 API 调用
+async function addTaskFromInput(inputEl) {
+  const title = (inputEl.value || "").trim();
+  if (!title || !currentSessionId) return;
+  try {
+    const data = await api("/api/task/add", "POST", {
+      session_id: currentSessionId,
+      title,
+      urgency: "normal",
+    });
+    if (data.status === "added" || data.status === "duplicate") {
+      inputEl.value = "";
+      await refreshSidebar();
+    }
+  } catch (e) {
+    console.error("addTask failed:", e);
+  }
+}
+
+async function refreshSidebar() {
+  // 调用 /api/state 拉新侧边栏（替代完整刷新）
+  if (!currentSessionId) return;
+  try {
+    const data = await api("/api/state?session_id=" + encodeURIComponent(currentSessionId), "GET");
+    // 仅重渲染侧边栏，不再触发叙事重放
+    if (typeof renderSidebar === "function") renderSidebar(data);
+  } catch (e) {
+    console.error("refreshSidebar failed:", e);
+  }
+}
+
+// 🆕 v1.7.28：查看已完成任务（简单弹层）
+function toggleCompleted() {
+  // 复用最近一次 /api/state 拉到的 completed_tasks_count；如需详细列表，弹层再发 /api/state
+  alert("已完成任务历史请查看存档（完成项已存档，不删除）");
 }
 
 function escapeHtml(s) {

@@ -137,6 +137,8 @@ def _format_state(game: GameLoop) -> dict:
         # 🆕 v1.7.26 侧边栏固化面板数据
         # 从 narrative 的 <aside> 块解析（LLM 输出）+ 后端推断兜底
         "sidebar_data": _build_sidebar_data(s, recent_narr),
+        # 🆕 v1.7.28：已完成任务计数（前端展示 + 弹层入口）
+        "completed_tasks_count": len(getattr(s, "completed_tasks", []) or []),
     }
     # 兜底注入（如果空）
     if not result["last_voice_options"]:
