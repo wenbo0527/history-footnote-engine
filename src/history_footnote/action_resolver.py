@@ -349,6 +349,9 @@ def resolve_action(state, action: PlayerAction, config: dict = None) -> ActionRe
     if action.verb == "TRAVEL" and action.target.startswith("fm_"):
         action.verb = "MEET"
 
+    # 🆕 v1.7.34 LLM Layer 2 fallback（已停用，需 config）
+    # 如果 LLM 传入，可在外部解析后调用 resolve_action，再次走总线
+
     if action.verb == "SELL":
         # 卖：cash + amount（amount 是银两）
         # 🆕 v1.7.33 从 era_config 读价格（缺省用 PRICES）
