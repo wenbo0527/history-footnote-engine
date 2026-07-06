@@ -140,6 +140,9 @@ class GameLoop:
         for q in list(self.quest_system.quests.values()):
             if q.status == "available":
                 self.quest_system.accept_quest(q.id)
+        # 🆕 v1.7.45 结局系统
+        from history_footnote.ending_system import EndingSystem
+        self.ending_system = EndingSystem()
 
         # 🆕 v1.7.38 Game Engine Facade（统一接口）
         from history_footnote.game_engine_facade import GameEngineFacade

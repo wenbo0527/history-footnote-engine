@@ -402,6 +402,36 @@ class GameEngineFacade:
             self._perf["process_calls"] += 1
             self._perf["process_total_ms"] += ms
 
+    def get_ending_system(self):
+        """🆕 v1.7.45 结局系统接入
+
+        Returns:
+            EndingSystem 实例（如未集成则 None）
+        """
+        # 延迟初始化
+        from history_footnote.ending_system import EndingSystem
+        if not hasattr(self, "_ending_system") or self._ending_system is None:
+            self._ending_system = EndingSystem()
+        return self._ending_system
+
+    def check_ending(self) -> Optional[dict]:
+        """🆕 v1.7.45 检查结局
+
+        Returns:
+            触发的 ending dict（如触发），或 None
+        """
+        es = self.get_ending_system()
+        ending = es.check(self.state)
+        if ending:
+            return {
+                "type": ending.type,
+                "name": ending.name,
+                "icon": ending.icon,
+                "narrative": ending.narrative_template,
+                "priority": ending.priority,
+            }
+        return None
+
     def get_recent_events_for_display(self, limit: int = 5) -> list:
         """🆕 v1.7.43 获取最近事件（用于 narrative 后显示）
 
