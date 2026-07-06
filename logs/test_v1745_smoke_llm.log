@@ -1,0 +1,61 @@
+============================================================
+v1.7.45 上线 smoke test（1 轮真实 LLM）
+============================================================
+✅ LLM: minimax-anthropic
+
+=== Smoke Test 1: CRAFT ===
+
+=== 1 轮后状态 ===
+  cash: 5.50
+  city: shengze
+  items: 3
+  round: 1
+  QuestSystem: completed=1, active=3
+  Wiki cache: size=1, hit=0%
+  LLM perf: calls=1, avg_ms=28391
+  EventBus: pub=7, fail=0
+  DramaManager 干预: 1 次
+  Recent events:
+    ⚡ major_event: evt.little_ice_age
+    ⚡ major_event: evt.guoben_dispute
+    ⚡ major_event: evt.silver_inflow
+    ⚡ major_event: evt.nurhaci_rise
+    ⚡ major_event: he_01
+  Ending check: 触发 勉强维持 🪵
+  耗时: 28.4s
+
+=== 11 系统状态验证 ===
+  GameState: ✅
+  ActionResolver: ✅
+  EventBus: ✅
+  DramaManager: ✅
+  QuestSystem: ✅
+  WikiRetriever: ✅
+  GameEngineFacade: ✅
+  StateRefHelpers: ✅
+  DM Agent: ✅
+  Performance: ✅
+  EndingSystem: ✅
+
+  🎉 全部 11 系统就绪
+
+=== Narrative 摘录 ===
+  沈氏的手停在围裙上，目光往门外瞟了一眼，没接话，只是把灶里的柴压了压。
+
+赵里长的脚步在门口顿了一下。他低头看了看手里的册子，又抬头扫了一眼你家门楣，扬起下巴咳了一声。
+
+"在家呢？"
+
+他没等你应声就推门进来了，裤腿上沾着半干的泥——从村北头那片烂泥田那边过来的。身后那个衙役缩在门框边上，哈着白气，搓着手不想进去。
+
+赵里长把册子翻到某一页，指甲在纸上划了一道：
+
+"春税预征，丁银加派。去年你报的是两台织机，今年呢？"
+
+他的目光落在作坊里那台刚织完的织机上，嘴角动了一下。
+
+"看这架势，是添了？"
+
+他不等你答，从布袋里掏出一张单子，搁在你面前织机旁的矮桌上。墨迹还没全干。
+
+"上头的数。...
