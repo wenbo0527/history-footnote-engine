@@ -83,6 +83,17 @@ class GameState:
     financial_status: dict = field(default_factory=dict)          # {"cash":3.7,"rice_days":7,"monthly_burn":1.2,...}
     completed_tasks: list[dict] = field(default_factory=list)     # 🆕 v1.7.27 已完成任务历史（玩家可查看）
 
+    # === 🆕 v1.7.30 钱结构化（替代 financial_status 部分字段） ===
+    # 之前 financial_status 是 dict（LLM 自由写），现在 cash/rice/debt 严格类型
+    # 后端校验：财务字段变更必须通过 state.apply_financial_change()（拒绝 LLM 自由改）
+    cash: float = 0.0           # 现金（两，1 两 = 1000 文）
+    rice: float = 0.0           # 存粮（石）
+    debt: float = 0.0           # 欠债（两）
+    monthly_burn: float = 0.0   # 每月基础开销（两，自动计算）
+    # financial_log: 财务变动日志（每笔交易 1 条）
+    # [{"date":"1587年1月","round":1,"type":"sell_silk","amount":+0.5,"note":"卖湖绫一匹","location":"盛泽"}]
+    financial_log: list[dict] = field(default_factory=list)
+
     # === 🆕 v1.7.1 Per-Save Character Wiki ===
     # 人物知识图谱：仅本存档，删除/重置存档时清空
     # 用于 LLM 上下文 + 侧边栏 UI + 支线一致性
@@ -109,6 +120,71 @@ class GameState:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+    # 🆕 v1.7.30: 财务变更（带日志 + 校验）
+    def apply_financial_change(
+        self,
+        amount: float,
+        type_: str,
+        note: str,
+        location: str = "",
+        round_number: int | None = None,
+    ) -> dict:
+        """应用一笔财务变更（核心入口，替代 LLM 自由改 cash/rice/debt）
+
+        Args:
+            amount: 金额（两），正为入账，负为支出
+            type_: 交易类型（"sell_silk" / "buy_thread" / "pay_tax" / "borrow" / "repay" / "rent" / "gift" ...）
+            note: 备注
+            location: 交易地点
+            round_number: 回合数（默认 self.round_number）
+
+        Returns:
+            交易记录 dict（已追加到 financial_log）
+
+        校验规则：
+        - 单笔交易上限 100 两（防 LLM 编造"天降 500 两"）
+        - 单笔下限 -50 两（防 LLM 把玩家钱扣到负数过多）
+        """
+        MAX_TRANSACTION = 100.0
+        MIN_TRANSACTION = -50.0
+        if amount > MAX_TRANSACTION:
+            raise ValueError(f"单笔入账 {amount} 两超过上限 {MAX_TRANSACTION}（疑似 LLM 编造）")
+        if amount < MIN_TRANSACTION:
+            raise ValueError(f"单笔支出 {amount} 两低于下限 {MIN_TRANSACTION}（疑似 LLM 编造）")
+        # 应用变更
+        if type_ == "borrow":
+            self.debt += abs(amount)  # 借钱 → 欠债增加（绝对值）
+        elif type_ == "repay":
+            self.debt = max(0.0, self.debt - abs(amount))  # 还钱 → 欠债减少
+        else:
+            # 现金变化（正入负出）
+            self.cash += amount
+            # 防止现金扣到 -0.1
+            if self.cash < 0:
+                self.cash = 0.0
+        entry = {
+            "date": self.current_date,
+            "round": round_number if round_number is not None else self.round_number,
+            "type": type_,
+            "amount": amount,
+            "note": note,
+            "location": location or self.current_city,
+        }
+        self.financial_log.append(entry)
+        return entry
+
+    def snapshot_financial(self) -> dict:
+        """返回当前财务快照（DM 可见 / UI 渲染用）"""
+        return {
+            "cash": self.cash,
+            "rice": self.rice,
+            "debt": self.debt,
+            "monthly_burn": self.monthly_burn,
+            "net_worth": self.cash - self.debt,
+            "rice_days_estimate": (self.rice / max(self.monthly_burn, 0.1)) * 30 if self.monthly_burn > 0 else None,
+            "log_count": len(self.financial_log),
+        }
 
     def save(self, path: Path) -> None:
         """保存到JSON文件"""
