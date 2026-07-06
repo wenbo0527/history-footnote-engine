@@ -94,6 +94,44 @@ class GameState:
     # [{"date":"1587年1月","round":1,"type":"sell_silk","amount":+0.5,"note":"卖湖绫一匹","location":"盛泽"}]
     financial_log: list[dict] = field(default_factory=list)
 
+    # === 🆕 v1.7.30 家人结构化 ===
+    # 之前 custom_character.family 是 dict（LLM 写），不可信
+    # 4 城市集成后，玩家离乡会触发"家人"互动（盛泽有老宅/祖坟/族谱）
+    # family_members: 玩家直接亲属（妻/子/女/父母/兄弟姐妹）
+    # [{"id":"fm_wife", "name":"沈氏", "relation":"wife", "age":27, "location":"shengze",
+    #   "health":"healthy", "relationship_score":70, "alive":True,
+    #   "notes":"操持家务也帮忙缫丝，娘家在隔壁村", "story_hooks_used":[]}]
+    family_members: list[dict] = field(default_factory=list)
+
+    # === 🆕 v1.7.30 谱系结构化（扩展家族） ===
+    # 区别于 family_members：family 是"自己家"（直系亲属），
+    # genealogy 是"大家族"（祖上三代/堂表亲/姻亲/继承关系/族产）
+    # 支持"祖宅/家业/族产"继承链；"我是谁家的孩子" 答
+    # [{"id":"ge_patriarch", "relation":"patriarch", "name":"施善", "alive":False,
+    #   "location":"shengze", "generation":0,
+    #   "is_known_to_player":True, "notes":"祖父，购置织机三台，族产奠基人"}]
+    genealogy: list[dict] = field(default_factory=list)
+
+    # === 🆕 v1.7.30 城市财产 + 跨城库存 ===
+    # 4 城市集成后，玩家在多城市可能拥有财产（铺面/作坊/寄存货物）
+    # city_properties: {city_id → list[property]} —— 该城市的玩家财产
+    # inventory: {city_id → list[item]} —— 该城市的玩家寄存物
+    # 例：
+    # city_properties = {
+    #   "suzhou": [{"id":"prop_001", "type":"shop", "name":"阊门绸铺",
+    #               "value":120, "rent_per_month":0.5, "status":"operating"}],
+    #   "shengze": [{"id":"prop_002", "type":"workshop", "name":"自家织房",
+    #                "value":15, "status":"own"}]
+    # }
+    # inventory = {
+    #   "shengze": [{"id":"inv_001", "type":"silk_bolt", "name":"湖绫",
+    #                "qty":10, "unit_value":0.5, "location_in_city":"自宅"}],
+    #   "suzhou": [{"id":"inv_002", "type":"silk_bolt", "name":"湖绫",
+    #                "qty":3, "unit_value":0.7, "location_in_city":"阊门牙行寄存"}]
+    # }
+    city_properties: dict = field(default_factory=dict)  # dict[city_id] -> list[property]
+    inventory: dict = field(default_factory=dict)  # dict[city_id] -> list[item]
+
     # === 🆕 v1.7.1 Per-Save Character Wiki ===
     # 人物知识图谱：仅本存档，删除/重置存档时清空
     # 用于 LLM 上下文 + 侧边栏 UI + 支线一致性
@@ -185,6 +223,163 @@ class GameState:
             "rice_days_estimate": (self.rice / max(self.monthly_burn, 0.1)) * 30 if self.monthly_burn > 0 else None,
             "log_count": len(self.financial_log),
         }
+
+    # 🆕 v1.7.30: 家人 CRUD（结构化操作）
+    def add_family_member(self, member: dict) -> dict:
+        """添加一位家人（自动校验 id 唯一）
+
+        Args:
+            member: 完整 member dict（含 id/name/relation/age/location/...）
+        Returns:
+            添加后的 member
+        Raises:
+            ValueError: id 重复 / 必填字段缺失
+        """
+        required = {"id", "name", "relation"}
+        missing = required - set(member.keys())
+        if missing:
+            raise ValueError(f"家人字段缺失：{missing}")
+        if any(m.get("id") == member["id"] for m in self.family_members):
+            raise ValueError(f"家人 id 重复：{member['id']}")
+        # 默认值填充
+        member.setdefault("location", "shengze")
+        member.setdefault("health", "healthy")
+        member.setdefault("alive", True)
+        member.setdefault("relationship_score", 50)
+        member.setdefault("notes", "")
+        member.setdefault("story_hooks_used", [])
+        self.family_members.append(member)
+        return member
+
+    def update_family_member(self, member_id: str, **updates) -> dict | None:
+        """更新一位家人的字段（按 id 定位）
+
+        Args:
+            member_id: 家人 id
+            **updates: 要更新的字段（health/location/relationship_score/notes/...）
+        Returns:
+            更新后的 member；找不到返回 None
+        """
+        for m in self.family_members:
+            if m.get("id") == member_id:
+                m.update(updates)
+                return m
+        return None
+
+    def get_family_member(self, member_id: str) -> dict | None:
+        return next((m for m in self.family_members if m.get("id") == member_id), None)
+
+    def get_family_by_location(self, city_id: str) -> list[dict]:
+        """获取某城市的所有家人（玩家去某城市时，DM 知道"家人"在不在那）"""
+        return [m for m in self.family_members if m.get("location") == city_id]
+
+    # 🆕 v1.7.30: 谱系 CRUD
+    def add_genealogy_entry(self, entry: dict) -> dict:
+        """添加一位族人
+
+        Args:
+            entry: 完整 entry dict（含 id/relation/name/...）
+        Returns:
+            添加后的 entry
+        Raises:
+            ValueError: id 重复 / 必填字段缺失
+        """
+        required = {"id", "relation", "name"}
+        missing = required - set(entry.keys())
+        if missing:
+            raise ValueError(f"谱系字段缺失：{missing}")
+        if any(e.get("id") == entry["id"] for e in self.genealogy):
+            raise ValueError(f"谱系 id 重复：{entry['id']}")
+        entry.setdefault("alive", True)
+        entry.setdefault("generation", 0)
+        entry.setdefault("is_known_to_player", True)
+        entry.setdefault("notes", "")
+        self.genealogy.append(entry)
+        return entry
+
+    def get_genealogy_by_relation(self, relation: str) -> list[dict]:
+        """按关系筛（如 'patriarch'/'grandparent'/'uncle'/'cousin'）"""
+        return [e for e in self.genealogy if e.get("relation") == relation]
+
+    def get_known_ancestors(self, max_generation: int = 3) -> list[dict]:
+        """获取已知祖先（≤ N 代）—— 用于离乡路线"祖上是谁"叙事"""
+        return [e for e in self.genealogy
+                if e.get("is_known_to_player")
+                and e.get("alive") is False
+                and e.get("generation", 0) <= max_generation]
+
+    # 🆕 v1.7.30: 城市财产 CRUD
+    def add_property(self, city_id: str, prop: dict) -> dict:
+        """在指定城市添加一处财产
+
+        Args:
+            city_id: 城市 id（如 "suzhou"）
+            prop: 财产 dict（含 id/type/name/value/...）
+        """
+        required = {"id", "type", "name"}
+        missing = required - set(prop.keys())
+        if missing:
+            raise ValueError(f"财产字段缺失：{missing}")
+        prop.setdefault("value", 0)
+        prop.setdefault("status", "own")
+        self.city_properties.setdefault(city_id, []).append(prop)
+        return prop
+
+    def get_properties_in_city(self, city_id: str) -> list[dict]:
+        return self.city_properties.get(city_id, [])
+
+    def get_total_property_value(self) -> float:
+        """所有城市的财产总值（两）"""
+        total = 0.0
+        for props in self.city_properties.values():
+            total += sum(p.get("value", 0) for p in props)
+        return total
+
+    # 🆕 v1.7.30: 跨城库存 CRUD
+    def add_inventory_item(self, city_id: str, item: dict) -> dict:
+        """在指定城市添加一项库存
+
+        Args:
+            city_id: 城市 id
+            item: 库存 dict（含 id/type/name/qty/...）
+        """
+        required = {"id", "type", "name", "qty"}
+        missing = required - set(item.keys())
+        if missing:
+            raise ValueError(f"库存字段缺失：{missing}")
+        if item["qty"] < 0:
+            raise ValueError(f"库存数量不能为负：{item['qty']}")
+        item.setdefault("unit_value", 0)
+        item.setdefault("location_in_city", "")
+        self.inventory.setdefault(city_id, []).append(item)
+        return item
+
+    def transfer_inventory(self, item_id: str, from_city: str, to_city: str) -> dict | None:
+        """跨城转移库存（运货）
+
+        Args:
+            item_id: 物品 id
+            from_city: 出发城市
+            to_city: 目标城市
+        Returns:
+            转移后的 item；找不到返回 None
+        """
+        items = self.inventory.get(from_city, [])
+        idx = next((i for i, it in enumerate(items) if it.get("id") == item_id), None)
+        if idx is None:
+            return None
+        item = items.pop(idx)
+        self.inventory.setdefault(to_city, []).append(item)
+        return item
+
+    def get_inventory_summary(self) -> dict:
+        """库存摘要（DM/UI 可见）"""
+        out = {}
+        for city, items in self.inventory.items():
+            total_qty = sum(it.get("qty", 0) for it in items)
+            total_value = sum(it.get("qty", 0) * it.get("unit_value", 0) for it in items)
+            out[city] = {"items": len(items), "total_qty": total_qty, "total_value": total_value}
+        return out
 
     def save(self, path: Path) -> None:
         """保存到JSON文件"""
