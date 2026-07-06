@@ -141,6 +141,12 @@ class GameLoop:
             if q.status == "available":
                 self.quest_system.accept_quest(q.id)
 
+        # 🆕 v1.7.38 Game Engine Facade（统一接口）
+        from history_footnote.game_engine_facade import GameEngineFacade
+        self.engine = GameEngineFacade(self.state, era_config)
+        # 把 facade 子系统映射到 self（保兼容）
+        self._bind_facade()
+
         self.knowledge_base = KnowledgeBase(
             entries=era_config.get("knowledge", {}).get("entries", []),
             snippets=era_config.get("knowledge", {}).get("narrative_snippets", []),
@@ -916,6 +922,16 @@ class GameLoop:
                     messages.append(f"  [判定] {roll}{crit} vs DC{dice_res['dc']} → 失败。{outcome.get('fail', '')}")
 
         return messages
+
+    def _bind_facade(self) -> None:
+        """🆕 v1.7.38 把 facade 子系统映射到 self（保兼容）
+
+        这样 game_loop 既能用 self.engine.process_player_input() 统一接口，
+        也能用 self.event_bus / self.drama_manager / self.quest_system 直接访问。
+        """
+        self.event_bus = self.engine.event_bus
+        self.drama_manager = self.engine.drama_manager
+        self.quest_system = self.engine.quest_system
 
     def set_random_events_for_dm(self, triggered: list[dict]) -> None:
         """把随机事件结果注入到DM Agent的LLM state_ref

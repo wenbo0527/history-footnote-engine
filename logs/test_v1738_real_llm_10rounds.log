@@ -1,0 +1,60 @@
+============================================================
+v1.7.38 真实 LLM 跑 10 轮（facade + cache 验证）
+============================================================
+✅ LLM: minimax-anthropic
+
+=== GameEngineFacade 状态 ===
+  facade: GameEngineFacade
+  event_bus: EventBus
+  drama_manager: DramaManager
+  quest_system: QuestSystem
+
+--- Round 1: 我织了一匹湖绫，丝光莹润。 ---
+  cash=5.50, city=shengze, items=4
+  quest: completed=1, active=3
+  wiki cache: size=0, hit=0%
+  bus: pub=7, fail=0
+
+--- Round 2: 我去镇上牙行卖这匹湖绫。 ---
+  cash=12.20, city=shengze, items=6
+  quest: completed=2, active=2
+  wiki cache: size=0, hit=0%
+  bus: pub=10, fail=0
+
+--- Round 3: 我搭船去苏州阊门码头。 ---
+  cash=12.20, city=suzhou, items=8
+  quest: completed=3, active=1
+  wiki cache: size=0, hit=0%
+  bus: pub=12, fail=0
+
+--- Round 4: 在苏州，我找了家茶馆坐坐。 ---
+  cash=12.52, city=suzhou, items=8
+  quest: completed=3, active=1
+  wiki cache: size=0, hit=0%
+  bus: pub=12, fail=0
+
+--- Round 5: 我回家告诉沈氏这事。 ---
+  cash=13.72, city=suzhou, items=8
+  quest: completed=4, active=0
+  wiki cache: size=0, hit=0%
+  bus: pub=15, fail=0
+
+--- Round 6: 我算了算账。 ---
+  cash=8.42, city=suzhou, items=8
+  quest: completed=4, active=0
+  wiki cache: size=0, hit=0%
+  bus: pub=15, fail=0
+
+--- Round 7: 我又织了一匹湖绫。 ---
+  cash=11.42, city=songjiang, items=9
+  quest: completed=4, active=0
+  wiki cache: size=0, hit=0%
+  bus: pub=16, fail=0
+
+--- Round 8: 我又去牙行卖第二匹。 ---
+  cash=13.42, city=songjiang, items=9
+  quest: completed=4, active=0
+  wiki cache: size=0, hit=0%
+  bus: pub=17, fail=0
+
+--- Round 9: 我又织了一匹湖绫。 ---
