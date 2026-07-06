@@ -119,10 +119,14 @@ class Intervention:
 class DramaManager:
     """戏剧管理器（监控 + 干预）"""
 
-    # 节奏阈值
-    TENSE_THRESHOLD = 0.7  # initiative_ratio > 0.7 = 紧张
-    RELAXED_THRESHOLD = 0.3  # initiative_ratio < 0.3 = 放松
+    # 🆕 v1.7.36 节奏阈值（调高，更宽容）
+    TENSE_THRESHOLD = 0.9  # initiative_ratio > 0.9 = 紧张（之前 0.7 太低）
+    RELAXED_THRESHOLD = 0.2  # initiative_ratio < 0.2 = 放松（之前 0.3）
     NPC_REINTRO_DISTANCE = 8  # NPC 8 轮没出现 → 重新引入
+    # 🆕 v1.7.36 cooldown：同一类型干预最少间隔 3 轮
+    INTERVENTION_COOLDOWN = 3
+    # 🆕 v1.7.36 任务执行模式（连续 SELL/CRAFT/TRAVEL 不算 "紧张"）
+    WORK_PATTERN_VERBS = {"CRAFT", "SELL", "BUY", "PAY", "BORROW", "REPAY"}
 
     def __init__(self, state: GameState, config: dict | None = None):
         self.state = state
@@ -189,8 +193,17 @@ class DramaManager:
         return interventions
 
     def _evaluate_pace(self) -> Optional[Intervention]:
-        """节奏评估"""
+        """节奏评估（v1.7.36 优化：cooldown + 任务模式判定）"""
         ir = self.player_model.initiative_ratio
+        # 🆕 优化 1：cooldown（同一类型干预最少间隔 3 轮）
+        if self._in_cooldown(InterventionType.DRAMA_PAUSE):
+            return None
+        if self._in_cooldown(InterventionType.DRAMA_INTRODUCE):
+            return None
+        # 🆕 优化 2：任务执行模式不触发"紧张"
+        # 如果最近 5 轮都是 WORK_PATTERN（织/卖/付/借等任务）
+        if self._is_work_pattern():
+            return None
         if ir > self.TENSE_THRESHOLD:
             return Intervention(
                 type=InterventionType.DRAMA_PAUSE,
@@ -208,6 +221,24 @@ class DramaManager:
                 payload={"pace": "relaxed", "ir": ir},
             )
         return None
+
+    def _in_cooldown(self, intervention_type: str) -> bool:
+        """检查某种干预是否在 cooldown 中"""
+        for iv in reversed(self.intervention_history):
+            if iv["type"] == intervention_type:
+                round_dist = self.state.round_number - iv["round"]
+                if round_dist < self.INTERVENTION_COOLDOWN:
+                    return True
+                break
+        return False
+
+    def _is_work_pattern(self) -> bool:
+        """检查最近 4 轮是否都是任务执行模式（织/卖/付等）"""
+        recent = list(self.player_model.recent_actions)[-4:]
+        if len(recent) < 3:
+            return False
+        work_count = sum(1 for a in recent if a.get("verb") in self.WORK_PATTERN_VERBS)
+        return work_count >= 3  # 4 个中 3 个是任务执行 → 不是紧张，是任务循环
 
     def _evaluate_balance(self) -> Optional[Intervention]:
         """NPC 均衡评估"""

@@ -1,0 +1,119 @@
+============================================================
+v1.7.36 真实 LLM 跑 10 轮（优化验证）
+============================================================
+✅ LLM: minimax-anthropic
+
+--- Round 1 ---
+  input: 我织了一匹湖绫，丝光莹润。
+  cash=5.50, debt=1.00, city=shengze
+  items=2, completed=1
+  bus: pub=7 fail=0
+  drama: ir=100%, focus=CRAFT, Interventions_total=1
+  最新干预: Round 1 drama_pause
+
+--- Round 2 ---
+  input: 我去镇上牙行卖这匹湖绫。
+  cash=6.20, debt=1.00, city=shengze
+  items=6, completed=2
+  bus: pub=10 fail=0
+  drama: ir=100%, focus=SELL, Interventions_total=1
+  最新干预: Round 1 drama_pause
+
+--- Round 3 ---
+  input: 我又织了一匹湖绫，纬线均匀。
+  cash=10.70, debt=1.00, city=shengze
+  items=7, completed=2
+  bus: pub=11 fail=0
+  drama: ir=100%, focus=CRAFT, Interventions_total=1
+  最新干预: Round 1 drama_pause
+
+--- Round 4 ---
+  input: 我又去牙行卖第二匹。
+  cash=17.85, debt=0.00, city=suzhou
+  items=7, completed=2
+  bus: pub=12 fail=0
+  drama: ir=100%, focus=SELL, Interventions_total=1
+  最新干预: Round 1 drama_pause
+
+--- Round 5 ---
+  input: 我搭船去苏州阊门码头。
+  cash=17.86, debt=0.00, city=suzhou
+  items=8, completed=3
+  bus: pub=14 fail=0
+  drama: ir=100%, focus=TRAVEL, Interventions_total=1
+  最新干预: Round 1 drama_pause
+
+--- Round 6 ---
+  input: 在苏州，我找了家茶馆坐坐。
+  cash=17.86, debt=0.00, city=songjiang
+  items=8, completed=3
+  bus: pub=14 fail=0
+  drama: ir=100%, focus=MEET, Interventions_total=1
+  最新干预: Round 1 drama_pause
+
+--- Round 7 ---
+  input: 我回家告诉沈氏这事。
+  cash=17.86, debt=0.00, city=shengze
+  items=10, completed=4
+  bus: pub=18 fail=0
+  drama: ir=100%, focus=MEET, Interventions_total=2
+  最新干预: Round 5 drama_pause
+
+--- Round 8 ---
+  input: 我算了算账。
+  cash=17.86, debt=0.00, city=shengze
+  items=10, completed=4
+  bus: pub=18 fail=0
+  drama: ir=100%, focus=IDLE, Interventions_total=2
+  最新干预: Round 5 drama_pause
+
+--- Round 9 ---
+  input: 我又织了一匹湖绫。
+  cash=22.86, debt=0.00, city=shengze
+  items=11, completed=4
+  bus: pub=19 fail=0
+  drama: ir=80%, focus=CRAFT, Interventions_total=2
+  最新干预: Round 5 drama_pause
+
+--- Round 10 ---
+  input: 我又去牙行卖第三匹。
+  cash=28.04, debt=0.00, city=shengze
+  items=11, completed=4
+  bus: pub=20 fail=0
+  drama: ir=80%, focus=SELL, Interventions_total=2
+  最新干预: Round 5 drama_pause
+
+============================================================
+📊 v1.7.36 优化效果评估
+============================================================
+
+[1] DramaManager 干预次数对比
+  v1.7.35 (10 轮): 10 次 drama_pause
+  v1.7.36 (10 轮): 2 次
+  减少: 8 次 (80%)
+
+[2] QuestSystem 完成度
+  v1.7.35: 4/4 (100%)
+  v1.7.36: 4/4
+
+[3] EventBus 事件流
+  总发布: 20
+  总处理: 40
+  失败: 0
+
+[4] 财务
+  cash: 5.00 → 28.04
+  debt: 1.00 → 0.00
+
+[5] 耗时
+  v1.7.35: 434.1s
+  v1.7.36: 258.1s
+
+[6] Prompt 修复验证
+  drama_hint 在 prompt: True
+  action_context 在 prompt: True
+  calendar_events 在 prompt: True
+  全部齐全: True
+  DramaManager threshold 0.9: True
+  cooldown: True
+  work pattern 跳过: True
