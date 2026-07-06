@@ -1325,7 +1325,520 @@
           "narrative_anchor": "秦淮河"
         }
       }
-    }
+    },
+    "economy": {
+      "price_anchor": {
+        "rice_per_shi": "0.6-0.8两（丰年0.5，灾年2-3）",
+        "silk_per_pi": "3-5两（上等），1-2两（普通）",
+        "cotton_per_pi": "0.3-0.5两",
+        "weaver_daily_wage": "0.03-0.05两（30-50文）",
+        "loom_price": "3-5两",
+        "mulberry_leaves_per_dan": "0.03-0.1两（正常），0.3两（缺叶年）",
+        "servant_buyout": "5-10两",
+        "small_house_in_county": "30-50两",
+        "county_magistrate_annual_salary": "27两（正七品法定）",
+        "key_exchange": "1两 ≈ 1织工1月工钱；1匹上等绸 ≈ 1织工3-5月；1张织机 ≈ 1织工半年"
+      },
+      "cost_model": {
+        "silk_cost_per_pi": "约0.5两原料+自织",
+        "silk_revenue_per_pi": "2-3两（牙行收购价）",
+        "silk_profit_per_pi": "1.5-2两（含自己劳动）",
+        "monthly_output_small": "4-8匹（1-2张织机）",
+        "monthly_income_normal": "6-16两",
+        "monthly_income_crisis": "2-5两",
+        "survival_line": "月入3两以下 → 吃紧",
+        "crisis_line": "月入1两以下 → 借债/卖机",
+        "threshold_tax": "税负增加1两/月 → 温饱→吃紧"
+      },
+      "silver_inflow": "高/中/低（与行情周期联动）",
+      "tax_specifics": {
+        "yitiaobianfa": "所有赋税折银缴纳（万历九年部分摊入田亩）",
+        "normal_tax_rate": "约10%（正税+杂派）",
+        "zaozhijia_tax": "每张织机纳银3钱（万历二十九年加征）",
+        "chaoguan_rate": "三十税一（法定），实际可逃税90%（行贿后）"
+      }
+    },
+    "bureaucracy": {
+      "local_hierarchy": {
+        "lijia": "里长、甲首、老人——征税、调解、摊派",
+        "county_clerks": "书吏、皂隶、禁子——具体办事、传唤",
+        "county_officials": "知县（正七品）、县丞（正八品）、主簿（正九品）",
+        "prefecture": "知府、推官——上诉、重审",
+        "weaving_eunuch": "织造太监——加征织造税，不受地方管辖（内监系统）",
+        "customs": "钞关主事（户部差遣）——过往货物收税"
+      },
+      "grease_cost": {
+        "lijia_favor": "0.5-1两（缓税、通融）",
+        "clerk_favor": "2-5两（免杂派、优先办事）",
+        "county_case": "10-30两（官司脱身）",
+        "customs_bribe": "货值3-5%（逃税90%）",
+        "eunuch_favor": "5-20两（暂免加征）",
+        "official_buy_unranked": "100-200两（典史、驿丞）",
+        "official_buy_9th_rank": "300-500两（主簿）"
+      },
+      "dispute_rules": {
+        "weaver_vs_broker": "里长调解→县衙，1-3月，2-10两",
+        "weaver_vs_merchant": "县衙起诉→知县判决，3-6月，5-20两",
+        "false_accusation": "即时收押，保释5-10两+官司10-30两",
+        "tax_resistance": "里长上报→县衙差役→可能升级；硬抗0两或倾家荡产"
+      },
+      "key_rule": "书吏是真正的办事人——知县三年一换，书吏世袭本地"
+    },
+    "triggers": [
+      {
+        "id": "trv.ship_stuck",
+        "category": "travel",
+        "name": "客船阻风",
+        "sources": [
+          "蒋兴哥重会珍珠衫"
+        ],
+        "cities": [
+          "suzhou",
+          "hangzhou",
+          "songjiang",
+          "nanjing"
+        ],
+        "trigger_condition": "player traveling by water + random wind event",
+        "dm_template": "船行了半日，天色忽然暗下来。船家探头看了看天，骂了一声'贼老天'，便开始收帆。你问怎么了，船家说：'客官有所不知，这水路到了这段，最怕起逆风。一刮就是三五日不停。'果然，风越刮越大，船身摇晃。",
+        "expected_events": []
+      },
+      {
+        "id": "trv.find_money",
+        "category": "travel",
+        "name": "途中拾遗",
+        "sources": [
+          "施润泽滩阙遇友"
+        ],
+        "cities": [
+          "shengze",
+          "suzhou"
+        ],
+        "trigger_condition": "player walking + low social credit",
+        "dm_template": "你从牙行出来，走了没几步，脚下踢到一个布包。捡起来掂了掂，沉甸甸的——打开一看，是几锭白银，少说也有五六两。你四下看看，街上人来人往，没人注意到你。",
+        "expected_events": [
+          "fam.relationship.self.+15",
+          "gen.ancestor.X.known"
+        ]
+      },
+      {
+        "id": "trv.robbed",
+        "category": "travel",
+        "name": "路遇盗贼",
+        "sources": [
+          "杨八老越国奇逢"
+        ],
+        "cities": [
+          "suzhou",
+          "hangzhou",
+          "nanjing"
+        ],
+        "trigger_condition": "player traveling by water + 5% chance per leg",
+        "dm_template": "船行至一段窄河道，两岸芦苇密得看不见天。忽然，前方水面冒出两条小船，船上人蒙着黑布，手里攥着明晃晃的刀。船家脸色大变，低声说：'别出声！'",
+        "expected_events": [
+          "inv.consume.silver",
+          "city.leave.X"
+        ]
+      },
+      {
+        "id": "trv.fake_death",
+        "category": "travel",
+        "name": "船家讹诈",
+        "sources": [
+          "恶船家计赚假尸银"
+        ],
+        "cities": [
+          "suzhou",
+          "hangzhou"
+        ],
+        "trigger_condition": "player traveling by water + 船家贪财判定",
+        "dm_template": "船行了一日，天黑时分，船家忽然在船尾惊叫起来。你赶过去一看，船尾的草席下面赫然躺着一具尸体。船家指着你说：'就是你这间舱的！'",
+        "expected_events": [
+          "gov.false_case"
+        ]
+      },
+      {
+        "id": "comm.broker_lowball",
+        "category": "commercial",
+        "name": "牙行压价",
+        "sources": [
+          "三言二拍"
+        ],
+        "cities": [
+          "shengze",
+          "suzhou",
+          "hangzhou"
+        ],
+        "trigger_condition": "player selling silk + 牙行判定",
+        "dm_template": "你把绸缎搬到牙行柜上，那经纪是个四十来岁的胖子，手指上套着三个金戒指。他拿起你的一匹绸，对着光照了照，皱着眉摇头：'这经线不匀，怕是新手织的？'你心里清楚这批货是上等货，可他报的价只有你预期的八成。",
+        "expected_events": [
+          "fin.sell_silk"
+        ]
+      },
+      {
+        "id": "comm.fake_goods",
+        "category": "commercial",
+        "name": "假货骗局",
+        "sources": [
+          "张应俞《杜骗新书》"
+        ],
+        "cities": [
+          "suzhou",
+          "nanjing"
+        ],
+        "trigger_condition": "player buying thread/silk + 骗子判定",
+        "dm_template": "一个面生的客商找到你，从包袱里取出一匹丝，在桌上展开。那丝光泽莹润，你忍不住伸手摸了摸——滑腻如水。客商说：'这是湖丝上品。'你正要答应，忽然注意到丝头处有一道极细的接痕……",
+        "expected_events": [
+          "fin.buy_thread",
+          "fin.lose_money"
+        ]
+      },
+      {
+        "id": "comm.partnership_trap",
+        "category": "commercial",
+        "name": "合伙坑人",
+        "sources": [
+          "金瓶梅（西门庆+乔大户）"
+        ],
+        "cities": [
+          "suzhou",
+          "nanjing"
+        ],
+        "trigger_condition": "player 资本 > 100两 + 外地商人找合伙",
+        "dm_template": "一个本地商人找到你，说想合伙做丝绸生意。他出五百两银子，你也出五百两，五五分账。听起来很公平。可他说：'进货的渠道我来找，铺面我来管，账目嘛……我那边有人。'你心里隐隐觉得不对——他管进货又管账。",
+        "expected_events": [
+          "fin.sell_silk",
+          "fin.borrow"
+        ]
+      },
+      {
+        "id": "comm.usury",
+        "category": "commercial",
+        "name": "高利贷",
+        "sources": [
+          "金瓶梅（西门庆五分利）"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "player cash < 1两 AND monthly_burn > 1两",
+        "dm_template": "你正为添织机的银子发愁，有人找上门来：'听说客官手头紧？我这有银子借，利息好商量。'你问多少，他竖起一只手：'五分。'你心里一算——五分利，借十两银子，一个月就要还五钱利息，一年就是六两！",
+        "expected_events": [
+          "fin.borrow",
+          "fin.debt_interest"
+        ]
+      },
+      {
+        "id": "gov.weaving_tax",
+        "category": "government",
+        "name": "织造加税",
+        "sources": [
+          "万历二十九年苏州织工抗税"
+        ],
+        "cities": [
+          "suzhou"
+        ],
+        "trigger_condition": "player in suzhou AND current_date.year >= 1587",
+        "dm_template": "你正在织机前忙活，邻居老张急匆匆跑来：'听说了吗？织造局要加税了！每张织机纳银三钱，每匹绸缎还要再加！'你心里一沉——你家里两张织机，加上绸缎税，一年要多出好几两银子。",
+        "expected_events": [
+          "fin.pay_tax"
+        ]
+      },
+      {
+        "id": "gov.customs",
+        "category": "government",
+        "name": "钞关抽税",
+        "sources": [
+          "金瓶梅（临清钞关）"
+        ],
+        "cities": [
+          "suzhou",
+          "hangzhou",
+          "songjiang",
+          "nanjing"
+        ],
+        "trigger_condition": "player transporting goods by water + 钞关位置",
+        "dm_template": "你的货船到了钞关，关吏上船来查验。他翻了翻你的货，面无表情地说：'按规矩，三十税一。'你心里一算——这批货值五百两，得交十六七两税银。关吏又补了一句：'不过嘛……要是有人打个招呼，也不是不能通融。'",
+        "expected_events": [
+          "fin.pay_tax",
+          "gov.bribe_official"
+        ]
+      },
+      {
+        "id": "gov.false_case",
+        "category": "government",
+        "name": "官司缠身",
+        "sources": [
+          "蒋兴哥重会珍珠衫"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "random 1% per turn + player not in 'safe' city",
+        "dm_template": "你走在街上，忽然一个老妇人倒在你脚边，口吐白沫。还没等你反应过来，旁边冲出一个汉子，揪住你的衣领：'你推了我娘！'围观的人越聚越多。",
+        "expected_events": [
+          "gov.bribe_official",
+          "fin.pay_tax"
+        ]
+      },
+      {
+        "id": "gov.bribe_official",
+        "category": "government",
+        "name": "贿赂开路",
+        "sources": [
+          "金瓶梅（西门庆买通李邦彦）"
+        ],
+        "cities": [
+          "nanjing",
+          "suzhou"
+        ],
+        "trigger_condition": "player in conflict with government + cash > 50两",
+        "dm_template": "你卷入了一场官司，对方是本地有头有脸的人物。有人找到你：'这事不难办，只要打点一下……'他伸出五根手指，'五十两，我帮你把事情摆平。'你犹豫了——五十两是你半年的收入。",
+        "expected_events": [
+          "fin.gift_out"
+        ]
+      },
+      {
+        "id": "obj.token_exposed",
+        "category": "object",
+        "name": "信物暴露",
+        "sources": [
+          "蒋兴哥重会珍珠衫"
+        ],
+        "cities": [
+          "shengze"
+        ],
+        "trigger_condition": "player has '信物' in inventory + family member present",
+        "dm_template": "你在茶馆里遇到一个外地商人，聊得正欢。他喝了几杯酒，脱了外衣，露出里面一件丝绸衣裳——你一眼认出，那是你上个月卖出去的那匹绸缎织成的。",
+        "expected_events": [
+          "fam.relationship.X.-20"
+        ]
+      },
+      {
+        "id": "obj.gold_bracelet",
+        "category": "object",
+        "name": "金镯失窃",
+        "sources": [
+          "金瓶梅"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "player has 金银细软 + family member/friend present",
+        "dm_template": "你收到一笔货款，里面有几个金镯子。你随手放在柜上，第二天发现少了一个。你问家里所有人，没人承认。",
+        "expected_events": [
+          "inv.lose_item"
+        ]
+      },
+      {
+        "id": "obj.daily_grudge",
+        "category": "object",
+        "name": "荷花饼争端",
+        "sources": [
+          "金瓶梅（妻妾争宠）"
+        ],
+        "cities": [
+          "shengze"
+        ],
+        "trigger_condition": "player married + bought gift for non-spouse",
+        "dm_template": "你从集市上买了一匹好绸回来，顺手送给了隔壁帮忙照看孩子的王婶。你妻子知道了，脸色一沉：'那匹绸我看了好几天了，你倒大方，送给外人。'",
+        "expected_events": [
+          "fam.relationship.fm_wife.-15"
+        ]
+      },
+      {
+        "id": "relig.nun_trap",
+        "category": "religious",
+        "name": "尼姑骗入庵",
+        "sources": [
+          "二刻拍案惊奇"
+        ],
+        "cities": [
+          "hangzhou",
+          "nanjing"
+        ],
+        "trigger_condition": "player_gender=female AND no children + 尼姑判定",
+        "dm_template": "你独自在家，一个尼姑敲门化缘。她看起来慈眉善目，说话轻声细语：'女施主，贫尼庵中供奉白衣观音，最是灵验。若想求子，念一部《白衣经》便好。'你本不想理会，可你成婚两年，肚子始终没动静……",
+        "expected_events": []
+      },
+      {
+        "id": "relig.monk_call",
+        "category": "religious",
+        "name": "和尚点化",
+        "sources": [
+          "金瓶梅（普净点化孝哥）"
+        ],
+        "cities": [
+          "hangzhou",
+          "nanjing"
+        ],
+        "trigger_condition": "player in temple + 0.5% chance per turn",
+        "dm_template": "你在寺庙借宿，一个老和尚看了你一眼，忽然说：'施主，你眉间有劫气。'你问他什么意思，他闭目不答。临走时，他留下一句话：'若想化解，不如在此出家。'",
+        "expected_events": [
+          "city.arrive.X"
+        ]
+      },
+      {
+        "id": "relig.omen",
+        "category": "religious",
+        "name": "谶语应验",
+        "sources": [
+          "明清小说常见"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "rare event (0.1% per turn) + DM discretion",
+        "dm_template": "你做了一个奇怪的梦：梦里你站在一座桥上，桥下流水浑浊，一条大鱼跃出水面，嘴里衔着一匹白绸。你伸手去接，白绸却化成了灰。你醒来后心神不宁。",
+        "expected_events": []
+      },
+      {
+        "id": "relig.temple_fair",
+        "category": "religious",
+        "name": "庙会奇遇",
+        "sources": [
+          "明代庙会"
+        ],
+        "cities": [
+          "hangzhou",
+          "nanjing"
+        ],
+        "trigger_condition": "player in city + 庙会日期",
+        "dm_template": "今天是城隍庙会，街上人山人海。你挤在人群里，闻到糖炒栗子的甜香。一个算命先生拉住你：'客官，算一卦？'你摆手要走，他却说了一句让你停住脚步的话。",
+        "expected_events": [
+          "reln.broker_wife"
+        ]
+      },
+      {
+        "id": "reln.broker_wife",
+        "category": "relationship",
+        "name": "牙婆撺掇",
+        "sources": [
+          "蒋兴哥重会珍珠衫（薛氏）"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "player_gender=female AND spouse absent",
+        "dm_template": "一个卖花粉的婆子常来你门前经过，每次都笑嘻嘻地打招呼。今天她多聊了几句：'大娘子一个人在家，不闷吗？'又压低声音：'隔壁新来了个客商，长得一表人才。'",
+        "expected_events": []
+      },
+      {
+        "id": "reln.hanger_on",
+        "category": "relationship",
+        "name": "帮闲引路",
+        "sources": [
+          "金瓶梅（应伯爵）"
+        ],
+        "cities": [
+          "suzhou",
+          "nanjing"
+        ],
+        "trigger_condition": "player new to city + cash > 10两",
+        "dm_template": "你刚到苏州，在茶馆里坐着发愁——不认识人，不知道去哪卖货。一个瘦子凑过来，自来熟地坐下：'客官是外地来的吧？巧了，我认识几家牙行的经纪，保你卖个好价。'",
+        "expected_events": [
+          "fin.sell_silk"
+        ]
+      },
+      {
+        "id": "reln.kindness_repaid",
+        "category": "relationship",
+        "name": "一饭之恩",
+        "sources": [
+          "乌将军一饭必酬"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "player 救助陌生人 + random",
+        "dm_template": "你在路上遇到一个衣衫褴褛的汉子，蹲在路边，看起来好几天没吃饭了。他抬头看了你一眼，目光锐利，不像普通乞丐。你犹豫了一下，把随身带的干粮分了他一半。",
+        "expected_events": []
+      },
+      {
+        "id": "reln.guild_hall",
+        "category": "relationship",
+        "name": "同乡会馆",
+        "sources": [
+          "山塘街会馆群"
+        ],
+        "cities": [
+          "suzhou"
+        ],
+        "trigger_condition": "player外地人 + 在苏州 + 想做生意",
+        "dm_template": "你到了苏州，人生地不熟。有人告诉你：'山塘街上有你们老家的人开的会馆，去那里问问。'你找到了会馆，门口挂着家乡的灯笼，看门人拦住了你：'你谁？哪村的？谁引荐的？'",
+        "expected_events": [
+          "reln.hanger_on"
+        ]
+      },
+      {
+        "id": "dis.plague",
+        "category": "disaster",
+        "name": "瘟疫",
+        "sources": [
+          "万历年间江南大疫"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "rare (1% per season) + DM discretion",
+        "dm_template": "镇上开始有人发热，起初只是两三家，三天后半条街都病倒了。药铺门口排起了长队，可大夫说这病他也没见过。城门已经关了，出不去了。",
+        "expected_events": [
+          "fam.death.X",
+          "fam.health.X.sick"
+        ]
+      },
+      {
+        "id": "dis.fire",
+        "category": "disaster",
+        "name": "火灾",
+        "sources": [
+          "山塘街 1860 烧毁"
+        ],
+        "cities": [
+          "all"
+        ],
+        "trigger_condition": "rare (0.5% per season) + 玩家有织机/宅院",
+        "dm_template": "半夜，你被一阵嘈杂声惊醒。推窗一看，街那头火光冲天，浓烟滚滚。有人喊：'走水了！快跑！'你抓起最重要的东西就往外冲。",
+        "expected_events": [
+          "inv.consume.X",
+          "prop.lost.X"
+        ]
+      },
+      {
+        "id": "dis.flood",
+        "category": "disaster",
+        "name": "水灾",
+        "sources": [
+          "万历江南水灾"
+        ],
+        "cities": [
+          "suzhou",
+          "hangzhou",
+          "songjiang"
+        ],
+        "trigger_condition": "season=夏 + random + era-specific",
+        "dm_template": "连下了五天大雨，运河水涨得比码头还高。船家说：'这水路走不了了，至少得等十天。'你的货在船上，一天拖一天就是一天的利息。",
+        "expected_events": [
+          "inv.consume.silk",
+          "city.arrive.shengze"
+        ]
+      },
+      {
+        "id": "dis.little_ice_age",
+        "category": "disaster",
+        "name": "小冰期",
+        "sources": [
+          "万历气候异常"
+        ],
+        "cities": [
+          "shengze"
+        ],
+        "trigger_condition": "year >= 1580 AND 春/秋季节",
+        "dm_template": "今年春天格外冷，都三月了桑树还没发芽。你蹲在桑树下看了又看，枝条光秃秃的。蚕房里的蚕宝宝已经孵出来了，可没有桑叶喂它们。",
+        "expected_events": [
+          "fin.buy_thread"
+        ]
+      }
+    ]
   },
   "mechanics": {
     "variables": [

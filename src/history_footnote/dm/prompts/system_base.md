@@ -311,17 +311,46 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - 城市用 id（"suzhou"，不要"苏州"）
 - 如果本回合无结构化变更 → 输出 `<events/>`（空块，不要省略）
 
-**6 类事件 id 前缀**：
+**13 类事件 id 前缀**（6 类原 + 7 类新）：
 - `fin.*` 财务（sell_silk/buy_thread/pay_tax/borrow/repay/...）
 - `city.*` 城市（arrive.{city_id} / leave.{city_id}）
 - `fam.*` 家人（meet / health / death / relationship）
 - `gen.*` 谱系（ancestor.known / ancestor.location）
 - `prop.*` 财产（buy / sell / rent_change）
 - `inv.*` 库存（buy / sell / transfer / consume）
+- `trv.*` 旅途意外（ship_stuck/find_money/robbed/fake_death）
+- `comm.*` 商业陷阱（broker_lowball/fake_goods/partnership_trap/usury）
+- `gov.*` 官府权力（weaving_tax/customs/false_case/bribe_official）
+- `obj.*` 物象触发（token_exposed/gold_bracelet/daily_grudge）
+- `relig.*` 宗教超自然（nun_trap/monk_call/omen/temple_fair）
+- `reln.*` 人际网络（broker_wife/hanger_on/kindness_repaid/guild_hall）
+- `dis.*` 灾祸天命（plague/fire/flood/little_ice_age）
 
+**触发模式库**：参考 [TriggerPatterns.md](../../../../docs/architecture/TriggerPatterns.md)（24 个明清小说情节模式）
 **为什么必须输出**：后端用 event_parser 解析 events 块 → 写入 GameState 持久化
 （cash / family_members / current_city / city_properties / inventory），
 玩家在 sidebar 看到的就是这些数据。LLM 自由写 narrative 不会自动同步。
+
+## 🆕 v1.7.30 经济/官僚数值锚点
+
+游戏内所有价格、打点成本、纠纷规则**严格按 era.json `world.economy` 和 `world.bureaucracy` 节点**：
+
+- 1 两银子 ≈ 1 织工 1 月工钱（30-50 文/日）
+- 1 匹上等丝绸 ≈ 3-5 两
+- 1 张织机 ≈ 3-5 两
+- 1 县城小院 ≈ 30-50 两
+- 催税缓缴打点里长：0.5-1 两
+- 免杂派打点书吏：2-5 两
+- 官司脱身：10-30 两
+- 织造太监免征：5-20 两
+- 织户 vs 牙行纠纷：里长调解→县衙，1-3 月，2-10 两
+
+**生存线**：月入 < 3 两 → 吃紧
+**危机线**：月入 < 1 两 → 借债/卖机
+**月末结算**：每月自动扣 1.2 两基础开销（settlement.py）
+
+**DM 必须严格按此数值**——玩家记下的数字必须与 narrative 描述一致。
+玩家问"这要花多少"时，DM 答的数字必须落入上述区间。
 
 ## 🆕 v1.7.30 城市感知（玩家当前所在城市）
 
