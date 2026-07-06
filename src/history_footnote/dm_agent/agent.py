@@ -1097,6 +1097,8 @@ class DMAgent(MockHelpersMixin):
             "insight_candidates": self._get_insights_for_mock(),
             # 🆕 v1.7.36 DramaManager 干预 hint（保留兼容，实际从 bind_state_ref slot 读取）
             "drama_hint": "",
+            # 🆕 v1.7.37 Wiki 检索 hint（按需注入）
+            "wiki_hint": "",
             # 🐛 Issue #9 修复：从 GameState 同步 v1.4.0+ 8 SKILL 字段
             "round_number": self.state.round_number,
             "action_points_current": self.state.action_points_current,

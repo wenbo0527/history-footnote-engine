@@ -312,6 +312,19 @@ class GameLoop:
                 obj=player_action.object,
                 is_initiative=player_action.verb not in ("IDLE",),
             )
+            # 🆕 v1.7.37 Wiki 检索（按 action + target + city）
+            try:
+                from history_footnote.wiki_tools import search_wiki_by_action
+                wiki_result = search_wiki_by_action(
+                    action_verb=player_action.verb,
+                    target=player_action.target or "",
+                    city=self.state.current_city or "",
+                    top_k=2,
+                )
+                if wiki_result.get("fragments"):
+                    self.set_wiki_hint_for_dm(wiki_result["fragments"])
+            except Exception as e:
+                logger.debug(f"Wiki 检索失败: {e}")
         else:
             # 失败（UNKNOWN / 现金不足等）→ 让 LLM 自由发挥
             self.set_action_context_for_dm(player_action, action_result, failed=True)
@@ -925,6 +938,24 @@ class GameLoop:
         if hasattr(self.dm.llm, "_state_ref_slot_ref"):
             current_ref = self.dm.llm._state_ref_slot_ref[0]
             current_ref["calendar_events"] = calendar_text
+
+    def set_wiki_hint_for_dm(self, fragments: list) -> None:
+        """🆕 v1.7.37 把 Wiki 检索片段注入到 DM LLM state_ref
+
+        DM Agent 可根据需要主动调用 wiki_search 工具
+        """
+        if not fragments:
+            return
+        if hasattr(self.dm.llm, "_state_ref_slot_ref"):
+            current_ref = self.dm.llm._state_ref_slot_ref[0]
+            # 限制长度（避免 prompt 爆炸）
+            content_blocks = []
+            for f in fragments[:3]:  # 最多 3 段
+                c = f.get("content", "")
+                if len(c) > 800:
+                    c = c[:800] + "..."
+                content_blocks.append(f"【{f.get('title', '')}】\n{c}")
+            current_ref["wiki_hint"] = "\n\n".join(content_blocks)
 
     def set_drama_hint_for_dm(self, hint: str) -> None:
         """🆕 v1.7.35 把 DramaManager 干预 hint 注入到 DM LLM state_ref"""
