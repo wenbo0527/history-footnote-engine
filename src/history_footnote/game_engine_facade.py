@@ -402,6 +402,45 @@ class GameEngineFacade:
             self._perf["process_calls"] += 1
             self._perf["process_total_ms"] += ms
 
+    def get_recent_events_for_display(self, limit: int = 5) -> list:
+        """🆕 v1.7.43 获取最近事件（用于 narrative 后显示）
+
+        玩家可看到：
+        - 任务完成（"✅ 初次织绸"）
+        - 大事件触发（"⚡ 葛贤抗税"）
+        - Drama 干预（"🎲 节奏调整"）
+
+        Returns:
+            [{"type": "quest_completed", "name": "初次织绸", "round": 5}, ...]
+        """
+        events = []
+        # 1. 任务完成
+        summary = self.quest_system.get_progress_summary()
+        for q in summary.get("completed", []):
+            events.append({
+                "type": "quest_completed",
+                "name": q.get("name", ""),
+                "round": self.state.round_number,
+                "icon": "✅",
+            })
+        # 2. Drama 干预
+        for iv in self.drama_manager.intervention_history[-limit:]:
+            events.append({
+                "type": "drama_intervention",
+                "name": iv.get("type", ""),
+                "round": iv.get("round", 0),
+                "icon": "🎲",
+            })
+        # 3. 触发大事件
+        for ev in self.state.triggered_events[-limit:]:
+            events.append({
+                "type": "major_event",
+                "name": ev,
+                "round": self.state.round_number,
+                "icon": "⚡",
+            })
+        return events[-limit:]
+
     def get_extended_perf_stats(self) -> dict:
         """🆕 v1.7.41 扩展性能统计
 

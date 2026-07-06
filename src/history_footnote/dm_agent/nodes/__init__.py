@@ -7,6 +7,8 @@ from .nodes import (
     extract_narrative_node,
     state_confirmation_node,
     make_all_dm_nodes,
+    should_skip_narrative_fusion,
+    smart_narrative_fusion_node,
 )
 
 __all__ = [
@@ -17,4 +19,6 @@ __all__ = [
     "extract_narrative_node",
     "state_confirmation_node",
     "make_all_dm_nodes",
+    "should_skip_narrative_fusion",
+    "smart_narrative_fusion_node",
 ]

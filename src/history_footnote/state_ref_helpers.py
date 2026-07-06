@@ -110,6 +110,35 @@ class DMStateRefHelpers:
             return {}
         return dict(state_ref)
 
+    def build_unified_context(self) -> str:
+        """🆕 v1.7.43 合并所有 hint 为 1 个 unified context
+
+        替代 4 个独立 hint 字段（calendar_events / wiki_hint / drama_hint / action_context）。
+        LLM 一次看到所有 context，无需分别处理。
+
+        Returns:
+            unified context 字符串
+        """
+        state_ref = self._get_state_ref() or {}
+        parts = []
+        # 1. 玩家动作 context（最重要）
+        action_ctx = state_ref.get("action_context")
+        if action_ctx:
+            parts.append(f"【玩家动作】\n{action_ctx.get('instruction', '')}")
+        # 2. Wiki 检索片段
+        wiki = state_ref.get("wiki_hint")
+        if wiki:
+            parts.append(f"【历史参考】\n{wiki}")
+        # 3. 戏剧干预
+        drama = state_ref.get("drama_hint")
+        if drama:
+            parts.append(f"【节奏干预】\n{drama}")
+        # 4. 历法大事件
+        cal = state_ref.get("calendar_events")
+        if cal:
+            parts.append(f"【时代背景】\n{cal}")
+        return "\n\n".join(parts)
+
     def clear_all_slots(self) -> None:
         """清空所有 slot（测试用）"""
         state_ref = self._get_state_ref()
