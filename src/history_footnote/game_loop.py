@@ -272,10 +272,23 @@ class GameLoop:
             for msg in effect_messages:
                 print(msg)
 
+        # === 🆕 v1.7.33 步骤4.6：action_resolver 解析 + 应用 ===
+        # 游戏引擎确定性处理所有结构化数据
+        # LLM 不再需要输出 events 块
+        from history_footnote.action_resolver import (
+            parse_player_input, resolve_action, apply_action_result
+        )
+        player_action = parse_player_input(player_input)
+        action_result = resolve_action(self.state, player_action, self.era_config)
+        if action_result.success:
+            apply_action_result(self.state, action_result)
+            # 把 PlayerAction + narrative_hints 注入 DM context
+            self.set_action_context_for_dm(player_action, action_result)
+        else:
+            # 失败（UNKNOWN / 现金不足等）→ 让 LLM 自由发挥
+            self.set_action_context_for_dm(player_action, action_result, failed=True)
+
         # === 步骤5：DM Agent生成叙事 ===
-        # 处理行动边界：如果是越界行动，先告知DM
-        if not action_check.get("allowed", True):
-            print(f"\n[系统] {action_check.get('reason', '行动被拒绝')}")
 
         # 🆕 v1.6+ 并发支持：LLM 调用受 LLM_THROTTLE 保护
         from history_footnote.concurrency import LLM_THROTTLE
@@ -392,6 +405,11 @@ class GameLoop:
             dm_response.get("_raw_llm_output")
             or dm_response.get("narrative", "")
         )
+        # 🆕 v1.7.30 P4 真实流程验证：如果 raw_output 不含 <events>，尝试从 dm.llm 拿
+        if not raw_llm_output or "<events>" not in raw_llm_output:
+            llm_obj = getattr(self.dm, "llm", None)
+            if llm_obj and hasattr(llm_obj, "get_raw_output"):
+                raw_llm_output = llm_obj.get_raw_output() or raw_llm_output
         event_result = process_llm_output(
             self.state, raw_llm_output, logger=logger
         )
@@ -864,6 +882,39 @@ class GameLoop:
         if hasattr(self.dm.llm, "_state_ref_slot_ref"):
             current_ref = self.dm.llm._state_ref_slot_ref[0]
             current_ref["calendar_events"] = calendar_text
+
+    def set_action_context_for_dm(self, player_action, action_result, failed: bool = False) -> None:
+        """🆕 v1.7.33 把 PlayerAction + ActionResult 注入到 DM LLM state_ref
+
+        LLM 用这些 context 生成 narrative（不再需要输出 events 块）
+
+        Args:
+            player_action: parse_player_input 的输出
+            action_result: resolve_action 的输出
+            failed: 是否失败（现金不足/UNKNOWN）
+        """
+        if not hasattr(self.dm.llm, "_state_ref_slot_ref"):
+            return
+        current_ref = self.dm.llm._state_ref_slot_ref[0]
+        current_ref["action_context"] = {
+            "raw_text": player_action.raw_text,
+            "verb": player_action.verb,
+            "object": player_action.object,
+            "amount": player_action.amount,
+            "target": player_action.target,
+            "location": player_action.location,
+            "hint": player_action.hint,
+            "state_changes": action_result.state_changes if action_result else {},
+            "events_triggered": [e.get("id", "") for e in (action_result.events if action_result else [])],
+            "narrative_hints": action_result.narrative_hints if action_result else [],
+            "failed": failed,
+            "error_msg": action_result.error_msg if action_result else "",
+            "instruction": (
+                "游戏引擎已处理以下结构化数据。你只需要把以下状态变化包装成 narrative："
+                + "\n".join([f"  - {e.get('id', '')}: {e.get('note', '')}" for e in (action_result.events if action_result else [])])
+                + "\n不需要输出 <events> 块。"
+            ),
+        }
 
     # === 身份切换机制 ===
 

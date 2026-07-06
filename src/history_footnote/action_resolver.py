@@ -290,6 +290,39 @@ PRICES = {
 }
 
 
+def _get_price(config: dict | None, object_id: str, default: float = 0.5) -> float:
+    """🆕 v1.7.33 从 era_config 读价格
+
+    era.json world.economy.price_anchor 节点：
+    {
+      "silk_bolt": 0.5-0.8,  # 或具体值
+      "rice_per_dan": 0.5-0.8,  # 范围
+      "thread": ...
+    }
+    """
+    if not config:
+        return default
+    price_anchor = (
+        config.get("world", {}).get("economy", {}).get("price_anchor", {})
+    )
+    # 优先：完全匹配
+    if object_id in price_anchor:
+        val = price_anchor[object_id]
+        if isinstance(val, (int, float)):
+            return float(val)
+        if isinstance(val, str) and "-" in val:
+            # 范围 "0.5-0.8" → 取中位
+            try:
+                parts = val.split("-")
+                return (float(parts[0]) + float(parts[1])) / 2
+            except (ValueError, IndexError):
+                pass
+    # 次选：相同样式
+    if "silk_bolt" in price_anchor and "绫" in str(object_id) or "绸" in str(object_id):
+        return _get_price(config, "silk_bolt", default=default)
+    return default
+
+
 def resolve_action(state, action: PlayerAction, config: dict = None) -> ActionResult:
     """把 PlayerAction 转成状态变化 + 事件
 
@@ -318,7 +351,9 @@ def resolve_action(state, action: PlayerAction, config: dict = None) -> ActionRe
 
     if action.verb == "SELL":
         # 卖：cash + amount（amount 是银两）
-        amount = action.amount if action.amount > 0 else PRICES.get(action.object, 0.5)
+        # 🆕 v1.7.33 从 era_config 读价格（缺省用 PRICES）
+        price = _get_price(config, action.object, default=PRICES.get(action.object, 0.5))
+        amount = action.amount if action.amount > 0 else price
         result.state_changes["cash_delta"] = amount
         result.events.append({
             "id": "fin.sell_silk",
@@ -453,20 +488,21 @@ def resolve_action(state, action: PlayerAction, config: dict = None) -> ActionRe
 
 
 def apply_action_result(state, result: ActionResult):
-    """把 ActionResult 应用到 GameState（应用 state_changes + events）"""
+    """把 ActionResult 应用到 GameState（应用 state_changes + events）
+
+    🆕 v1.7.33 修复：fin.* 事件通过 apply_event() 内部调 apply_financial_change()
+    改 cash——所以我们这里不再单独改 cash_delta（避免双重计算）。
+    唯一直接改的 state_changes：current_city（city.* 事件也通过 apply_event 但保险起见）
+    """
     if not result.success:
         return
-    # 应用 state_changes
-    if "cash_delta" in result.state_changes:
-        state.cash = (state.cash or 0) + result.state_changes["cash_delta"]
-    if "debt_delta" in result.state_changes:
-        state.debt = (state.debt or 0) + result.state_changes["debt_delta"]
-    if "current_city" in result.state_changes:
-        state.current_city = result.state_changes["current_city"]
-    # 应用 events
+    # 应用 events（fin.* 内部会改 cash/debt/rice）
     for ev in result.events:
         from history_footnote.event_parser import apply_event
         apply_event(state, ev)
+    # current_city 是 city.* 事件产物（apply_event 也会改），这里保险起见再 set 一次
+    if "current_city" in result.state_changes:
+        state.current_city = result.state_changes["current_city"]
 
 
 # ============= 烟雾测试 =============

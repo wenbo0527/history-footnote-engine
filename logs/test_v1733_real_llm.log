@@ -1,0 +1,72 @@
+============================================================
+v1.7.33 真实 LLM 跑 6 轮（仅 narrative）
+============================================================
+✅ LLM: minimax-anthropic
+
+初始: cash=5.00, rice=5.0, debt=1.00
+
+--- Round 1 ---
+  input: 我织了一匹湖绫，丝光莹润。
+  parsed: verb=CRAFT, obj=silk_bolt, target=, amount=1.0
+  resolve: success=True, events=['discover.item'], state_changes={}
+  cash=4.60, debt=1.00, rice=5.0
+  discoveries: items=4, persons=0, places=0
+  triggered_events: 5 个
+  monthly_settle: 0 次
+  current_city: shengze
+
+--- Round 2 ---
+  input: 我去镇上牙行卖这匹湖绫。
+  parsed: verb=SELL, obj=silk_bolt, target=npc_broker, amount=0.0
+  resolve: success=True, events=['fin.sell_silk', 'discover.item'], state_changes={'cash_delta': 0.7}
+  cash=7.40, debt=1.00, rice=5.0
+  discoveries: items=7, persons=0, places=0
+  triggered_events: 5 个
+  monthly_settle: 0 次
+  current_city: shengze
+
+--- Round 3 ---
+  input: 我搭船去苏州阊门码头。
+  parsed: verb=TRAVEL, obj=, target=suzhou, amount=0.0
+  resolve: success=True, events=['city.arrive.suzhou'], state_changes={'current_city': 'suzhou'}
+  cash=7.40, debt=1.00, rice=5.0
+  discoveries: items=8, persons=0, places=0
+  triggered_events: 5 个
+  monthly_settle: 0 次
+  current_city: songjiang
+
+--- Round 4 ---
+  input: 在苏州，我找了家茶馆坐坐。
+  parsed: verb=MEET, obj=groceries, target=suzhou, amount=0.0
+  resolve: success=True, events=[], state_changes={}
+  cash=6.50, debt=1.00, rice=4.7
+  discoveries: items=8, persons=0, places=0
+  triggered_events: 5 个
+  monthly_settle: 1 次
+  current_city: suzhou
+
+--- Round 5 ---
+  input: 我回家告诉沈氏这事。
+  parsed: verb=MEET, obj=, target=fm_wife, amount=0.0
+  resolve: success=True, events=['discover.person', 'fam.meet.fm_wife'], state_changes={}
+  cash=6.50, debt=0.30, rice=4.7
+  discoveries: items=8, persons=2, places=0
+  triggered_events: 5 个
+  monthly_settle: 1 次
+  current_city: shengze
+
+--- Round 6 ---
+  input: 我算了算账。
+  parsed: verb=IDLE, obj=, target=, amount=0.0
+  resolve: success=True, events=[], state_changes={}
+  cash=6.50, debt=0.30, rice=4.7
+  discoveries: items=8, persons=2, places=0
+  triggered_events: 5 个
+  monthly_settle: 1 次
+  current_city: shengze
+
+总耗时: 150.3s
+
+=== v1.7.33 验证 ===
+  cash=6.50, debt=0.30, city=shengze
+  items=8, persons=2
