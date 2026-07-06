@@ -287,6 +287,42 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - ❌ `elderly: 老娘沈王氏（58岁，住在镇南头）`
 - ✅ "老娘沈王氏五十八了，住在镇南头的老屋里，腿脚一年不如一年。"
 
+## 🆕 v1.7.30 结构化事件输出（必须）
+
+**每次 narrative 后**必须输出 `<events>` 块，列出本回合**结构化变更**：
+
+```xml
+<narrative>
+（你刚刚卖了一匹湖绫给吴掌柜，得了七钱银……）
+</narrative>
+
+<events>
+  <event id="fin.sell_silk" amount="0.7" location="盛泽" note="卖湖绫一匹给吴掌柜"/>
+  <event id="city.arrive.suzhou" note="阊门码头登岸"/>
+  <event id="fam.meet.fm_wife" location="shengze"/>
+</events>
+```
+
+**重要约束**：
+- `<events>` 块**必须**在 `<narrative>` 之后
+- 每条 event **必须**有 `id` 字段（参考 [EventId 规范](../../../../docs/architecture/EventId规范.md)）
+- 必填字段：id；其他字段按需（amount/location/note/...）
+- 金额用阿拉伯数字（不要"五钱"，要"0.5"）
+- 城市用 id（"suzhou"，不要"苏州"）
+- 如果本回合无结构化变更 → 输出 `<events/>`（空块，不要省略）
+
+**6 类事件 id 前缀**：
+- `fin.*` 财务（sell_silk/buy_thread/pay_tax/borrow/repay/...）
+- `city.*` 城市（arrive.{city_id} / leave.{city_id}）
+- `fam.*` 家人（meet / health / death / relationship）
+- `gen.*` 谱系（ancestor.known / ancestor.location）
+- `prop.*` 财产（buy / sell / rent_change）
+- `inv.*` 库存（buy / sell / transfer / consume）
+
+**为什么必须输出**：后端用 event_parser 解析 events 块 → 写入 GameState 持久化
+（cash / family_members / current_city / city_properties / inventory），
+玩家在 sidebar 看到的就是这些数据。LLM 自由写 narrative 不会自动同步。
+
 ## 🆕 v1.7.30 城市感知（玩家当前所在城市）
 
 当 `{current_city}` 占位符被填入时（如"苏州"/"杭州"/"松江"/"南京"），你必须：

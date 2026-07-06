@@ -365,6 +365,43 @@ class GameLoop:
             event_summary,
         )
 
+        # 🆕 v1.7.30：event_parser 解析 LLM 输出中的 <events> 块 → 写入 GameState
+        # 替代旧的 LLM 自由写 financial_status 模式
+        from history_footnote.event_parser import process_llm_output
+        raw_llm_output = (
+            dm_response.get("_raw_llm_output")
+            or dm_response.get("narrative", "")
+        )
+        event_result = process_llm_output(
+            self.state, raw_llm_output, logger=logger
+        )
+        if event_result["events_applied"] > 0:
+            logger.info(
+                f"event_parser: {event_result['events_applied']} applied "
+                f"(fallback={event_result['fallback_used']})"
+            )
+
+        # 🆕 v1.7.30：月度结算（每 3 回合触发一次）
+        from history_footnote.settlement import (
+            should_settle, settle_monthly, mark_settled, format_settlement_narrative,
+        )
+        if should_settle(self.state):
+            settle_log = settle_monthly(self.state)
+            if settle_log:
+                settlement_text = format_settlement_narrative(settle_log)
+                # 把结算 narrative 附加到 state.narrative_history
+                self.state.narrative_history.append({
+                    "round": self.state.round_number,
+                    "narrative": settlement_text,
+                    "type": "monthly_settlement",
+                    "events": settle_log,
+                })
+                logger.info(
+                    f"月度结算（{len(settle_log)} 条）："
+                    f"cash={self.state.cash:.2f}, debt={self.state.debt:.2f}, rice={self.state.rice:.1f}"
+                )
+            mark_settled(self.state)
+
         # 🐛 v1.5.1 P1 Issue 5 修复：持久化 voice_options（供存档/前端复用）
         # 🆕 v1.6.9 P0 修复：当 LLM 把选项写进 narrative 而未通过 voice_options 返回时，
         # 自动从 narrative 文本提取"一、二、三"等内嵌选项
