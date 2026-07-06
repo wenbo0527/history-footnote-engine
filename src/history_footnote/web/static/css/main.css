@@ -1078,6 +1078,123 @@ body {
   }
 }
 
+/* ============================================================ */
+/* 🆕 v1.7.30 我的档案折叠区（6 区：财务/位置/家人/谱系/财产/库存） */
+/* ============================================================ */
+.sidebar-my-profile-btn {
+  display: none;  /* 桌面端隐藏（sidebar 已显示），移动端显示 */
+  width: 100%;
+  background: linear-gradient(135deg, #8b6f47 0%, #5a3e1f 100%);
+  color: #f5e6c8;
+  border: 1px solid #c4a878;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin: 8px 0 12px;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+.sidebar-my-profile-btn:hover {
+  background: linear-gradient(135deg, #a08858 0%, #6a4e2f 100%);
+  transform: translateY(-1px);
+}
+.sidebar-my-profile-btn:active { transform: scale(0.99); }
+
+.sb-section {
+  margin: 6px 0 10px;
+  border: 1px solid rgba(139, 111, 71, 0.25);
+  border-radius: 4px;
+  background: rgba(245, 230, 200, 0.3);
+  overflow: hidden;
+}
+.sb-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5a3e1f;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(196, 168, 120, 0.15);
+  transition: background 0.15s ease;
+}
+.sb-section-header:hover { background: rgba(196, 168, 120, 0.3); }
+.sb-section-toggle {
+  color: #8b6f47;
+  font-size: 12px;
+  font-weight: bold;
+}
+.sb-section-body {
+  padding: 6px 10px;
+  font-size: 12px;
+  max-height: 400px;
+  overflow: hidden;
+  transition: max-height 0.2s ease, padding 0.2s ease;
+}
+.sb-section-body.collapsed {
+  max-height: 0;
+  padding: 0 10px;
+}
+.sb-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(139, 111, 71, 0.12);
+}
+.sb-item:last-of-type { border-bottom: none; }
+.sb-item-name {
+  font-weight: 500;
+  color: #3a2618;
+  flex-shrink: 0;
+}
+.sb-item-meta {
+  font-size: 11px;
+  color: #8b6f47;
+  text-align: right;
+}
+.sb-section-actions {
+  margin-top: 4px;
+  text-align: center;
+}
+.sb-section-more {
+  background: transparent;
+  border: 1px solid rgba(139, 111, 71, 0.3);
+  color: #5a3e1f;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+.sb-section-more:hover {
+  background: rgba(196, 168, 120, 0.3);
+  border-color: #c4a878;
+}
+
+/* 🆕 v1.7.30 移动端策略（≤768px）*/
+/* 移动端 sidebar 空间有限，隐藏次要折叠区 + 显示"我的档案"按钮 */
+@media (max-width: 768px) {
+  .sidebar-my-profile-btn { display: block; }
+  .sidebar .sb-section-genealogy,
+  .sidebar .sb-section-property,
+  .sidebar .sb-section-inventory { display: none; }
+}
+
+/* 极小屏幕（≤480px）进一步压缩 */
+@media (max-width: 480px) {
+  .sb-section-header { font-size: 11px; padding: 5px 8px; }
+  .sb-section-body { font-size: 11px; padding: 4px 8px; }
+  .sb-item-name { font-size: 11px; }
+  .sb-item-meta { font-size: 10px; }
+}
+
 /* 🆕 v1.6.2 iOS 键盘弹出时自适应 */
 /* 当 input-area 获得焦点时，确保它在可视区域内 */
 .input-area:focus-within {

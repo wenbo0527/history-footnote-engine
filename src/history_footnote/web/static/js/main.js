@@ -1768,6 +1768,54 @@ const WANLI_FACTS = [
   { cat: "物价", text: "上等猪肉 1 斤 20 文；鸡蛋 1 枚 1 文；好酒 1 斤 50~80 文" },
 ];
 
+// 🆕 v1.7.30 城市显示名（city_id → 中文名）
+const CITY_DISPLAY = {
+  shengze: "盛泽镇",
+  suzhou: "苏州府",
+  hangzhou: "杭州府",
+  songjiang: "松江府",
+  nanjing: "南京应天府",
+};
+
+// 🆕 v1.7.30 亲属关系显示名
+const RELATION_DISPLAY = {
+  wife: "妻",
+  husband: "夫",
+  son: "子",
+  daughter: "女",
+  father: "父",
+  mother: "母",
+  brother: "兄",
+  sister: "姐",
+  patriarch: "祖父",
+  grandparent: "祖父母",
+  parent: "父母",
+  uncle: "叔伯",
+  aunt: "姑姨",
+  cousin: "堂表亲",
+  ancestor: "先祖",
+  spouse: "配偶",
+  child: "子女",
+};
+
+// 🆕 v1.7.30 折叠区切换
+function toggleSbSection(name) {
+  const $body = document.querySelector(`[data-body="${name}"]`);
+  const $header = document.querySelector(`[data-section="${name}"] .sb-section-toggle`);
+  if (!$body) return;
+  const isCollapsed = $body.classList.toggle("collapsed");
+  if ($header) $header.textContent = isCollapsed ? "▸" : "▾";
+  // localStorage 记忆
+  try { localStorage.setItem(`hfe_sb_${name}_collapsed`, isCollapsed ? "1" : "0"); } catch (_) {}
+}
+
+// 🆕 v1.7.30 我的档案弹层（5 tab）
+function openMyProfile(tab = "cash") {
+  // 简单实现：提示后续 commit 完善
+  alert(`👤 我的档案\n\n即将上线：${tab} 标签页\n\n当前在 sidebar 已有 6 折叠区。\n弹层"全部"功能 v1.7.30 后续 commit 完善。`);
+}
+
+
 async function submitInputWithText(inputText) {
 const $btn = document.getElementById("btn_submit");
 if ($btn) {
@@ -2035,6 +2083,102 @@ $side.innerHTML = `
     💬 问询/观察不消耗行动点，可继续追问。
   </div>
 
+  <!-- 🆕 v1.7.30 我的档案折叠区（6 区：财务/家人/谱系/财产/库存/位置） -->
+  <button class="sidebar-my-profile-btn" onclick="openMyProfile()" title="查看完整档案">👤 我的档案</button>
+  <div class="sb-section sb-section-cash" data-section="cash">
+    <div class="sb-section-header" onclick="toggleSbSection('cash')">
+      💰 财务 <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="cash">
+      <div class="stat-line"><span class="label">💵 现金</span><span class="val">${(data.cash ?? 0).toFixed(2)} 两</span></div>
+      <div class="stat-line"><span class="label">🍚 存粮</span><span class="val">${(data.rice ?? 0).toFixed(1)} 石</span></div>
+      <div class="stat-line"><span class="label">💳 欠债</span><span class="val">${(data.debt ?? 0).toFixed(2)} 两</span></div>
+      <div class="stat-line"><span class="label">📉 月耗</span><span class="val">${(data.monthly_burn ?? 0).toFixed(2)} 两</span></div>
+      <div class="sb-section-actions">
+        <button class="sb-section-more" onclick="openMyProfile('cash')">📊 全部</button>
+      </div>
+    </div>
+  </div>
+  <div class="sb-section sb-section-location" data-section="location">
+    <div class="sb-section-header" onclick="toggleSbSection('location')">
+      📍 当前位置 <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="location">
+      <div class="stat-line"><span class="label">城市</span><span class="val">${escapeHtml(CITY_DISPLAY[data.current_city] || data.current_city || "盛泽镇")}</span></div>
+    </div>
+  </div>
+  <div class="sb-section sb-section-family" data-section="family">
+    <div class="sb-section-header" onclick="toggleSbSection('family')">
+      👨‍👩‍👧 家人 (${(data.family_members || []).length}) <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="family">
+      ${(data.family_members || []).slice(0, 4).map(m => `
+        <div class="sb-item">
+          <span class="sb-item-name">${escapeHtml(m.name || "?")}</span>
+          <span class="sb-item-meta">${escapeHtml(RELATION_DISPLAY[m.relation] || m.relation || "")} · ${escapeHtml(CITY_DISPLAY[m.location] || m.location || "盛泽")}</span>
+        </div>
+      `).join("") || "<div style='color:#5a4a30;font-size:12px'>暂无家人</div>"}
+      ${(data.family_members || []).length > 4 ? `<div class="sb-item-meta">… 还有 ${data.family_members.length - 4} 位</div>` : ""}
+      <div class="sb-section-actions">
+        <button class="sb-section-more" onclick="openMyProfile('family')">📊 全部</button>
+      </div>
+    </div>
+  </div>
+  <div class="sb-section sb-section-genealogy" data-section="genealogy">
+    <div class="sb-section-header" onclick="toggleSbSection('genealogy')">
+      🌳 谱系 (${(data.genealogy || []).length}) <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="genealogy">
+      ${(data.genealogy || []).filter(e => e.is_known_to_player).slice(0, 3).map(e => `
+        <div class="sb-item">
+          <span class="sb-item-name">${escapeHtml(e.name || "?")}</span>
+          <span class="sb-item-meta">${escapeHtml(RELATION_DISPLAY[e.relation] || e.relation || "")}${e.alive ? "" : "（已逝）"}</span>
+        </div>
+      `).join("") || "<div style='color:#5a4a30;font-size:12px'>尚无记录</div>"}
+      <div class="sb-section-actions">
+        <button class="sb-section-more" onclick="openMyProfile('genealogy')">📊 全部</button>
+      </div>
+    </div>
+  </div>
+  <div class="sb-section sb-section-property" data-section="property">
+    <div class="sb-section-header" onclick="toggleSbSection('property')">
+      🏘️ 城市财产 <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="property">
+      ${Object.keys(data.city_properties || {}).length > 0
+        ? Object.entries(data.city_properties).map(([city, props]) => `
+          <div class="sb-item">
+            <span class="sb-item-name">${escapeHtml(CITY_DISPLAY[city] || city)}</span>
+            <span class="sb-item-meta">${props.length} 处 · ${props.reduce((s, p) => s + (p.value || 0), 0).toFixed(0)} 两</span>
+          </div>
+        `).join("")
+        : "<div style='color:#5a4a30;font-size:12px'>尚无</div>"
+      }
+      <div class="sb-section-actions">
+        <button class="sb-section-more" onclick="openMyProfile('property')">📊 全部</button>
+      </div>
+    </div>
+  </div>
+  <div class="sb-section sb-section-inventory" data-section="inventory">
+    <div class="sb-section-header" onclick="toggleSbSection('inventory')">
+      📦 库存 <span class="sb-section-toggle">▸</span>
+    </div>
+    <div class="sb-section-body" data-body="inventory">
+      ${Object.keys(data.inventory || {}).length > 0
+        ? Object.entries(data.inventory).map(([city, items]) => `
+          <div class="sb-item">
+            <span class="sb-item-name">${escapeHtml(CITY_DISPLAY[city] || city)}</span>
+            <span class="sb-item-meta">${items.length} 项 · ${items.reduce((s, it) => s + (it.qty || 0), 0)} 件</span>
+          </div>
+        `).join("")
+        : "<div style='color:#5a4a30;font-size:12px'>尚无</div>"
+      }
+      <div class="sb-section-actions">
+        <button class="sb-section-more" onclick="openMyProfile('inventory')">📊 全部</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 🆕 v1.7.26 固化面板：任务 / 还债 / 财务 -->
   <h3>📋 待办 (${tasks.length})</h3>
   <div class="sidebar-tasks">${tasksHtml}</div>
@@ -2097,6 +2241,24 @@ $side.innerHTML = `
       if (e.key === "Enter") addTaskFromInput(addInput);
     });
   }
+
+  // 🆕 v1.7.30 折叠区初始化：默认折叠 + localStorage 恢复
+  document.querySelectorAll(".sb-section").forEach($section => {
+    const name = $section.dataset.section;
+    let collapsed = true;  // 默认折叠
+    try {
+      const saved = localStorage.getItem(`hfe_sb_${name}_collapsed`);
+      if (saved === "0") collapsed = false;
+    } catch (_) {}
+    const $body = $section.querySelector(".sb-section-body");
+    const $toggle = $section.querySelector(".sb-section-toggle");
+    if ($body) {
+      $body.classList.toggle("collapsed", collapsed);
+    }
+    if ($toggle) {
+      $toggle.textContent = collapsed ? "▸" : "▾";
+    }
+  });
 }
 
 // 🆕 v1.7.28：任务完成 API 调用
