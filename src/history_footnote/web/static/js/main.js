@@ -1592,6 +1592,10 @@ const LoadingModal = {
   overlay: null,
   startTime: 0,
   timer: null,
+  // 🆕 v1.7.30: facts 轮播状态
+  factTimer: null,
+  factPauseUntil: 0,
+  currentFactIndex: 0,
   show(title = "🌀 DM 正在渲染下一回合...") {
     this.close();  // 关闭已存在的
     this.startTime = Date.now();
@@ -1604,6 +1608,15 @@ const LoadingModal = {
             <div class="loading-progress-bar" style="width:0%"></div>
           </div>
           <div class="loading-time">⏱️ 已等待 0 秒</div>
+          <div class="loading-facts" aria-live="polite">
+            <div class="loading-facts-header">💡 等待时的小知识</div>
+            <div class="loading-facts-body">
+              <button class="loading-facts-prev" onclick="LoadingModal.cycleFact(-1)" aria-label="上一条">‹</button>
+              <div class="loading-facts-content" id="loading-facts-content">…</div>
+              <button class="loading-facts-next" onclick="LoadingModal.cycleFact(1)" aria-label="下一条">›</button>
+            </div>
+            <div class="loading-facts-counter"><span id="loading-facts-counter">--</span></div>
+          </div>
         </div>
       </div>
     `;
@@ -1617,6 +1630,18 @@ const LoadingModal = {
         $t.textContent = `⏱️ 已等待 ${sec} 秒`;
       }
     }, 200);
+    // 🆕 v1.7.30: 启动 facts 轮播（5s 一次）
+    this.refreshFacts();
+    this.factTimer = setInterval(() => {
+      if (Date.now() < this.factPauseUntil) return;
+      this.cycleFact(1);
+    }, 5000);
+    // hover 暂停（桌面端）
+    const $facts = this.overlay?.querySelector(".loading-facts");
+    if ($facts) {
+      $facts.addEventListener("mouseenter", () => { this.factPauseUntil = Date.now() + 8000; });
+      $facts.addEventListener("mouseleave", () => { this.factPauseUntil = 0; });
+    }
   },
   update(phase, message, progress) {
     if (!this.overlay) return;
@@ -1625,9 +1650,89 @@ const LoadingModal = {
     if ($phase && message) $phase.textContent = message;
     if ($bar && typeof progress === "number") $bar.style.width = progress + "%";
   },
+  // 🆕 v1.7.30: 收集等待时可展示的 facts（4 个来源）
+  collectFacts() {
+    const facts = [];
+    // 来源 1: world_dwell（已有的世界画卷）
+    if (wizard && wizard.world_dwell) {
+      const dwell = wizard.world_dwell;
+      if (dwell.geography) facts.push({ source: "地理", text: dwell.geography });
+      if (dwell.economy) facts.push({ source: "生计", text: dwell.economy });
+      if (dwell.culture) facts.push({ source: "风物", text: dwell.culture });
+      if (dwell.politics) facts.push({ source: "官府", text: dwell.politics });
+    }
+    // 来源 2: era_data（时代包元数据）
+    if (wizard && wizard.era_data) {
+      const e = wizard.era_data;
+      if (e.description) facts.push({ source: "时代", text: `${e.name || ""}：${e.description}` });
+      if (e.year_range) facts.push({ source: "年代", text: `本时代年份：${e.year_range}` });
+    }
+    // 来源 3: 静态知识库（万历十五年硬知识）
+    if (WANLI_FACTS && Array.isArray(WANLI_FACTS)) {
+      for (const f of WANLI_FACTS) facts.push({ source: f.cat, text: f.text });
+    }
+    // 来源 4: state.narrative_history 摘要（最近 3 轮）
+    if (typeof state !== "undefined" && state.narrative_history && state.narrative_history.length) {
+      const recent = state.narrative_history.slice(-3);
+      for (const n of recent) {
+        const t = (n && n.narrative) || "";
+        if (t) facts.push({ source: "回顾", text: t.replace(/\s+/g, " ").slice(0, 80) + "…" });
+      }
+    }
+    // 去空 + 去重
+    const seen = new Set();
+    const uniq = [];
+    for (const f of facts) {
+      if (!f || !f.text) continue;
+      const key = f.text.slice(0, 40);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      uniq.push(f);
+    }
+    return uniq.slice(0, 20);  // 最多 20 条
+  },
+  refreshFacts() {
+    const facts = this.collectFacts();
+    this.facts = facts;
+    this.currentFactIndex = 0;
+    this.renderFact();
+  },
+  cycleFact(direction) {
+    if (!this.facts || this.facts.length === 0) {
+      this.refreshFacts();
+      return;
+    }
+    this.currentFactIndex = (this.currentFactIndex + direction + this.facts.length) % this.facts.length;
+    this.renderFact();
+  },
+  renderFact() {
+    if (!this.overlay) return;
+    const $content = this.overlay.querySelector("#loading-facts-content");
+    const $counter = this.overlay.querySelector("#loading-facts-counter");
+    if (!this.facts || this.facts.length === 0) {
+      if ($content) $content.textContent = "（无更多内容）";
+      if ($counter) $counter.textContent = "0/0";
+      return;
+    }
+    const f = this.facts[this.currentFactIndex];
+    if ($content) {
+      // 简单 fade 动画
+      $content.classList.add("loading-facts-fadeout");
+      setTimeout(() => {
+        if (!$content) return;
+        $content.innerHTML = `<span class="loading-facts-source">${escapeHtml(f.source)}</span>${escapeHtml(f.text)}`;
+        $content.classList.remove("loading-facts-fadeout");
+      }, 150);
+    }
+    if ($counter) $counter.textContent = `${this.currentFactIndex + 1}/${this.facts.length}`;
+  },
   close() {
     if (this.timer) clearInterval(this.timer);
+    if (this.factTimer) clearInterval(this.factTimer);
     this.timer = null;
+    this.factTimer = null;
+    this.facts = [];
+    this.currentFactIndex = 0;
     if (this.overlay) {
       this.overlay.classList.add("loading-modal-fadeout");
       setTimeout(() => {
@@ -1641,6 +1746,27 @@ const LoadingModal = {
     }
   },
 };
+
+// 🆕 v1.7.30: 静态知识库——万历十五年小知识
+// 等待时展示，玩家可学些硬知识
+const WANLI_FACTS = [
+  { cat: "物价", text: "万历年间，米价每石 8 钱至 1 两不等（江南水乡偏高，荒年翻倍）" },
+  { cat: "差役", text: "里甲制下，每 10 年轮差 1 次；正德后多雇人代役，1 个正役折银 1~3 两" },
+  { cat: "科举", text: "秀才须通过院试，考题出自《四书》《五经》，每县录取率 1/300" },
+  { cat: "物价", text: "上好湖绫 1 匹可卖 5~8 钱；盛泽镇绸行抽佣 3%~5%" },
+  { cat: "律法", text: "《大明律》藏匿逃人杖 80；诱拐良家女子绞监候；私藏武器杖 100" },
+  { cat: "农时", text: "五月收麦插秧，七月早稻登场；霜降后种油菜，冬至前完成" },
+  { cat: "纺织", text: "盛泽镇出产湖绫、苏缎、水纬；机户十之七八，织工日赚 30~50 文" },
+  { cat: "赋税", text: "田赋按亩征夏税秋粮；丁税（人头税）已于万历九年部分摊入田亩" },
+  { cat: "商业", text: "徽商晋商多走盐茶丝；江南本地商人多走绸布；长途贩运风险高" },
+  { cat: "官制", text: "县令正七品，月俸 7.5 石米；典史 9 品未入流；里长由粮长轮充" },
+  { cat: "节令", text: "五月初五端午，挂艾虎、饮雄黄；七月初七乞巧，女子对月穿针" },
+  { cat: "饮食", text: "江南主食米饭，菜以鱼虾豆腐为主；富户宴客八菜一汤" },
+  { cat: "婚嫁", text: "聘礼一般为银 30~50 两（盛泽镇中等人家标准）；嫁妆 1~2 抬箱笼" },
+  { cat: "宗族", text: "江南宗族势力大；建祠堂、修族谱、设族田；犯事可请族长出面具保" },
+  { cat: "宗教", text: "江南佛道并存；城隍庙、土地祠最普遍；妇女入庙烧香为日常" },
+  { cat: "物价", text: "上等猪肉 1 斤 20 文；鸡蛋 1 枚 1 文；好酒 1 斤 50~80 文" },
+];
 
 async function submitInputWithText(inputText) {
 const $btn = document.getElementById("btn_submit");
