@@ -1339,6 +1339,7 @@ const freetextButton = hasFreetext
 
 // 🆕 v1.7.29 移动端折叠：默认隐藏 grid，只显示一条"🎭 N 个声音 ▾"小按钮
 // 用户点 / 点 header 后展开（保存偏好到 localStorage）
+// 🆕 v1.7.30 修复：折叠态也保留「自由输入」入口（grid 外），避免死局
 const PREF_KEY = "hfe_voice_options_collapsed";
 const isMobile = window.matchMedia("(max-width: 768px)").matches;
 const storage = window.__VOICE_PREFS__ || JSON.parse(localStorage.getItem(PREF_KEY) || "null");
@@ -1356,19 +1357,30 @@ const initialCollapsed = userPref;
 // 当前回合数（用于高亮）；从 state.round 取不到时用 -1
 const currentRound = (typeof state !== "undefined" && state.round_number) || 0;
 const voiceCount = voiceOptions.filter(v => !v.is_freetext).length || 1;
+// 🆕 v1.7.30：折叠态常驻「自由输入」按钮（grid 外），保证玩家永远有 fallback
+// 重要：voiceOptions 为空时强制不折叠（无可选项时隐藏 grid 等于死局）
+const hasRealOptions = voiceOptions.filter(v => !v.is_freetext).length > 0;
+const effectiveCollapsed = hasRealOptions ? initialCollapsed : false;
+const fallbackText = voiceOptions.length > 0
+  ? "或自由输入"
+  : "DM 没生成选项——直接描述你想做什么";
 div.innerHTML = `
   <div class="voice-options-header">
-    <button class="voice-options-toggle" aria-expanded="${!initialCollapsed}" aria-controls="voice-options-grid">
-      <span class="voice-options-toggle-icon">${initialCollapsed ? "▸" : "▾"}</span>
-      <span class="voice-options-title">🎭 ${initialCollapsed ? voiceCount + " 个声音" : "你脑海中的声音"}</span>
+    <button class="voice-options-toggle" aria-expanded="${!effectiveCollapsed}" aria-controls="voice-options-grid" ${hasRealOptions ? "" : "disabled"}>
+      <span class="voice-options-toggle-icon">${effectiveCollapsed ? "▸" : "▾"}</span>
+      <span class="voice-options-title">🎭 ${effectiveCollapsed ? voiceCount + " 个声音" : "你脑海中的声音"}</span>
       ${currentRound > 0 ? `<span class="voice-options-round-tag" title="当前回合">R${currentRound}</span>` : ""}
     </button>
-    <span class="voice-options-hint">${initialCollapsed ? "点开选行动" : headerHint.replace(/<[^>]+>/g, "")}</span>
+    <span class="voice-options-hint">${effectiveCollapsed ? "点开选行动" : headerHint.replace(/<[^>]+>/g, "")}</span>
   </div>
-  <div class="voice-options-grid ${initialCollapsed ? "collapsed" : ""}" id="voice-options-grid" role="region">
+  <div class="voice-options-grid ${effectiveCollapsed ? "collapsed" : ""}" id="voice-options-grid" role="region">
     ${gridItems}
     ${freetextButton}
   </div>
+  <button class="voice-options-freetext-fallback" onclick="showFreeInputTab()" aria-label="自由输入">
+    <span class="freetext-icon">✍️</span>
+    <span class="freetext-text">${fallbackText}</span>
+  </button>
 `;
 // 折叠状态：如果默认展开，反向给折叠按钮取消 collapsed class（已经有 expanded class）
 if (!initialCollapsed) div.classList.add("voice-options-expanded");

@@ -241,6 +241,45 @@ body {
   animation: voice-pulse 0.9s ease-out 1;
   border-radius: 6px;
 }
+
+/* 🆕 v1.7.30 修复：折叠态常驻「自由输入」fallback 按钮
+   避免 voice options 折叠后玩家无法继续操作（死局） */
+.voice-options-freetext-fallback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: rgba(139, 111, 71, 0.18);
+  border: 1px dashed rgba(160, 136, 88, 0.4);
+  color: #8b6f47;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-top: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  font-family: inherit;
+}
+.voice-options-freetext-fallback:hover {
+  background: rgba(139, 111, 71, 0.3);
+  border-color: #c19a5b;
+  color: #5a3e1f;
+}
+.voice-options-freetext-fallback:active { transform: scale(0.99); }
+.voice-options-freetext-fallback:focus-visible {
+  outline: 2px solid #c4a878;
+  outline-offset: 2px;
+}
+.voice-options-freetext-fallback .freetext-icon { font-size: 14px; flex-shrink: 0; }
+.voice-options-freetext-fallback .freetext-text { flex: 1; }
+
+/* 折叠态：fallback 按钮更紧凑（移动端节省屏高） */
+.voice-options-collapsed .voice-options-freetext-fallback {
+  margin-top: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
 .voice-options-hint {
   color: #a08858;
   font-size: 12px;
@@ -895,6 +934,11 @@ body {
     background: rgba(245, 230, 200, 0.6);
     border: 1px solid rgba(139, 111, 71, 0.25);
     border-radius: 6px;
+  }
+  /* 🆕 v1.7.30：fallback 按钮移动端更紧凑 */
+  .voice-options-freetext-fallback {
+    font-size: 12px;
+    padding: 5px 8px;
   }
 }
 
