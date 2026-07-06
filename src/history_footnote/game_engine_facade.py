@@ -61,6 +61,13 @@ class GameEngineFacade:
             QuestFacade, DramaFacade, WikiFacade, EventFacade, StateFacade,
         )
         self._sub_facades = None  # 延迟初始化
+        # 🆕 v1.7.41 性能监控
+        self._perf = {
+            "llm_calls": 0,
+            "llm_total_ms": 0.0,
+            "process_calls": 0,
+            "process_total_ms": 0.0,
+        }
 
     @property
     def sub_facades(self) -> dict:
@@ -366,6 +373,55 @@ class GameEngineFacade:
             }
         """
         return {
+            "wiki_cache": self.get_wiki_cache_stats(),
+            "drama": {
+                "interventions": len(self.drama_manager.intervention_history),
+                "ir": self.drama_manager.player_model.initiative_ratio,
+                "total_rounds": self.drama_manager.player_model.total_rounds,
+            },
+            "event_bus": self.event_bus.get_stats(),
+            "quest": self.quest_system.get_progress_summary(),
+        }
+
+    def record_perf(self, kind: str, ms: float = 0) -> None:
+        """🆕 v1.7.41 记录性能数据
+
+        Args:
+            kind: 类别（llm_calls / process_calls）
+            ms: 耗时毫秒
+        """
+        if kind == "llm_call":
+            self._perf["llm_calls"] += 1
+            self._perf["llm_total_ms"] += ms
+        elif kind == "process_call":
+            self._perf["process_calls"] += 1
+            self._perf["process_total_ms"] += ms
+
+    def get_extended_perf_stats(self) -> dict:
+        """🆕 v1.7.41 扩展性能统计
+
+        Returns:
+            {
+                "llm": {"calls": int, "total_ms": float, "avg_ms": float},
+                "process": {"calls": int, "total_ms": float, "avg_ms": float},
+                "wiki_cache": {...},
+                "drama": {...},
+                ...
+            }
+        """
+        llm_calls = self._perf["llm_calls"]
+        process_calls = self._perf["process_calls"]
+        return {
+            "llm": {
+                "calls": llm_calls,
+                "total_ms": self._perf["llm_total_ms"],
+                "avg_ms": self._perf["llm_total_ms"] / max(llm_calls, 1),
+            },
+            "process": {
+                "calls": process_calls,
+                "total_ms": self._perf["process_total_ms"],
+                "avg_ms": self._perf["process_total_ms"] / max(process_calls, 1),
+            },
             "wiki_cache": self.get_wiki_cache_stats(),
             "drama": {
                 "interventions": len(self.drama_manager.intervention_history),

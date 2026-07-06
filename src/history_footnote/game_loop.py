@@ -354,6 +354,8 @@ class GameLoop:
 
         # 🆕 v1.6+ 并发支持：LLM 调用受 LLM_THROTTLE 保护
         from history_footnote.concurrency import LLM_THROTTLE
+        import time as _time
+        _t0 = _time.time()
         try:
             with LLM_THROTTLE:
                 dm_response = self.dm.run(player_input)
@@ -367,6 +369,8 @@ class GameLoop:
                 },
                 era_config=self.era_config,
             )
+        # 🆕 v1.7.41 性能监控
+        self.engine.record_perf("llm_call", (_time.time() - _t0) * 1000)
 
         # v1.2+：处理DM发起的身份切换offer
         identity_offer = dm_response.get("identity_offer")
@@ -949,11 +953,7 @@ class GameLoop:
 
         calendar_text: 多行字符串，每行一个触发事件
         """
-        if not calendar_text:
-            return
-        if hasattr(self.dm.llm, "_state_ref_slot_ref"):
-            current_ref = self.dm.llm._state_ref_slot_ref[0]
-            current_ref["calendar_events"] = calendar_text
+        self.set_state_ref_slot("calendar_events", calendar_text)
 
     def set_wiki_hint_for_dm(self, fragments: list) -> None:
         """🆕 v1.7.37 把 Wiki 检索片段注入到 DM LLM state_ref
@@ -962,24 +962,29 @@ class GameLoop:
         """
         if not fragments:
             return
-        if hasattr(self.dm.llm, "_state_ref_slot_ref"):
-            current_ref = self.dm.llm._state_ref_slot_ref[0]
-            # 限制长度（避免 prompt 爆炸）
-            content_blocks = []
-            for f in fragments[:3]:  # 最多 3 段
-                c = f.get("content", "")
-                if len(c) > 800:
-                    c = c[:800] + "..."
-                content_blocks.append(f"【{f.get('title', '')}】\n{c}")
-            current_ref["wiki_hint"] = "\n\n".join(content_blocks)
+        content_blocks = []
+        for f in fragments[:3]:  # 最多 3 段
+            c = f.get("content", "")
+            if len(c) > 800:
+                c = c[:800] + "..."
+            content_blocks.append(f"【{f.get('title', '')}】\n{c}")
+        self.set_state_ref_slot("wiki_hint", "\n\n".join(content_blocks))
 
-    def set_drama_hint_for_dm(self, hint: str) -> None:
-        """🆕 v1.7.35 把 DramaManager 干预 hint 注入到 DM LLM state_ref"""
-        if not hint:
+    def set_state_ref_slot(self, key: str, value) -> None:
+        """🆕 v1.7.41 通用 state_ref slot 注入
+
+        替代 5 个 set_*_hint 方法。
+        LLM 通过 _state_ref_slot_ref[0] 读取 state_ref 字典。
+        """
+        if not value:
             return
         if hasattr(self.dm.llm, "_state_ref_slot_ref"):
             current_ref = self.dm.llm._state_ref_slot_ref[0]
-            current_ref["drama_hint"] = hint
+            current_ref[key] = value
+
+    def set_drama_hint_for_dm(self, hint: str) -> None:
+        """🆕 v1.7.35 把 DramaManager 干预 hint 注入到 DM LLM state_ref"""
+        self.set_state_ref_slot("drama_hint", hint)
 
     def set_action_context_for_dm(self, player_action, action_result, failed: bool = False) -> None:
         """🆕 v1.7.33 把 PlayerAction + ActionResult 注入到 DM LLM state_ref
