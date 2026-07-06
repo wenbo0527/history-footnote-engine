@@ -122,7 +122,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def run(host: str = "0.0.0.0", port: int = Server.DEFAULT_PORT):
     """启动 web 服务器（开发用）"""
-    setup_keepalive()
+    setup_keepalive(Handler)
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"🎭 历史注脚体验引擎 已启动")
     print(f"   地址: http://{host}:{port}/")

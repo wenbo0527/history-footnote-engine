@@ -56,4 +56,4 @@ def Path_eras_root():
     from pathlib import Path as _P
     here = _P(__file__).resolve()
     # web_server/routers/eras.py → 项目根目录
-    return here.parents[3] / "eras"
+    return here.parents[4] / "eras"

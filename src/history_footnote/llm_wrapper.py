@@ -220,13 +220,20 @@ class LLMWrapper:
         self._tools: List[Any] = []
 
     def _get_llm(self, provider: str) -> Any:
-        """获取或创建指定 provider 的 LLM"""
+        """获取或创建指定 provider 的 LLM
+
+        失败时返回 None（如缺 API Key），由调用方决定是否跳过
+        """
         if provider not in self._llm_cache:
             with self._create_lock:
                 if provider not in self._llm_cache:
-                    from history_footnote.llm_providers import make_llm
-                    self._llm_cache[provider] = make_llm(provider, era_config=self.era_config)
-                    logger.info(f"[LLMWrapper] Created LLM: {provider}")
+                    try:
+                        from history_footnote.llm_providers import make_llm
+                        self._llm_cache[provider] = make_llm(provider, era_config=self.era_config)
+                        logger.info(f"[LLMWrapper] Created LLM: {provider}")
+                    except Exception as e:
+                        logger.warning(f"[LLMWrapper] Failed to create {provider}: {e}")
+                        self._llm_cache[provider] = None
         return self._llm_cache[provider]
 
     def bind_tools(self, tools: List[Any]) -> "LLMWrapper":
@@ -245,6 +252,9 @@ class LLMWrapper:
         # 立即 bind_tools 到所有 provider 的 LLM（懒加载）
         for provider in new_wrapper.fallback_chain:
             base_llm = new_wrapper._get_llm(provider)
+            if base_llm is None:
+                logger.warning(f"[LLMWrapper] Skipping {provider} (creation failed)")
+                continue
             if hasattr(base_llm, "bind_tools"):
                 new_wrapper._llm_cache[provider] = base_llm.bind_tools(tools)
                 logger.debug(f"[LLMWrapper] bind_tools on {provider}: {len(tools)} tools")

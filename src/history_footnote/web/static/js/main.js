@@ -17,10 +17,20 @@ const $main = document.getElementById("main");
 const $side = document.getElementById("sidebar");
 
 async function api(path, method = "GET", body = null) {
-const opts = { method, headers: {"Content-Type": "application/json"} };
-if (body) opts.body = JSON.stringify(body);
-const resp = await fetch(path, opts);
-return await resp.json();
+  // Patch 2026-07-05 v1.7.24: adaptive pathname prefix
+  //   - subpath deploy (wenbodemo.com/history-footnote-engine/) : add prefix
+  //   - subdomain deploy (footnote.wenbodemo.com/) : direct fetch
+  //   - root deploy (wenbodemo.com/) : direct fetch
+  let fullPath = path;
+  if (path.startsWith("/api/")) {
+    if (window.location.pathname.startsWith("/history-footnote-engine")) {
+      fullPath = `/history-footnote-engine${path}`;
+    }
+  }
+  const opts = { method, headers: {"Content-Type": "application/json"} };
+  if (body) opts.body = JSON.stringify(body);
+  const resp = await fetch(fullPath, opts);
+  return await resp.json();
 }
 
 let wizard = {
