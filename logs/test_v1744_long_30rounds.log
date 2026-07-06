@@ -1,0 +1,380 @@
+======================================================================
+v1.7.44 长程验证：30 轮真实 LLM（含 1601 葛贤抗税）
+======================================================================
+✅ LLM: minimax-anthropic
+
+初始: cash=5.00, rice=8.0, debt=1.00
+
+--- Round 1 | 我织了一匹湖绫，丝光莹润。 ---
+  cash=5.50, debt=1.00, city=shengze
+  discoveries: items=1, persons=0, places=0
+  triggered_events: 5
+  monthly_settle: 0 次
+  narrative 含'葛贤': False
+  perf: llm.calls=1, llm.avg_ms=18359
+  cache: size=1, hit=0%
+  轮耗时: 18.4s
+
+--- Round 2 | 我去镇上牙行卖这匹湖绫，得银七钱。 ---
+  cash=6.20, debt=1.00, city=shengze
+  discoveries: items=5, persons=0, places=0
+  triggered_events: 5
+  monthly_settle: 0 次
+  narrative 含'葛贤': False
+  perf: llm.calls=2, llm.avg_ms=31507
+  cache: size=2, hit=0%
+  轮耗时: 44.7s
+
+--- Round 3 | 我又织了一匹湖绫。 ---
+  cash=6.20, debt=1.00, city=shengze
+  discoveries: items=6, persons=0, places=0
+  triggered_events: 5
+  monthly_settle: 0 次
+  narrative 含'葛贤': False
+  perf: llm.calls=3, llm.avg_ms=24100
+  cache: size=2, hit=33%
+  轮耗时: 9.3s
+
+--- Round 4 | 我又去牙行卖第二匹。 ---
+  cash=7.31, debt=1.00, city=shengze
+  discoveries: items=9, persons=0, places=0
+  triggered_events: 5
+  monthly_settle: 1 次
+  narrative 含'葛贤': False
+  perf: llm.calls=4, llm.avg_ms=23069
+  cache: size=2, hit=50%
+  轮耗时: 20.0s
+
+--- Round 5 | 我算了算账，还了五钱借款。 ---
+  cash=7.31, debt=1.50, city=shengze
+  discoveries: items=9, persons=0, places=0
+  triggered_events: 5
+  monthly_settle: 1 次
+  narrative 含'葛贤': False
+  perf: llm.calls=5, llm.avg_ms=27393
+  cache: size=3, hit=40%
+  轮耗时: 44.7s
+
+--- Round 6 | 我搭船去苏州阊门码头。 ---
+  cash=7.31, debt=1.50, city=hangzhou
+  discoveries: items=11, persons=0, places=0
+  triggered_events: 5
+  monthly_settle: 1 次
+  narrative 含'葛贤': False
+  perf: llm.calls=6, llm.avg_ms=28860
+  cache: size=4, hit=33%
+  轮耗时: 36.2s
+
+--- Round 7 | 在苏州，我找了家茶馆坐坐，听说朝鲜打仗。 ---
+  cash=7.31, debt=1.50, city=suzhou
+  discoveries: items=11, persons=0, places=0
+  triggered_events: 6
+  monthly_settle: 1 次
+  narrative 含'葛贤': False
+  perf: llm.calls=7, llm.avg_ms=30588
+  cache: size=5, hit=29%
+  轮耗时: 41.0s
+
+--- Round 8 | 我又搭船去杭州。 ---
+  cash=7.31, debt=1.50, city=hangzhou
+  discoveries: items=11, persons=0, places=0
+  triggered_events: 6
+  monthly_settle: 1 次
+  narrative 含'葛贤': False
+  perf: llm.calls=8, llm.avg_ms=29264
+  cache: size=6, hit=25%
+  轮耗时: 20.0s
+
+--- Round 9 | 在西湖边看丝市行情。 ---
+  cash=6.71, debt=1.50, city=shengze
+  discoveries: items=11, persons=0, places=0
+  triggered_events: 6
+  monthly_settle: 1 次
+  narrative 含'葛贤': False
+  perf: llm.calls=9, llm.avg_ms=31156
+  cache: size=7, hit=22%
+  轮耗时: 46.3s
+
+--- Round 10 | 我回盛泽。 ---
+  cash=5.80, debt=1.50, city=shengze
+  discoveries: items=11, persons=0, places=0
+  triggered_events: 6
+  monthly_settle: 2 次
+  narrative 含'葛贤': False
+  perf: llm.calls=10, llm.avg_ms=29878
+  cache: size=8, hit=20%
+  轮耗时: 18.4s
+
+--- Round 11 | 我见沈氏。 ---
+  cash=5.80, debt=2.10, city=shengze
+  discoveries: items=11, persons=1, places=0
+  triggered_events: 6
+  monthly_settle: 2 次
+  narrative 含'葛贤': False
+  perf: llm.calls=11, llm.avg_ms=29498
+  cache: size=9, hit=18%
+  轮耗时: 25.7s
+
+--- Round 12 | 我又织了一匹湖绫。 ---
+  cash=1.80, debt=2.10, city=shengze
+  discoveries: items=12, persons=1, places=0
+  triggered_events: 6
+  monthly_settle: 2 次
+  narrative 含'葛贤': False
+  perf: llm.calls=12, llm.avg_ms=30704
+  cache: size=9, hit=25%
+  轮耗时: 44.0s
+
+--- Round 13 | 我又去牙行卖。 ---
+  cash=0.00, debt=0.00, city=shengze
+  discoveries: items=12, persons=1, places=0
+  triggered_events: 6
+  monthly_settle: 2 次
+  narrative 含'葛贤': False
+  perf: llm.calls=13, llm.avg_ms=30669
+  cache: size=9, hit=31%
+  轮耗时: 30.3s
+
+--- Round 14 | 借了邻居老王三两银子买米。 ---
+  cash=0.00, debt=0.00, city=shengze
+  discoveries: items=12, persons=1, places=0
+  triggered_events: 6
+  monthly_settle: 2 次
+  narrative 含'葛贤': False
+  perf: llm.calls=14, llm.avg_ms=30217
+  cache: size=9, hit=31%
+  轮耗时: 24.3s
+
+--- Round 15 | 我又去茶馆听人聊朝鲜之役。 ---
+  cash=0.00, debt=0.00, city=shengze
+  discoveries: items=12, persons=1, places=0
+  triggered_events: 6
+  monthly_settle: 2 次
+  narrative 含'葛贤': False
+  perf: llm.calls=15, llm.avg_ms=28942
+  cache: size=10, hit=29%
+  轮耗时: 11.1s
+
+--- Round 16 | 我交了税款三钱。 ---
+  📅 强制推进日期: 1587年11月 → 1587年8月
+  cash=0.30, debt=0.00, city=shengze
+  discoveries: items=12, persons=1, places=0
+  triggered_events: 7
+  monthly_settle: 3 次
+  narrative 含'葛贤': False
+  perf: llm.calls=16, llm.avg_ms=29212
+  cache: size=10, hit=29%
+  轮耗时: 33.3s
+
+--- Round 17 | 我又织了一匹湖绫。 ---
+  cash=8.10, debt=0.00, city=shengze
+  discoveries: items=14, persons=1, places=0
+  triggered_events: 7
+  monthly_settle: 3 次
+  narrative 含'葛贤': False
+  perf: llm.calls=17, llm.avg_ms=28602
+  cache: size=10, hit=33%
+  轮耗时: 18.9s
+
+--- Round 18 | 我又去牙行卖。 ---
+  cash=8.60, debt=0.00, city=shengze
+  discoveries: items=14, persons=1, places=0
+  triggered_events: 7
+  monthly_settle: 3 次
+  narrative 含'葛贤': False
+  perf: llm.calls=18, llm.avg_ms=28805
+  cache: size=10, hit=38%
+  轮耗时: 32.2s
+
+--- Round 19 | 在盛泽镇上转转。 ---
+  cash=8.60, debt=0.00, city=shengze
+  discoveries: items=14, persons=1, places=0
+  triggered_events: 7
+  monthly_settle: 3 次
+  narrative 含'葛贤': False
+  perf: llm.calls=19, llm.avg_ms=28258
+  cache: size=10, hit=38%
+  轮耗时: 18.4s
+
+--- Round 20 | 我算了算账。 ---
+  cash=12.60, debt=0.00, city=shengze
+  discoveries: items=14, persons=1, places=0
+  triggered_events: 7
+  monthly_settle: 3 次
+  narrative 含'葛贤': False
+  perf: llm.calls=20, llm.avg_ms=28492
+  cache: size=10, hit=41%
+  轮耗时: 32.9s
+
+--- Round 21 | 听说朝鲜打完了，朝廷要加税。 ---
+  📅 强制推进日期: 1588年1月 → 1592年6月
+  cash=12.60, debt=0.00, city=shengze
+  discoveries: items=14, persons=1, places=0
+  triggered_events: 8
+  monthly_settle: 3 次
+  narrative 含'葛贤': False
+  perf: llm.calls=21, llm.avg_ms=28121
+  cache: size=10, hit=44%
+  轮耗时: 20.7s
+
+--- Round 22 | 我交了这个月的税款。 ---
+  cash=11.73, debt=0.00, city=shengze
+  discoveries: items=14, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 4 次
+  narrative 含'葛贤': False
+  perf: llm.calls=22, llm.avg_ms=27438
+  cache: size=10, hit=44%
+  轮耗时: 13.1s
+
+--- Round 23 | 我在茶馆听人议论时局。 ---
+  cash=11.73, debt=0.00, city=shengze
+  discoveries: items=14, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 4 次
+  narrative 含'葛贤': False
+  perf: llm.calls=23, llm.avg_ms=26958
+  cache: size=10, hit=47%
+  轮耗时: 16.4s
+
+--- Round 24 | 我又织了一匹湖绫，存着不卖。 ---
+  cash=12.73, debt=0.00, city=shengze
+  discoveries: items=15, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 4 次
+  narrative 含'葛贤': False
+  perf: llm.calls=24, llm.avg_ms=26397
+  cache: size=11, hit=45%
+  轮耗时: 13.5s
+
+--- Round 25 | 时间过了几年，听说西北有旱灾。 ---
+  📅 强制推进日期: 1588年5月 → 1600年12月
+  cash=12.73, debt=0.00, city=shengze
+  discoveries: items=15, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 4 次
+  narrative 含'葛贤': False
+  perf: llm.calls=25, llm.avg_ms=26479
+  cache: size=11, hit=48%
+  轮耗时: 28.4s
+
+--- Round 26 | 时间到了 1601 年，阊门的织工在闹事。 ---
+  📅 强制推进日期: 1600年12月 → 1601年6月
+  cash=12.73, debt=0.00, city=shengze
+  discoveries: items=15, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 4 次
+  narrative 含'葛贤': False
+  perf: llm.calls=26, llm.avg_ms=26218
+  cache: size=12, hit=45%
+  轮耗时: 19.7s
+
+--- Round 27 | 我想去苏州看看织工们的动静。 ---
+  cash=12.73, debt=0.00, city=suzhou
+  discoveries: items=15, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 4 次
+  narrative 含'葛贤': False
+  perf: llm.calls=27, llm.avg_ms=26518
+  cache: size=12, hit=48%
+  轮耗时: 34.3s
+
+--- Round 28 | 我在茶馆听张婶说葛贤被抓了。 ---
+  cash=11.87, debt=0.00, city=shengze
+  discoveries: items=15, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 5 次
+  narrative 含'葛贤': True
+  perf: llm.calls=28, llm.avg_ms=26723
+  cache: size=13, hit=46%
+  轮耗时: 32.3s
+
+--- Round 29 | 我回到盛泽，继续织绸。 ---
+  cash=2.87, debt=3.00, city=shengze
+  discoveries: items=15, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 5 次
+  narrative 含'葛贤': True
+  perf: llm.calls=29, llm.avg_ms=27164
+  cache: size=13, hit=48%
+  轮耗时: 39.5s
+
+--- Round 30 | 我算了算这十年的家底。 ---
+  📅 强制推进日期: 1588年7月 → 1605年12月
+  cash=2.87, debt=3.00, city=shengze
+  discoveries: items=15, persons=1, places=0
+  triggered_events: 9
+  monthly_settle: 5 次
+  narrative 含'葛贤': True
+  perf: llm.calls=30, llm.avg_ms=27072
+  cache: size=13, hit=50%
+  轮耗时: 24.4s
+
+
+======================================================================
+📊 v1.7.44 长程验证报告（30 轮）
+======================================================================
+
+[1] QuestSystem 自动完成度
+  完成: 4/4
+    ✅ 初次织绸
+    ✅ 第一次卖绸
+    ✅ 初访苏州
+    ✅ 家人团圆
+
+[2] 触发事件统计
+  triggered_events 总数: 9
+    - evt.little_ice_age
+    - evt.guoben_dispute
+    - evt.silver_inflow
+    - evt.nurhaci_rise
+    - he_01
+    - he_02
+    - he_04
+    - evt.three_campaigns
+    - he_06
+
+[3] 1601 葛贤抗税验证
+  narrative 含'葛贤'条数: 1
+  ✅ 触发
+
+[4] 月度结算次数
+  monthly_settle 触发: 5 次
+  期望（4 年每月结算）: 约 36 次
+
+[5] DramaManager 干预统计
+  总干预次数: 2
+    drama_pause: 2 次
+
+[6] Wiki Cache 长期统计
+  cache_size: 13
+  hit_rate: 50%
+  cache_max: 100
+
+[7] LLM 性能
+  总 LLM 调用: 30
+  总 LLM 耗时: 812163ms (812.2s)
+  平均/调用: 27072ms
+
+[8] EventBus 统计
+  总发布: 29
+  总处理: 83
+  失败: 0
+  死信: 0
+
+[9] 总耗时
+  总耗时: 812.4s
+  平均/轮: 27.1s
+  对比 v1.7.40 5 轮 172.3s（34.5s/轮）
+
+[10] 财务
+  cash: 5.00 → 2.87 (-2.13)
+  rice: 8.0 → 5.0 (-3.0)
+  debt: 1.00 → 3.00 (+2.00)
+
+[11] 最近事件反馈
+  ⚡ major_event: he_01
+  ⚡ major_event: he_02
+  ⚡ major_event: he_04
+  ⚡ major_event: evt.three_campaigns
+  ⚡ major_event: he_06
