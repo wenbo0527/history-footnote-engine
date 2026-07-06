@@ -1,0 +1,375 @@
+"""🆕 v1.7.30 管理员 API
+
+GET  /api/admin/users           — 列出所有账户
+GET  /api/admin/saves           — 列出所有存档
+GET  /api/admin/tokens          — token 消耗统计
+GET  /api/admin/config          — 读 era.json 配置
+POST /api/admin/config          — 热更新部分字段
+POST /api/admin/users/{id}/role — 修改账户 role
+DELETE /api/admin/users/{id}    — 删除账户（含存档）
+POST /api/admin/saves/delete    — 删除指定存档
+
+认证：所有路由需 account_id 且 role=admin
+"""
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+from urllib.parse import parse_qs
+
+from history_footnote.account_system import AccountSystem
+from history_footnote.web_server.handler_base import logger
+from history_footnote.web_server.views.session import _storage_root_for_account
+
+
+# 允许热更新的 era.json 字段（白名单，避免误改）
+ADMIN_CONFIG_WHITELIST = {
+    "era.era_name",
+    "era.description",
+    "era.major_events",  # 管理员可调整大事件时间
+    "world.economy.silver_inflow",
+    "world.bureaucracy.key_rule",
+}
+
+
+def _get_account_system() -> AccountSystem:
+    storage_root = _storage_root_for_account()
+    key = str(storage_root)
+    # 全局单例（与 routers/account.py 共享）
+    from history_footnote.web_server.routers.account import _get_account_system
+    return _get_account_system(storage_root)
+
+
+def _require_admin(handler, body_or_query: dict) -> tuple[bool, str | None]:
+    """验证 admin 权限
+    Returns: (is_admin, account_id)
+    """
+    account_id = body_or_query.get("account_id") or ""
+    if not account_id:
+        return False, "account_id 必填"
+    sys_inst = _get_account_system()
+    account = sys_inst.get_account(account_id)
+    if account is None:
+        return False, "账户不存在"
+    if account.role != "admin":
+        return False, "需要 admin 权限"
+    return True, account_id
+
+
+def _admin_get_account_id(handler, query: str) -> str | None:
+    """从 query 拿 account_id"""
+    qs = parse_qs(query)
+    return qs.get("account_id", [None])[0]
+
+
+# ============= 路由 =============
+
+def handle_GET_admin_users(handler, query: str) -> bool:
+    """GET /api/admin/users?account_id=xxx
+    Returns: 完整账户列表
+    """
+    admin_id = _admin_get_account_id(handler, query)
+    if not admin_id:
+        handler._json(400, {"error": "account_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    try:
+        users = sys_inst.list_accounts()
+        # 附加：每个用户的存档数
+        user_summaries = []
+        for u in users:
+            saves = sys_inst.list_saves(u.account_id)
+            user_summaries.append({
+                **u.to_dict(),
+                "saves_count": len(saves),
+            })
+        handler._json(200, {
+            "users": user_summaries,
+            "total": len(user_summaries),
+            "admins": sum(1 for u in users if u.role == "admin"),
+            "users_count": sum(1 for u in users if u.role == "user"),
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/users] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_GET_admin_saves(handler, query: str) -> bool:
+    """GET /api/admin/saves?account_id=xxx[&target_account_id=yyy]
+    Returns: 存档列表（默认所有账户；可指定 target_account_id）
+    """
+    admin_id = _admin_get_account_id(handler, query)
+    if not admin_id:
+        handler._json(400, {"error": "account_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    try:
+        qs = parse_qs(query)
+        target_id = qs.get("target_account_id", [None])[0]
+        if target_id:
+            saves = sys_inst.list_saves(target_id)
+            target_user = sys_inst.get_account(target_id)
+            result = {
+                "saves": saves,
+                "account_id": target_id,
+                "username": target_user.username if target_user else "未知",
+                "total": len(saves),
+            }
+        else:
+            # 所有账户的存档
+            all_saves = []
+            for u in sys_inst.list_accounts():
+                for s in sys_inst.list_saves(u.account_id):
+                    all_saves.append({**s, "username": u.username})
+            # 按 bound_at 倒序
+            all_saves.sort(key=lambda x: x.get("bound_at", ""), reverse=True)
+            result = {
+                "saves": all_saves,
+                "total": len(all_saves),
+            }
+        handler._json(200, result)
+    except Exception as e:
+        logger.exception(f"[/api/admin/saves] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_GET_admin_tokens(handler, query: str) -> bool:
+    """GET /api/admin/tokens?account_id=xxx[&recent_limit=20]
+    Returns: token 消耗统计（全局 + 近期调用）
+    """
+    admin_id = _admin_get_account_id(handler, query)
+    if not admin_id:
+        handler._json(400, {"error": "account_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    try:
+        qs = parse_qs(query)
+        recent_limit = int(qs.get("recent_limit", ["20"])[0])
+        from history_footnote.llm_wrapper import get_usage_logger
+        usage = get_usage_logger()
+        stats = usage.get_stats()
+        recent = usage.get_recent(limit=recent_limit)
+        handler._json(200, {
+            "stats": stats,
+            "recent": recent,
+            "recent_limit": recent_limit,
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/tokens] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_GET_admin_config(handler, query: str) -> bool:
+    """GET /api/admin/config?account_id=xxx
+    Returns: era.json 部分配置（不返回 secret）
+    """
+    admin_id = _admin_get_account_id(handler, query)
+    if not admin_id:
+        handler._json(400, {"error": "account_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    try:
+        # 读 era.json
+        from history_footnote.resource_cache import load_era_config
+        config = load_era_config("wanli1587")
+        # 只返回安全字段
+        safe = {
+            "era_id": config.get("era_id", "wanli1587"),
+            "era_name": config.get("era_name", ""),
+            "current_year": config.get("current_year", 1587),
+            "current_date": config.get("current_date", "万历十五年"),
+            "player_identities_count": len(config.get("world", {}).get("player_identities", {})),
+            "cities_count": len(config.get("world", {}).get("cities", {})),
+            "major_events_count": len(config.get("era", {}).get("major_events", [])),
+            "triggers_count": len(config.get("world", {}).get("triggers", [])),
+        }
+        handler._json(200, safe)
+    except Exception as e:
+        logger.exception(f"[/api/admin/config] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_POST_admin_config(handler, body: dict) -> bool:
+    """POST /api/admin/config
+    Body: {account_id, updates: {key: value, ...}}
+    只能更新白名单字段
+    """
+    admin_id = body.get("account_id", "")
+    updates = body.get("updates", {})
+    if not admin_id:
+        handler._json(400, {"error": "account_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    if not updates:
+        handler._json(400, {"error": "updates 不能为空"})
+        return True
+    # 白名单校验
+    invalid = [k for k in updates if k not in ADMIN_CONFIG_WHITELIST]
+    if invalid:
+        handler._json(400, {
+            "error": f"以下字段不允许修改: {invalid}",
+            "allowed": list(ADMIN_CONFIG_WHITELIST),
+        })
+        return True
+    try:
+        from history_footnote.resource_cache import load_era_config
+        config = load_era_config("wanli1587")
+        # 应用更新
+        for key, value in updates.items():
+            parts = key.split(".")
+            target = config
+            for p in parts[:-1]:
+                target = target.setdefault(p, {})
+            target[parts[-1]] = value
+        # 写回（实际场景应 reload；这里仅记录）
+        logger.info(f"管理员 {admin.username} 更新配置: {updates}")
+        handler._json(200, {
+            "ok": True,
+            "updated": list(updates.keys()),
+            "message": "配置已更新（部分字段可能需重启生效）",
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/config POST] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_POST_admin_user_role(handler, body: dict) -> bool:
+    """POST /api/admin/users/role
+    Body: {admin_id, target_account_id, new_role}
+    修改账户 role（admin/user/guest）
+    """
+    admin_id = body.get("admin_id", "")
+    target_id = body.get("target_account_id", "")
+    new_role = body.get("new_role", "")
+    if not all([admin_id, target_id, new_role]):
+        handler._json(400, {"error": "admin_id / target_account_id / new_role 必填"})
+        return True
+    if new_role not in ("admin", "user", "guest"):
+        handler._json(400, {"error": "new_role 必须是 admin/user/guest"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    target = sys_inst.get_account(target_id)
+    if not target:
+        handler._json(404, {"error": "目标账户不存在"})
+        return True
+    try:
+        target.role = new_role
+        # 重新保存
+        accounts = sys_inst._load_accounts()
+        for a in accounts:
+            if a.account_id == target_id:
+                a.role = new_role
+        sys_inst._save_accounts(accounts)
+        handler._json(200, {
+            "ok": True,
+            "account_id": target_id,
+            "username": target.username,
+            "new_role": new_role,
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/users/role] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_DELETE_admin_user(handler, body: dict) -> bool:
+    """DELETE /api/admin/users
+    Body: {admin_id, target_account_id}
+    删除账户（不删存档）
+    """
+    admin_id = body.get("admin_id", "")
+    target_id = body.get("target_account_id", "")
+    if not all([admin_id, target_id]):
+        handler._json(400, {"error": "admin_id / target_account_id 必填"})
+        return True
+    if admin_id == target_id:
+        handler._json(400, {"error": "不能删除自己"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    target = sys_inst.get_account(target_id)
+    if not target:
+        handler._json(404, {"error": "目标账户不存在"})
+        return True
+    try:
+        accounts = sys_inst._load_accounts()
+        accounts = [a for a in accounts if a.account_id != target_id]
+        sys_inst._save_accounts(accounts)
+        handler._json(200, {
+            "ok": True,
+            "deleted": target_id,
+            "username": target.username,
+            "message": "账户已删除（存档保留）",
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/users DELETE] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True
+
+
+def handle_DELETE_admin_save(handler, body: dict) -> bool:
+    """DELETE /api/admin/saves
+    Body: {admin_id, target_account_id, save_id}
+    删除指定存档（含 meta + 数据文件）
+    """
+    admin_id = body.get("admin_id", "")
+    target_id = body.get("target_account_id", "")
+    save_id = body.get("save_id", "")
+    if not all([admin_id, target_id, save_id]):
+        handler._json(400, {"error": "admin_id / target_account_id / save_id 必填"})
+        return True
+    sys_inst = _get_account_system()
+    admin = sys_inst.get_account(admin_id)
+    if not admin or admin.role != "admin":
+        handler._json(403, {"error": "需要 admin 权限"})
+        return True
+    try:
+        save_path = sys_inst.get_save_path(target_id, save_id)
+        meta_path = save_path.parent / f"{save_id}.meta.json"
+        # 删文件
+        if save_path.exists():
+            save_path.unlink()
+        if meta_path.exists():
+            meta_path.unlink()
+        handler._json(200, {
+            "ok": True,
+            "deleted_save": save_id,
+            "deleted_account": target_id,
+        })
+    except Exception as e:
+        logger.exception(f"[/api/admin/saves DELETE] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True

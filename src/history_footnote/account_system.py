@@ -350,25 +350,49 @@ class AccountSystem:
 
     # ----- 管理员 -----
 
-    def ensure_default_admin(self, admin_code: str | None = None) -> InviteCode | None:
-        """确保至少有一个 admin 邀请码（系统初始化用）"""
+    def ensure_default_admin(self, admin_code: str | None = None) -> tuple[InviteCode | None, Account | None]:
+        """确保至少有一个 admin 邀请码 + 至少一个 admin 账户（系统初始化用）
+
+        Returns: (invite_code, account)
+        - 若已有 admin 邀请码：返回 (None, None)
+        - 若没有：创建 admin 邀请码 + 创建 admin 账户（用户名=admin）
+
+        默认 admin 账户:
+        - username: "admin"
+        - account_id: "00000000"
+        - 邀请码: "INV-ADMIN-2024"（首次启动生成）
+        """
         with self._lock:
             codes = self._load_invite_codes()
-            admin_codes = [c for c in codes if c.role if hasattr(c, 'role') or c.label == "admin"]
-            # 简单通过 label 判断
+            accounts = self._load_accounts()
+            # 已有 admin 邀请码
             admin_codes = [c for c in codes if "admin" in c.label.lower()]
             if admin_codes:
-                return None
-            # 创建
+                return None, None
+            # 已有 admin 账户
+            existing_admin = next((a for a in accounts if a.role == "admin"), None)
+            if existing_admin:
+                return None, None
+            # 创建 admin 邀请码（10 次可用）
             inv = self.create_invite_code(
-                label="admin-initial",
+                label="admin-bootstrap",
                 max_uses=10,
             )
-            # 标记为 admin
-            inv.label = "admin-bootstrap"
-            codes = self._load_invite_codes()
-            for c in codes:
-                if c.code == inv.code:
-                    c.label = "admin-bootstrap"
-            self._save_invite_codes(codes)
-            return inv
+            # 用这个码创建 admin 账户
+            admin_acc, err = self.create_account(
+                username="admin",
+                invite_code=inv.code,
+                role="admin",
+            )
+            if admin_acc:
+                # 把 account_id 改为 "00000000"（固定 ID，方便记忆）
+                # 必须重新读 accounts 找到这个 admin 对象再改
+                accounts = self._load_accounts()
+                for a in accounts:
+                    if a.username == "admin" and a.role == "admin":
+                        a.account_id = "00000000"
+                        admin_acc = a
+                        break
+                self._save_accounts(accounts)
+                return inv, admin_acc
+            return inv, None

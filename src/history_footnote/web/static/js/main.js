@@ -1903,6 +1903,7 @@ async function registerAccount() {
     state.account_role = data.role;
     localStorage.setItem("hfe_account_id", data.account_id);
     localStorage.setItem("hfe_account_username", data.username);
+    localStorage.setItem("hfe_account_role", data.role);
     showSavesList();
   } catch (e) {
     $err.textContent = "网络错误：" + e.message;
@@ -1949,6 +1950,7 @@ async function loginByAccountId() {
     state.account_role = data.role;
     localStorage.setItem("hfe_account_id", data.account_id);
     localStorage.setItem("hfe_account_username", data.username);
+    localStorage.setItem("hfe_account_role", data.role);
     showSavesList();
   } catch (e) {
     $err.textContent = "网络错误：" + e.message;
@@ -2022,13 +2024,210 @@ function logoutAccount() {
 function restoreAccountFromStorage() {
   const accountId = localStorage.getItem("hfe_account_id");
   const username = localStorage.getItem("hfe_account_username");
+  const role = localStorage.getItem("hfe_account_role") || "user";
   if (accountId && username) {
     state.account_id = accountId;
     state.account_username = username;
+    state.account_role = role;
     return true;
   }
   return false;
 }
+
+// 🆕 v1.7.30 管理员面板（4 tab）
+async function showAdminPanel() {
+  if (!state.account_id) {
+    showAccountLogin();
+    return;
+  }
+  // 先验证权限
+  const info = await api(`/api/account/info?account_id=${state.account_id}`);
+  if (info.error || info.role !== "admin") {
+    alert("需要 admin 权限");
+    return;
+  }
+  $main.innerHTML = `
+    <div class="start-screen">
+      <h2>🛠 管理员面板</h2>
+      <p style="color:#8b6f47;font-size:13px">
+        ${escapeHtml(state.account_username)} (${state.account_id}) · <span style="color:#5a3e1f">admin</span>
+      </p>
+      <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap">
+        <button onclick="adminShowTab('users')" class="admin-tab-btn" data-tab="users" style="padding:8px 16px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer">
+          👥 用户
+        </button>
+        <button onclick="adminShowTab('saves')" class="admin-tab-btn" data-tab="saves" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer">
+          💾 存档
+        </button>
+        <button onclick="adminShowTab('tokens')" class="admin-tab-btn" data-tab="tokens" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer">
+          🎫 Token
+        </button>
+        <button onclick="adminShowTab('config')" class="admin-tab-btn" data-tab="config" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer">
+          ⚙️ 配置
+        </button>
+        <button onclick="logoutAccount()" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;margin-left:auto">
+          退出
+        </button>
+      </div>
+      <div id="admin-tab-content" style="margin-top:16px"></div>
+    </div>
+  `;
+  adminShowTab("users");
+}
+
+async function adminShowTab(tab) {
+  // 切换按钮样式
+  document.querySelectorAll(".admin-tab-btn").forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.style.background = isActive ? "#5a3e1f" : "transparent";
+    btn.style.color = isActive ? "#f5e6c8" : "#5a3e1f";
+  });
+  const $content = document.getElementById("admin-tab-content");
+  $content.innerHTML = "<p style='color:#a08858;font-size:13px'>加载中…</p>";
+  try {
+    if (tab === "users") {
+      const data = await api(`/api/admin/users?account_id=${state.account_id}`);
+      $content.innerHTML = `
+        <h3>👥 用户列表 (${data.total})</h3>
+        <p style="font-size:13px;color:#5a3e1f">管理员 ${data.admins} 个 · 普通用户 ${data.users_count} 个</p>
+        <div style="max-width:900px">
+        ${data.users.map(u => `
+          <div class="archive-item" style="display:flex;align-items:center;gap:12px">
+            <div style="flex:1">
+              <div class="ar-session">${escapeHtml(u.username)} ${u.role === "admin" ? "🛠" : ""}</div>
+              <div class="ar-meta">id=${escapeHtml(u.account_id)} · ${u.saves_count} 个存档 · ${escapeHtml(u.email || "")}</div>
+            </div>
+            <select onchange="adminChangeRole('${u.account_id}', this.value)" style="padding:4px 8px;border:1px solid #c4a878;border-radius:4px">
+              <option value="user" ${u.role === "user" ? "selected" : ""}>user</option>
+              <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
+              <option value="guest" ${u.role === "guest" ? "selected" : ""}>guest</option>
+            </select>
+            <button onclick="adminDeleteUser('${u.account_id}')" style="padding:4px 8px;background:#c0392b;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">删除</button>
+          </div>
+        `).join("")}
+        </div>
+      `;
+    } else if (tab === "saves") {
+      const data = await api(`/api/admin/saves?account_id=${state.account_id}`);
+      $content.innerHTML = `
+        <h3>💾 全部存档 (${data.total})</h3>
+        <div style="max-width:900px">
+        ${data.saves.length === 0 ? "<p style='color:#a08858'>尚无存档</p>" :
+          data.saves.map(s => `
+            <div class="archive-item" style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1">
+                <div class="ar-session">💾 ${escapeHtml(s.save_id)} <span style="color:#8b6f47;font-size:12px">@ ${escapeHtml(s.username || "")}</span></div>
+                <div class="ar-meta">account=${escapeHtml(s.account_id)} · ${escapeHtml(s.bound_at || "")}</div>
+              </div>
+              <button onclick="adminDeleteSave('${s.account_id}', '${s.save_id}')" style="padding:4px 8px;background:#c0392b;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">删除</button>
+            </div>
+          `).join("")
+        }
+        </div>
+      `;
+    } else if (tab === "tokens") {
+      const data = await api(`/api/admin/tokens?account_id=${state.account_id}&recent_limit=10`);
+      const s = data.stats || {};
+      $content.innerHTML = `
+        <h3>🎫 Token 消耗统计</h3>
+        <div style="background:#faf3e0;padding:16px;border:1px solid #c4a878;border-radius:6px;margin-bottom:16px">
+          <div class="stat-line"><span class="label">总调用次数</span><span class="val">${s.total_calls || 0}</span></div>
+          <div class="stat-line"><span class="label">总 token</span><span class="val">${s.total_tokens || 0}</span></div>
+          <div class="stat-line"><span class="label">输入 token</span><span class="val">${s.total_prompt_tokens || 0}</span></div>
+          <div class="stat-line"><span class="label">输出 token</span><span class="val">${s.total_completion_tokens || 0}</span></div>
+          <div class="stat-line"><span class="label">错误数</span><span class="val">${s.error_count || 0}</span></div>
+        </div>
+        <h4>近期调用 (${(data.recent || []).length})</h4>
+        <div style="max-width:900px">
+        ${(data.recent || []).map(r => `
+          <div class="archive-item" style="font-size:12px">
+            <div class="ar-meta">${escapeHtml(r.model || "")} · ${r.prompt_tokens || 0} → ${r.completion_tokens || 0} · ${escapeHtml(r.timestamp || "")}</div>
+          </div>
+        `).join("")}
+        </div>
+      `;
+    } else if (tab === "config") {
+      const data = await api(`/api/admin/config?account_id=${state.account_id}`);
+      $content.innerHTML = `
+        <h3>⚙️ 配置概览</h3>
+        <div style="background:#faf3e0;padding:16px;border:1px solid #c4a878;border-radius:6px;margin-bottom:16px">
+          <div class="stat-line"><span class="label">era_id</span><span class="val">${escapeHtml(data.era_id)}</span></div>
+          <div class="stat-line"><span class="label">era_name</span><span class="val">${escapeHtml(data.era_name)}</span></div>
+          <div class="stat-line"><span class="label">current_year</span><span class="val">${data.current_year}</span></div>
+          <div class="stat-line"><span class="label">current_date</span><span class="val">${escapeHtml(data.current_date)}</span></div>
+          <div class="stat-line"><span class="label">player_identities</span><span class="val">${data.player_identities_count}</span></div>
+          <div class="stat-line"><span class="label">cities</span><span class="val">${data.cities_count}</span></div>
+          <div class="stat-line"><span class="label">major_events</span><span class="val">${data.major_events_count}</span></div>
+          <div class="stat-line"><span class="label">triggers</span><span class="val">${data.triggers_count}</span></div>
+        </div>
+        <p style="color:#8b6f47;font-size:12px">💡 热更新请用 POST /api/admin/config（白名单字段：era_name / current_date / silver_inflow 等）</p>
+      `;
+    }
+  } catch (e) {
+    $content.innerHTML = `<p style='color:#c0392b'>加载失败：${e.message}</p>`;
+  }
+}
+
+async function adminChangeRole(accountId, newRole) {
+  if (!confirm(`确认将 ${accountId} 改为 ${newRole}?`)) return;
+  const data = await api("/api/admin/users/role", "POST", {
+    admin_id: state.account_id,
+    target_account_id: accountId,
+    new_role: newRole,
+  });
+  if (data.error) {
+    alert("错误：" + data.error);
+  } else {
+    alert("✅ 角色已更新");
+    adminShowTab("users");
+  }
+}
+
+async function adminDeleteUser(accountId) {
+  if (!confirm(`确认删除账户 ${accountId}?（存档保留）`)) return;
+  const data = await api("/api/admin/users/delete", "POST", {
+    admin_id: state.account_id,
+    target_account_id: accountId,
+  });
+  if (data.error) {
+    alert("错误：" + data.error);
+  } else {
+    alert("✅ 账户已删除");
+    adminShowTab("users");
+  }
+}
+
+async function adminDeleteSave(accountId, saveId) {
+  if (!confirm(`确认删除存档 ${saveId}?`)) return;
+  const data = await api("/api/admin/saves/delete", "POST", {
+    admin_id: state.account_id,
+    target_account_id: accountId,
+    save_id: saveId,
+  });
+  if (data.error) {
+    alert("错误：" + data.error);
+  } else {
+    alert("✅ 存档已删除");
+    adminShowTab("saves");
+  }
+}
+
+// 在存档选择页加 admin 入口
+const _origShowSavesList = showSavesList;
+showSavesList = async function() {
+  await _origShowSavesList();
+  if (state.account_role === "admin") {
+    // 在 saves 列表下加一个 admin 入口按钮
+    const adminBtn = document.createElement("div");
+    adminBtn.style.cssText = "margin-top:16px;padding-top:16px;border-top:1px dashed #c4a878";
+    adminBtn.innerHTML = `
+      <button onclick="showAdminPanel()" style="padding:8px 16px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px">
+        🛠 进入管理员面板
+      </button>
+    `;
+    document.querySelector(".start-screen").appendChild(adminBtn);
+  }
+};
 
 
 async function submitInputWithText(inputText) {

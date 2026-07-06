@@ -18,6 +18,7 @@ from urllib.parse import parse_qs
 
 from history_footnote.web_server.routers import (
     account as _account,
+    admin as _admin,
     character as _character,
     eras as _eras,
     glossary as _glossary,
@@ -58,6 +59,11 @@ GET_ROUTES = {
     "/api/account/saves": _account.handle_GET_account_saves,
     "/api/account/info": _account.handle_GET_account_info,
     "/api/account/invite_codes": _account.handle_GET_account_invite_codes,
+    # 🆕 v1.7.30 管理员
+    "/api/admin/users": _admin.handle_GET_admin_users,
+    "/api/admin/saves": _admin.handle_GET_admin_saves,
+    "/api/admin/tokens": _admin.handle_GET_admin_tokens,
+    "/api/admin/config": _admin.handle_GET_admin_config,
 }
 
 # POST 路由
@@ -91,6 +97,11 @@ POST_ROUTES = {
     "/api/account/register": _account.handle_POST_account_register,
     "/api/account/login": _account.handle_POST_account_login,
     "/api/account/saves": _account.handle_POST_account_create_save,
+    # 🆕 v1.7.30 管理员
+    "/api/admin/config": _admin.handle_POST_admin_config,
+    "/api/admin/users/role": _admin.handle_POST_admin_user_role,
+    "/api/admin/users/delete": _admin.handle_DELETE_admin_user,
+    "/api/admin/saves/delete": _admin.handle_DELETE_admin_save,
 }
 
 
