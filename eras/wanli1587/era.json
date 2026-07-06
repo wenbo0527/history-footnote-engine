@@ -1115,7 +1115,217 @@
         "trigger": "moral_anxiety>4",
         "prompt_fragment": "你想起爹临终前说的：'咱家虽然穷，但不能让人指着脊梁骨'。"
       }
-    ]
+    ],
+    "cities": {
+      "suzhou": {
+        "name": "苏州",
+        "distance_from_shengze": "半日水路",
+        "travel_cost": "30~50文",
+        "travel_days": 1.0,
+        "sensory": {
+          "sight": "阊门码头人声鼎沸，招牌密如林",
+          "sound": "牙人叫价声、船夫号子、茶馆评弹",
+          "smell": "桐油、生丝、桂花糕"
+        },
+        "functions": [
+          "sell_silk",
+          "buy_thread",
+          "exam",
+          "guild_hall",
+          "teahouse",
+          "kangshui_1601"
+        ],
+        "key_locations": [
+          "阊门",
+          "山塘街",
+          "观前街",
+          "太监弄",
+          "岭南会馆"
+        ],
+        "danger_level": 2,
+        "opportunity_level": 3,
+        "description": "万历年间江南丝织业绝对中心，赋税占全国十分之一，民间机户工匠超过三万人。",
+        "narrative_arrival": "阊门码头上船还没靠稳，岸上的牙人已经扯着嗓子喊起了价。脚下是湿漉漉的青石板，头顶是密密麻麻的招牌——'杭绸''湖丝''松江棉布'。空气里混着桐油、生丝和桂花糕的甜味。",
+        "entry_event": {
+          "event_id": "arrive_suzhou_v1730",
+          "trigger": "first_arrive",
+          "name": "初到苏州府城",
+          "description": "从盛泽坐船半日，到苏州阊门码头。十倍于盛泽的嘈杂扑面而来。",
+          "narrative_hook": "阊门码头人声鼎沸，牙人叫价；金阊门银胥门。",
+          "effects": {
+            "unlock_function": "sell_silk_guild",
+            "narrative_anchor": "阊门"
+          }
+        }
+      },
+      "hangzhou": {
+        "name": "杭州",
+        "distance_from_shengze": "2~3天水路",
+        "travel_cost": "80~120文",
+        "travel_days": 2.5,
+        "sensory": {
+          "sight": "清河坊招牌从街头挂到街尾，拱宸桥运河开阔",
+          "sound": "船过桥下水声、织机大作坊的'手提足蹴'声",
+          "smell": "桂花香（巷子里）、生丝"
+        },
+        "functions": [
+          "learn_skill",
+          "buy_silk",
+          "temple_visit",
+          "lake_tour",
+          "weaving_bureau"
+        ],
+        "key_locations": [
+          "清河坊",
+          "十五奎巷",
+          "拱宸桥",
+          "灵隐寺",
+          "杭州织染局"
+        ],
+        "danger_level": 1,
+        "opportunity_level": 4,
+        "description": "南宋旧都，丝绸生产的源头城，大作坊为特色（张毅庵从1张织机发展到20余张）。",
+        "narrative_arrival": "船过拱宸桥，杭州城就铺开了。和苏州不一样，这里的河更宽，桥更高。清河坊的丝绸庄伙计站在门口招呼，一匹杭绸在阳光下闪着水一样的光。闻到一股桂花香——不是糕点，是巷子里的桂花树。",
+        "entry_event": {
+          "event_id": "arrive_hangzhou_v1730",
+          "trigger": "first_arrive",
+          "name": "初到南宋旧都",
+          "description": "船过拱宸桥，杭州城铺开。大作坊与西湖并存。",
+          "narrative_hook": "清河坊的杭绸在阳光下闪着光，巷子里飘着桂花香。",
+          "effects": {
+            "unlock_function": "weaving_bureau_apply",
+            "narrative_anchor": "清河坊"
+          }
+        }
+      },
+      "songjiang": {
+        "name": "松江",
+        "distance_from_shengze": "2天水路",
+        "travel_cost": "60~90文",
+        "travel_days": 2.0,
+        "sensory": {
+          "sight": "布庄比绸庄多，招牌'标布''扣布''三梭布'",
+          "sound": "里媪晨抱纱入市，棉纺车声",
+          "smell": "棉花的干燥气息（不是蚕茧）"
+        },
+        "functions": [
+          "switch_to_cotton",
+          "trade_cloth",
+          "buy_cotton",
+          "dyeing_workshop",
+          "sea_trade"
+        ],
+        "key_locations": [
+          "松江府城",
+          "枫泾",
+          "朱家角",
+          "七宝"
+        ],
+        "danger_level": 1,
+        "opportunity_level": 3,
+        "description": "全国棉纺织业中心，'衣被天下'，万历年间赋税122万两占全国7%。",
+        "narrative_arrival": "松江和盛泽完全不同。这里闻不到蚕茧的味道，空气里飘的是棉花的干燥气息。街上的布庄比绸庄多，招牌上写的是'标布''扣布''三梭布'。'买不尽松江布，收不尽魏塘纱'，这话你听过，现在亲眼见了。",
+        "entry_event": {
+          "event_id": "arrive_songjiang_v1730",
+          "trigger": "first_arrive",
+          "name": "初到棉布天下",
+          "description": "松江空气里是棉花的干燥气息，丝织手艺不适用。",
+          "narrative_hook": "买不尽松江布，收不尽魏塘纱。",
+          "effects": {
+            "unlock_function": "switch_to_cotton",
+            "narrative_anchor": "松江府城"
+          }
+        }
+      },
+      "nanjing": {
+        "name": "南京",
+        "distance_from_shengze": "5~7天水路",
+        "travel_cost": "200~300文",
+        "travel_days": 6.0,
+        "sensory": {
+          "sight": "城墙高得仰头才看得见顶，秦淮河上画舫穿梭",
+          "sound": "宵禁松弛，夜间酒楼茶肆灯火通明",
+          "smell": "墨汁（贡院街）、桂花糕、秦淮河腥气"
+        },
+        "functions": [
+          "exam",
+          "petition",
+          "temple_visit",
+          "trade",
+          "lantern_festival",
+          "join_army"
+        ],
+        "key_locations": [
+          "秦淮河",
+          "贡院街",
+          "江南贡院",
+          "三山街",
+          "应天府",
+          "南京守备"
+        ],
+        "danger_level": 3,
+        "opportunity_level": 5,
+        "description": "留都，'天下财赋出于江南，而金陵为其会'，人口40~50万，万历中期科举黄金时代。",
+        "narrative_arrival": "南京城比苏州大三倍。城墙高得仰头才看得见顶，城门洞里能并排走两辆马车。秦淮河上画舫穿梭，河两岸酒楼茶肆灯火通明——万历年间宵禁已经松了，夜里也能做生意。贡院街挤满了书肆、笔墨铺和茶馆，空气里飘着墨汁和桂花糕的味道。",
+        "entry_event": {
+          "event_id": "arrive_nanjing_v1730",
+          "trigger": "first_arrive",
+          "name": "初到留都",
+          "description": "城墙高得仰头才看得见顶。织户在这里什么都不是。",
+          "narrative_hook": "秦淮河上画舫穿梭，贡院街挤满书肆笔墨铺。",
+          "effects": {
+            "unlock_function": "exam_or_petition",
+            "narrative_anchor": "秦淮河"
+          }
+        }
+      }
+    },
+    "city_entry_events": {
+      "suzhou": {
+        "event_id": "arrive_suzhou_v1730",
+        "trigger": "first_arrive",
+        "name": "初到苏州府城",
+        "description": "从盛泽坐船半日，到苏州阊门码头。十倍于盛泽的嘈杂扑面而来。",
+        "narrative_hook": "阊门码头人声鼎沸，牙人叫价；金阊门银胥门。",
+        "effects": {
+          "unlock_function": "sell_silk_guild",
+          "narrative_anchor": "阊门"
+        }
+      },
+      "hangzhou": {
+        "event_id": "arrive_hangzhou_v1730",
+        "trigger": "first_arrive",
+        "name": "初到南宋旧都",
+        "description": "船过拱宸桥，杭州城铺开。大作坊与西湖并存。",
+        "narrative_hook": "清河坊的杭绸在阳光下闪着光，巷子里飘着桂花香。",
+        "effects": {
+          "unlock_function": "weaving_bureau_apply",
+          "narrative_anchor": "清河坊"
+        }
+      },
+      "songjiang": {
+        "event_id": "arrive_songjiang_v1730",
+        "trigger": "first_arrive",
+        "name": "初到棉布天下",
+        "description": "松江空气里是棉花的干燥气息，丝织手艺不适用。",
+        "narrative_hook": "买不尽松江布，收不尽魏塘纱。",
+        "effects": {
+          "unlock_function": "switch_to_cotton",
+          "narrative_anchor": "松江府城"
+        }
+      },
+      "nanjing": {
+        "event_id": "arrive_nanjing_v1730",
+        "trigger": "first_arrive",
+        "name": "初到留都",
+        "description": "城墙高得仰头才看得见顶。织户在这里什么都不是。",
+        "narrative_hook": "秦淮河上画舫穿梭，贡院街挤满书肆笔墨铺。",
+        "effects": {
+          "unlock_function": "exam_or_petition",
+          "narrative_anchor": "秦淮河"
+        }
+      }
+    }
   },
   "mechanics": {
     "variables": [
