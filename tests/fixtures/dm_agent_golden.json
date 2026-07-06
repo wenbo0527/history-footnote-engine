@@ -1,0 +1,71 @@
+{
+  "schema_version": "v1.7.30",
+  "generated_at": "test",
+  "signatures": {
+    "dm_state_fields": [
+      "applied_changes",
+      "era_id",
+      "events_to_save",
+      "forced_events",
+      "insight_candidates",
+      "messages",
+      "narrative",
+      "pacing_directives",
+      "player_input",
+      "recent_events",
+      "related_knowledge",
+      "state_changes",
+      "triggered_rules",
+      "updates",
+      "validation_passed",
+      "view_state"
+    ],
+    "make_tools_src_lines": 384,
+    "make_dm_nodes_src_lines": 262,
+    "extract_narrative_node_src_lines": 55,
+    "state_confirmation_node_src_lines": 3,
+    "DMAgent_public_methods": [
+      "_build_graph",
+      "_build_recent_context_for_prompt",
+      "_build_system_prompt",
+      "_get_forced_events_for_mock",
+      "_get_insights_for_mock",
+      "_get_pacing_for_mock",
+      "_get_triggers_for_mock",
+      "_load_dm_persona",
+      "_make_view_state_dict",
+      "regenerate",
+      "run"
+    ],
+    "DMAgent_private_methods": [
+      "_build_graph",
+      "_build_recent_context_for_prompt",
+      "_build_system_prompt",
+      "_get_forced_events_for_mock",
+      "_get_insights_for_mock",
+      "_get_pacing_for_mock",
+      "_get_triggers_for_mock",
+      "_load_dm_persona",
+      "_make_view_state_dict"
+    ],
+    "dm_agent_py_lines": 1434
+  },
+  "pure_functions": {
+    "_make_view_state_dict": {
+      "round_number": 1,
+      "current_date": "1587年3月",
+      "variables": {},
+      "triggered_events": [],
+      "unlocked_insights": [],
+      "npc_levels": {},
+      "value_shifts": {},
+      "player_idle_rounds": 0,
+      "selected_identity": "weaving_male",
+      "player_gender": "male"
+    },
+    "_get_forced_events_for_mock": [],
+    "_get_pacing_for_mock": [],
+    "_get_triggers_for_mock": [],
+    "_get_insights_for_mock": []
+  }
+}
