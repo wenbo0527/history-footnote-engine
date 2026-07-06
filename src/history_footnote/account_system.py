@@ -350,6 +350,140 @@ class AccountSystem:
 
     # ----- 管理员 -----
 
+    # 🆕 v1.7.30 体验版（无需邀请码，30 回合限制 + 10 回合反馈）
+
+    TRIAL_MAX_ROUNDS = 30
+    TRIAL_FEEDBACK_INTERVAL = 10
+    TRIAL_FILE = "trial.json"
+
+    def _get_trial_path(self) -> Path:
+        return self.accounts_dir / self.TRIAL_FILE
+
+    def _load_trial(self) -> dict:
+        path = self._get_trial_path()
+        if not path.exists():
+            return {"current": None, "history": []}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return {"current": None, "history": []}
+
+    def _save_trial(self, trial: dict) -> None:
+        _atomic_write(self._get_trial_path(), trial)
+
+    def start_trial(self) -> dict:
+        """开始一次体验版（不需要邀请码）
+
+        Returns: {trial_id, current_round, started_at, feedback_required_at}
+        """
+        with self._lock:
+            trial = self._load_trial()
+            new_trial = {
+                "trial_id": secrets.token_hex(8),
+                "current_round": 0,
+                "started_at": _now(),
+                "feedback_required_at": self.TRIAL_FEEDBACK_INTERVAL,  # 第 10 回合要求反馈
+                "feedback_submitted": False,
+                "ended_at": None,
+                "contact": "",
+                "invite_code_received": False,
+            }
+            trial["current"] = new_trial
+            self._save_trial(trial)
+            return new_trial
+
+    def get_current_trial(self) -> dict | None:
+        with self._lock:
+            trial = self._load_trial()
+            return trial.get("current")
+
+    def increment_trial_round(self) -> dict | None:
+        """增加体验版轮数（玩家每轮结束调用）"""
+        with self._lock:
+            trial = self._load_trial()
+            current = trial.get("current")
+            if not current:
+                return None
+            current["current_round"] += 1
+            # 检查是否需要反馈
+            if current["current_round"] >= self.TRIAL_MAX_ROUNDS and not current.get("ended_at"):
+                current["ended_at"] = _now()
+            self._save_trial(trial)
+            return current
+
+    def is_trial_round_feedback_required(self) -> bool:
+        """当前是否需要提交反馈（每 10 回合）"""
+        with self._lock:
+            current = self.get_current_trial()
+            if not current:
+                return False
+            round_num = current.get("current_round", 0)
+            # 每 10 轮（10/20/30）且未提交
+            if round_num > 0 and round_num % self.TRIAL_FEEDBACK_INTERVAL == 0 and not current.get("feedback_submitted"):
+                return True
+            return False
+
+    def submit_trial_feedback(self, feedback: str, contact: str = "") -> bool:
+        """提交体验版反馈
+
+        Args:
+            feedback: 反馈/建议
+            contact: 联系方式（可选）
+
+        Returns: 是否成功
+        """
+        with self._lock:
+            trial = self._load_trial()
+            current = trial.get("current")
+            if not current:
+                return False
+            current["feedback_submitted"] = True
+            current["contact"] = contact
+            # 记录历史
+            history = trial.get("history", [])
+            history.append({
+                "trial_id": current.get("trial_id"),
+                "round": current.get("current_round"),
+                "feedback": feedback,
+                "contact": contact,
+                "submitted_at": _now(),
+            })
+            trial["history"] = history
+            self._save_trial(trial)
+            return True
+
+    def end_trial(self) -> dict | None:
+        """结束体验版（玩家主动结束 / 30 回合到）"""
+        with self._lock:
+            trial = self._load_trial()
+            current = trial.get("current")
+            if not current:
+                return None
+            if not current.get("ended_at"):
+                current["ended_at"] = _now()
+            # 移入 history
+            history = trial.get("history", [])
+            history.append(current)
+            trial["history"] = history
+            trial["current"] = None
+            self._save_trial(trial)
+            return current
+
+    def grant_invite_code_for_trial(self, contact: str) -> InviteCode | None:
+        """如果反馈意见被采纳，奖励一个邀请码（管理员操作）
+
+        Args:
+            contact: 联系方式（用于查找 trial history）
+
+        Returns: 创建的邀请码
+        """
+        with self._lock:
+            inv = self.create_invite_code(
+                label=f"trial-reward-{secrets.token_hex(4)}",
+                max_uses=1,
+            )
+            return inv
+
     def ensure_default_admin(self, admin_code: str | None = None) -> tuple[InviteCode | None, Account | None]:
         """确保至少有一个 admin 邀请码 + 至少一个 admin 账户（系统初始化用）
 

@@ -1785,3 +1785,177 @@ body {
   color: #8b6f47;
   font-style: italic;
 }
+
+/* ============================================================ */
+/* 🆕 v1.7.30 完整响应式（断点系统：4 档） */
+/* ============================================================ */
+
+/* 桌面端（≥1200px）：sidebar 320px + main 弹性 */
+@media (min-width: 1200px) {
+  body {
+    font-size: 15px;
+  }
+  .sidebar {
+    width: 320px;
+    min-width: 320px;
+  }
+  .main {
+    margin-left: 320px;
+  }
+}
+
+/* 平板（768px-1199px）：sidebar 280px */
+@media (min-width: 768px) and (max-width: 1199px) {
+  body {
+    font-size: 14px;
+  }
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+  }
+  .main {
+    margin-left: 280px;
+  }
+}
+
+/* 大手机（481px-767px）：sidebar 抽屉式（默认隐藏） */
+@media (min-width: 481px) and (max-width: 767px) {
+  body {
+    font-size: 14px;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    z-index: 100;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+    background: #faf3e0;
+  }
+  .sidebar.open {
+    left: 0;
+    box-shadow: 4px 0 12px rgba(0,0,0,0.15);
+  }
+  .main {
+    margin-left: 0;
+    width: 100%;
+    padding: 8px;
+  }
+  .input-area {
+    padding: 8px;
+  }
+  .voice-options {
+    grid-template-columns: 1fr;
+  }
+  /* 显示 sidebar 切换按钮 */
+  .sidebar-toggle-btn {
+    display: block;
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    z-index: 101;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #5a3e1f;
+    color: #f5e6c8;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    cursor: pointer;
+    font-size: 24px;
+  }
+  /* 蒙层 */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 99;
+  }
+  .sidebar.open ~ .sidebar-overlay {
+    display: block;
+  }
+}
+
+/* 小手机（≤480px）：紧凑布局 */
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -100vw;
+    width: 90vw;
+    height: 100vh;
+    z-index: 100;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+    background: #faf3e0;
+  }
+  .sidebar.open {
+    left: 0;
+  }
+  .main {
+    margin-left: 0;
+    width: 100%;
+    padding: 4px;
+  }
+  .start-screen {
+    padding: 12px;
+  }
+  .start-screen h2 {
+    font-size: 18px;
+  }
+  .input-area {
+    padding: 4px;
+  }
+  .input-area input,
+  .input-area button {
+    font-size: 14px;
+    padding: 8px;
+  }
+  .voice-options {
+    grid-template-columns: 1fr;
+  }
+  .voice-option {
+    font-size: 12px;
+    padding: 8px;
+  }
+  .sb-section-header {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  .sb-item-name {
+    font-size: 12px;
+  }
+  .sb-item-meta {
+    font-size: 10px;
+  }
+  .modal-content {
+    width: 95vw;
+    max-height: 90vh;
+  }
+  .sidebar-toggle-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}
+
+/* 通用：sidebar 切换按钮默认隐藏（桌面端） */
+.sidebar-toggle-btn {
+  display: none;
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  button, .voice-option, .archive-item {
+    min-height: 44px;  /* iOS 推荐触摸目标 */
+  }
+  .input-area input {
+    font-size: 16px;  /* 防止 iOS 自动缩放 */
+  }
+}
