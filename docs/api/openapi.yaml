@@ -518,6 +518,22 @@ paths:
               schema:
                 type: object
 
+  /api/voice_options/suggest:
+    post:
+      summary: "POST /api/voice_options/suggest — 玩家主动求 LLM 补充选项"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
   /health:
     get:
       summary: "健康检查（基础）"

@@ -26,6 +26,7 @@ from history_footnote.web_server.routers import (
     session as _session_router,
     state as _state,
     tasks as _tasks,
+    voice_suggest as _voice_suggest,
 )
 
 
@@ -80,6 +81,7 @@ POST_ROUTES = {
     "/api/archive/delete": _session_router.handle_POST_archive_delete,
     "/api/archives/clear": _session_router.handle_POST_archives_clear,
     "/api/input_stream": _input.handle_POST_input_stream,
+    "/api/voice_options/suggest": _voice_suggest.handle_POST_voice_options_suggest,
 }
 
 

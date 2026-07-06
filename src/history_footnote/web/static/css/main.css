@@ -280,6 +280,64 @@ body {
   padding: 5px 8px;
   font-size: 12px;
 }
+
+/* 🆕 v1.7.30 "✨ 帮我一下" 按钮（玩家主动求 LLM 补充选项）
+   触发条件：当前 voice_options 数量 < 2
+   显示在 grid 之后 / freetext fallback 之前 */
+.voice-options-suggest-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(196, 168, 120, 0.22) 100%);
+  border: 1px solid rgba(196, 168, 120, 0.5);
+  color: #5a3e1f;
+  font-size: 13px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  font-family: inherit;
+  font-weight: 500;
+}
+.voice-options-suggest-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(196, 168, 120, 0.35) 100%);
+  border-color: #c4a878;
+  color: #3a2618;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+.voice-options-suggest-btn:active:not(:disabled) { transform: scale(0.99); }
+.voice-options-suggest-btn:focus-visible {
+  outline: 2px solid #c4a878;
+  outline-offset: 2px;
+}
+.voice-options-suggest-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.voice-options-suggest-btn .suggest-icon { font-size: 14px; flex-shrink: 0; }
+.voice-options-suggest-btn .suggest-text { flex: 1; }
+
+/* loading 旋转动画 */
+@keyframes suggest-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.voice-options-suggest-btn.loading .suggest-icon {
+  display: inline-block;
+  animation: suggest-spin 1.2s linear infinite;
+}
+
+/* 已使用后置灰 */
+.voice-options-suggest-btn.used {
+  background: rgba(139, 111, 71, 0.08);
+  border-color: rgba(139, 111, 71, 0.2);
+  color: #8b6f47;
+}
 .voice-options-hint {
   color: #a08858;
   font-size: 12px;
@@ -939,6 +997,11 @@ body {
   .voice-options-freetext-fallback {
     font-size: 12px;
     padding: 5px 8px;
+  }
+  /* 🆕 v1.7.30：suggest 按钮移动端更紧凑 */
+  .voice-options-suggest-btn {
+    font-size: 12px;
+    padding: 6px 8px;
   }
 }
 

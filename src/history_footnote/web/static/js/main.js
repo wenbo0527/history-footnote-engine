@@ -1364,6 +1364,13 @@ const effectiveCollapsed = hasRealOptions ? initialCollapsed : false;
 const fallbackText = voiceOptions.length > 0
   ? "或自由输入"
   : "DM 没生成选项——直接描述你想做什么";
+// 🆕 v1.7.30：玩家主动求 LLM 补充选项（仅 < 2 真实选项时显示）
+const suggestButton = hasRealOptions ? "" : `
+  <button class="voice-options-suggest-btn" onclick="suggestVoiceOptions()" aria-label="帮我一下">
+    <span class="suggest-icon">✨</span>
+    <span class="suggest-text">帮我一下（DM 帮想 3~5 个方案）</span>
+  </button>
+`;
 div.innerHTML = `
   <div class="voice-options-header">
     <button class="voice-options-toggle" aria-expanded="${!effectiveCollapsed}" aria-controls="voice-options-grid" ${hasRealOptions ? "" : "disabled"}>
@@ -1377,6 +1384,7 @@ div.innerHTML = `
     ${gridItems}
     ${freetextButton}
   </div>
+  ${suggestButton}
   <button class="voice-options-freetext-fallback" onclick="showFreeInputTab()" aria-label="自由输入">
     <span class="freetext-icon">✍️</span>
     <span class="freetext-text">${fallbackText}</span>
@@ -1425,9 +1433,70 @@ requestAnimationFrame(() => {
 });
 }
 
+// 🆕 v1.7.30：玩家点 "✨ 帮我一下" 调 /api/voice_options/suggest
+// LLM 基于最近 narrative + state 补充 3~5 个可执行方案
+async function suggestVoiceOptions() {
+  const sid = (typeof state !== "undefined" && state.session_id) || "";
+  if (!sid) {
+    console.warn("[suggestVoiceOptions] no session_id");
+    return;
+  }
+  const $btn = document.querySelector(".voice-options-suggest-btn");
+  if (!$btn) return;
+  // 锁定按钮 + 改文案
+  $btn.disabled = true;
+  $btn.classList.add("loading");
+  const $text = $btn.querySelector(".suggest-text");
+  const originalText = $text ? $text.textContent : "";
+  if ($text) $text.textContent = "DM 在想...";
+  try {
+    const resp = await fetch("/api/voice_options/suggest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sid }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const errMsg = data.error || "请求失败";
+      if ($text) $text.textContent = `${errMsg}，请直接输入`;
+      console.error("[suggestVoiceOptions] HTTP", resp.status, errMsg);
+      return;
+    }
+    if (Array.isArray(data.voice_options) && data.voice_options.length > 0) {
+      // 重渲染：删除旧节点 + 重新调 appendVoiceOptions
+      const old = document.getElementById("voice-options");
+      if (old) old.remove();
+      // 临时禁用 localStorage 折叠（确保新选项可见）
+      const prev = window.__VOICE_PREFS__;
+      window.__VOICE_PREFS__ = false;
+      appendVoiceOptions(data.voice_options);
+      window.__VOICE_PREFS__ = prev;
+      // 滚动到新选项
+      const newOpts = document.getElementById("voice-options");
+      if (newOpts && newOpts.scrollIntoView) {
+        newOpts.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    } else {
+      if ($text) $text.textContent = "没想出方案，请直接输入";
+    }
+  } catch (e) {
+    console.error("[suggestVoiceOptions] failed:", e);
+    if ($text) $text.textContent = "网络出错，请直接输入";
+  } finally {
+    // 2s 后让按钮失效（玩家已用过了）
+    setTimeout(() => {
+      if ($btn) {
+        $btn.classList.add("used");
+        $btn.disabled = true;
+        if ($text) $text.textContent = "已使用，请基于这些选项行动";
+      }
+    }, 500);
+  }
+}
+
 function showFreeInputTab() {
 // 🆕 v1.7.9 改：玩家点 "自由输入" 后展开输入框（不是新 tab，只是展开折叠区）
-// 1. 展开 input-area（移除 collapsed class）
+  // 1. 展开 input-area（移除 collapsed class）
 const $inputArea = document.getElementById("input-area");
 if ($inputArea) {
   $inputArea.classList.remove("input-area-collapsed");

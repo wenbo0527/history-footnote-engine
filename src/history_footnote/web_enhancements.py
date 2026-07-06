@@ -214,6 +214,13 @@ LLM_RATE_LIMITER = RateLimiter(
     window_seconds=_RateCfg.LLM_WINDOW_SECONDS,
 )
 
+# 🆕 v1.7.30: Session 级 LLM 限流（更细粒度）
+# 防玩家反复点"帮我一下"刷请求（每 session 每分钟最多 N 次）
+SESSION_LLM_RATE_LIMITER = RateLimiter(
+    max_requests=_RateCfg.LLM_MAX_REQUESTS // 2,  # 30/分钟（默认）
+    window_seconds=_RateCfg.LLM_WINDOW_SECONDS,
+)
+
 
 # ============================================================
 # 监控指标收集器
