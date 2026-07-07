@@ -45,6 +45,20 @@ def handle_POST_generate_character(handler, body) -> bool:
     location_desc = body.get("location_description", "")
     identity_desc = body.get("identity_description", "")
     life_exp = body.get("life_expectation", "")
+    # 🆕 v1.9.2 缓存查询（精确 → 模糊 → 兜底）
+    try:
+        from history_footnote.llm_cache import get as cache_get, put as cache_put
+        cached = cache_get(era_id, gender, location, identity_desc, life_exp)
+        if cached:
+            logger.info(f"[generate_character] 缓存命中 (exact): {cached.get('character', {}).get('name', '?')}")
+            handler._json(200, {
+                "character": cached["character"],
+                "raw": cached.get("raw", ""),
+                "cache_hit": "exact",
+            })
+            return True
+    except Exception as e:
+        logger.warning(f"[generate_character] 缓存读失败：{e}")
     try:
         from history_footnote.resource_cache import load_era_config
         config = load_era_config(era_id)
@@ -58,10 +72,33 @@ def handle_POST_generate_character(handler, body) -> bool:
             HumanMessage(content=prompt),
         ])
         parsed = parse_character_response(resp.content)
-        handler._json(200, {"character": parsed, "raw": resp.content})
+        # 🆕 v1.9.2 写缓存
+        try:
+            from history_footnote.llm_cache import put as cache_put
+            cache_put(era_id, gender, location, identity_desc, life_exp, parsed, resp.content)
+        except Exception as e:
+            logger.warning(f"[generate_character] 缓存写失败：{e}")
+        handler._json(200, {"character": parsed, "raw": resp.content, "cache_hit": "miss"})
     except Exception as e:
         error_id = safe_error_id()
         logger.exception(f"[generate_character] {error_id} failed: {e}")
+        # 🆕 v1.9.2 降级：模糊匹配 → 兜底（最新）
+        try:
+            from history_footnote.llm_cache import find_similar, find_latest
+            fallback = find_similar(era_id, gender, location, identity_desc, life_exp) or find_latest(era_id)
+            if fallback:
+                hit = fallback.get("cache_hit", "fallback")
+                logger.info(f"[generate_character] LLM 失败，降级用缓存 {hit}: {fallback.get('character', {}).get('name', '?')}")
+                handler._json(200, {
+                    "character": fallback["character"],
+                    "raw": fallback.get("raw", ""),
+                    "cache_hit": hit,
+                    "degraded": True,
+                    "warning": f"LLM 失败，已用缓存 ({hit})",
+                })
+                return True
+        except Exception as e2:
+            logger.warning(f"[generate_character] 降级失败：{e2}")
         handler._json(500, {"error": "character generation failed", "error_id": error_id})
     return True
 
