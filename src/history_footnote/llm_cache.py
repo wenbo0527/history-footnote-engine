@@ -160,3 +160,41 @@ def stats() -> dict:
         "path": str(CACHE_PATH),
         "threshold": _SIMILARITY_THRESHOLD,
     }
+
+
+# ============================================================
+# 🆕 v1.9.3 narrative cache（按 action 文本缓存）
+# ============================================================
+
+def get_narrative(action_key: str) -> Optional[dict]:
+    """查 narrative 精确缓存"""
+    cache = _load()
+    return cache.get(f"narr:{action_key}")
+
+
+def put_narrative(action_key: str, narrative: str) -> None:
+    """写 narrative 缓存"""
+    cache = _load()
+    cache[f"narr:{action_key}"] = {
+        "type": "narrative",
+        "action_key": action_key,
+        "narrative": narrative,
+        "ts": int(time.time()),
+    }
+    if len(cache) > 500:  # narrative 缓存更多
+        sorted_keys = sorted(cache.keys(), key=lambda k: cache[k].get("ts", 0), reverse=True)
+        for k in sorted_keys[500:]:
+            del cache[k]
+    _save(cache)
+
+
+def make_narrative_key(state_dict: dict, player_input: str) -> str:
+    """🆕 v1.9.3 narrative 缓存键（基于 state + action 简化 hash）"""
+    # 只 hash 关键 state 字段（避免 state 变化大导致缓存失效）
+    key_state = {
+        "round": state_dict.get("current_round", 0),
+        "city": state_dict.get("current_city", ""),
+        "occupation": (state_dict.get("character", {}) or {}).get("occupation", ""),
+    }
+    raw = f"{key_state}|{player_input.strip()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]

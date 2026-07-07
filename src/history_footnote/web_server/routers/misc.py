@@ -67,8 +67,11 @@ def handle_POST_generate_character(handler, body) -> bool:
         from history_footnote.llm_wrapper import get_wrapped_llm
         llm = get_wrapped_llm(primary_provider="minimax-anthropic", era_config=config)
         from langchain_core.messages import SystemMessage, HumanMessage
+        # 🆕 v1.9.3 Prompt Caching：使用固定的 system prompt 前缀
+        # （所有调用都用同一字符串 → Anthropic/Claude/OpenAI 字节级 KV cache 命中）
+        STATIC_SYSTEM_PROMPT = "你是「历史注脚体验引擎」的人设生成助手。严格按 JSON 格式输出，包含 name/age/family/background/occupation/location 字段。文字生动，时代感强（明万历年间）。"
         resp = llm.invoke([
-            SystemMessage(content="你是人设生成助手。严格按 JSON 格式输出。"),
+            SystemMessage(content=STATIC_SYSTEM_PROMPT),
             HumanMessage(content=prompt),
         ])
         parsed = parse_character_response(resp.content)
