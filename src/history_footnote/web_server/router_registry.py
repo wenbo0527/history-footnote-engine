@@ -74,6 +74,8 @@ GET_ROUTES = {
     "/api/admin/trials": _admin.handle_GET_admin_trials,
     # 🆕 v1.8.0 admin session 端点
     "/api/admin/whoami": _admin.handle_GET_admin_whoami,
+    # 🆕 v1.8.6 admin settings
+    "/api/admin/settings": _admin.handle_GET_admin_settings,
     # 🆕 v1.7.47 通用菜单
     "/api/menu": _menu.handle_GET_menu,
     "/api/saves/list": _menu.handle_GET_saves_list,
@@ -128,6 +130,9 @@ POST_ROUTES = {
     "/api/admin/login": _admin.handle_POST_admin_login,
     "/api/admin/logout": _admin.handle_POST_admin_logout,
     "/api/admin/kill_sessions": _admin.handle_POST_admin_kill_sessions,
+    # 🆕 v1.8.6 admin settings
+    "/api/admin/settings": _admin.handle_POST_admin_settings,
+    "/api/admin/settings/reset": _admin.handle_POST_admin_settings_reset,
 }
 
 

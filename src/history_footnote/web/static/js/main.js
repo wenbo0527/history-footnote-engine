@@ -2764,6 +2764,9 @@ async function showAdminPanel() {
         <button onclick="adminShowTab('config')" class="admin-tab-btn" data-tab="config" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer">
           ⚙️ 配置
         </button>
+        <button onclick="adminShowTab('settings')" class="admin-tab-btn" data-tab="settings" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer" title="🆕 v1.8.6 运行时配置">
+          🔧 设置
+        </button>
         <button onclick="adminLogout()" style="padding:8px 16px;background:#c0392b;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;margin-left:auto" title="🆕 v1.8.0 scrypt session 登出">
           🚪 登出
         </button>
@@ -2845,6 +2848,10 @@ async function adminShowTab(tab) {
         `).join("")}
         </div>
       `;
+    } else if (tab === "settings") {
+      // 🆕 v1.8.6 设置 tab
+      await renderAdminSettings();
+      return;  // settings 自己渲染
     } else if (tab === "config") {
       const data = await api(`/api/admin/config?account_id=${state.account_id}`);
       $content.innerHTML = `
@@ -3485,6 +3492,111 @@ try {
 } catch (e) {
   return [];
 }
+}
+
+// 🆕 v1.8.6 admin 设置 tab 渲染
+async function renderAdminSettings() {
+  const $content = document.getElementById("admin-tab-content");
+  if (!$content) return;
+  // 读设置
+  const data = await withLoading("加载设置…", () =>
+    api("/api/admin/settings", "GET", null)
+  , { silent: true });
+  if (data.error) {
+    $content.innerHTML = `<div style="color:#c0392b;padding:16px">❌ ${data.error}</div>`;
+    return;
+  }
+  const s = data.settings || {};
+  $content.innerHTML = `
+    <div style="max-width:680px">
+      <h3 style="color:#5a3e1f;margin:0 0 16px">🔧 运行时设置</h3>
+      <div style="background:#faf3e0;border:1px solid #c4a878;border-radius:6px;padding:16px;margin-bottom:16px">
+        <p style="color:#8b6f47;font-size:13px;margin:0 0 12px">
+          📝 改完点"💾 保存"——写入 <code>.env</code>，<strong style="color:#c0392b">重启服务后生效</strong>。
+        </p>
+        <div style="display:grid;grid-template-columns:200px 100px 1fr;gap:12px;align-items:center">
+          <label>LLM 最大请求数</label>
+          <input id="set-llm-max" type="number" min="1" value="${s.LLM_MAX_REQUESTS || 20}" style="padding:6px 10px;border:1px solid #c4a878;border-radius:4px;font-size:14px">
+          <span style="color:#8b6f47;font-size:12px">30 轮/5 分钟 足够</span>
+
+          <label>LLM 窗口（秒）</label>
+          <input id="set-llm-win" type="number" min="1" step="0.1" value="${s.LLM_WINDOW_SECONDS || 60}" style="padding:6px 10px;border:1px solid #c4a878;border-radius:4px;font-size:14px">
+          <span style="color:#8b6f47;font-size:12px">60-600s</span>
+
+          <label>全局最大请求数</label>
+          <input id="set-g-max" type="number" min="1" value="${s.GLOBAL_MAX_REQUESTS || 60}" style="padding:6px 10px;border:1px solid #c4a878;border-radius:4px;font-size:14px">
+          <span style="color:#8b6f47;font-size:12px">所有 endpoint 共享</span>
+
+          <label>全局窗口（秒）</label>
+          <input id="set-g-win" type="number" min="1" step="0.1" value="${s.GLOBAL_WINDOW_SECONDS || 60}" style="padding:6px 10px;border:1px solid #c4a878;border-radius:4px;font-size:14px">
+          <span style="color:#8b6f47;font-size:12px">同 LLM 窗口</span>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:#8b6f47">
+          ADMIN_TOKEN：<code>${escapeHtmlInline(s.ADMIN_TOKEN || "***")}</code>（修改需手动改 .env）
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <button onclick="adminSaveSettings()" style="padding:8px 16px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px">
+          💾 保存
+        </button>
+        <button onclick="adminResetSettings()" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:14px">
+          🔄 恢复默认
+        </button>
+        <button onclick="renderAdminSettings()" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:14px">
+          ↻ 重载
+        </button>
+        <button onclick="location.reload()" style="padding:8px 16px;background:transparent;color:#c0392b;border:1px solid #c0392b;border-radius:4px;cursor:pointer;font-size:14px">
+          🔁 重启服务（手动 kill + 启）
+        </button>
+      </div>
+      <div style="background:#fdf3f3;border:1px solid #c0392b;border-radius:6px;padding:12px;font-size:13px">
+        <strong style="color:#c0392b">⚠️ 注意</strong>：本服务为单进程，直接 kill 会中断所有用户。
+        生产环境建议：<code>pkill -f "run.*8765" && nohup python -u -c "from history_footnote.web_server import run; run('0.0.0.0', 8765)" > logs/server.log 2>&1 &</code>
+      </div>
+    </div>
+  `;
+  HAPTIC.tap();
+}
+
+// 🆕 v1.8.6 保存设置
+async function adminSaveSettings() {
+  const updates = {
+    LLM_MAX_REQUESTS: parseInt(document.getElementById("set-llm-max")?.value || "0"),
+    LLM_WINDOW_SECONDS: parseFloat(document.getElementById("set-llm-win")?.value || "0"),
+    GLOBAL_MAX_REQUESTS: parseInt(document.getElementById("set-g-max")?.value || "0"),
+    GLOBAL_WINDOW_SECONDS: parseFloat(document.getElementById("set-g-win")?.value || "0"),
+  };
+  // 简单校验
+  for (const [k, v] of Object.entries(updates)) {
+    if (!v || v < 1) {
+      showToast(`${k} 必须 ≥ 1`, "error");
+      return;
+    }
+  }
+  const data = await withLoading("保存设置…", () =>
+    api("/api/admin/settings", "POST", updates)
+  , { silent: true });
+  if (data.error) {
+    showToast(`保存失败：${data.error}`, "error");
+    return;
+  }
+  showToast(data.message || "已保存", "success", 5000);
+  HAPTIC.success();
+}
+
+// 🆕 v1.8.6 恢复默认
+async function adminResetSettings() {
+  if (!confirm("确定恢复默认设置？\n\nLLM 20/60s, GLOBAL 60/60s\n\n（需重启服务生效）")) return;
+  const data = await withLoading("恢复默认…", () =>
+    api("/api/admin/settings/reset", "POST", {})
+  , { silent: true });
+  if (data.error) {
+    showToast(`失败：${data.error}`, "error");
+    return;
+  }
+  showToast(data.message || "已恢复默认", "success", 5000);
+  HAPTIC.success();
+  setTimeout(() => renderAdminSettings(), 800);
 }
 
 renderStart();
