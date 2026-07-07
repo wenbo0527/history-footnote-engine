@@ -228,9 +228,10 @@ function adminLoginForm() {
 
     const modal = document.createElement("div");
     modal.id = "hfe-admin-login-modal";
+    modal.className = "form-modal-overlay";
     modal.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:system-ui";
     modal.innerHTML = `
-      <div style="background:#faf3e0;border:2px solid #c4a878;border-radius:8px;padding:24px;min-width:380px;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+      <div class="form-modal" style="background:#faf3e0;border:2px solid #c4a878;border-radius:8px;padding:24px;min-width:380px;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
         <h2 style="margin:0 0 16px;color:#5a3e1f;font-size:20px">🛡️  管理员登录</h2>
         <form id="hfe-admin-login-form" autocomplete="on">
           <div style="margin-bottom:12px">
@@ -2690,7 +2691,7 @@ async function showAdminPanel() {
       <p style="color:#8b6f47;font-size:13px">
         ${escapeHtml(state.account_username)} (${state.account_id}) · <span style="color:#5a3e1f">admin</span>
       </p>
-      <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap">
+      <div class="admin-tabs" style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap">
         <button onclick="adminShowTab('users')" class="admin-tab-btn" data-tab="users" style="padding:8px 16px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer">
           👥 用户
         </button>
