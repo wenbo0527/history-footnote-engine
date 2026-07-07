@@ -72,6 +72,8 @@ GET_ROUTES = {
     "/api/trial/history": _trial.handle_GET_trial_history,
     # 🆕 v1.7.30 体验版管理（admin）
     "/api/admin/trials": _admin.handle_GET_admin_trials,
+    # 🆕 v1.8.0 admin session 端点
+    "/api/admin/whoami": _admin.handle_GET_admin_whoami,
     # 🆕 v1.7.47 通用菜单
     "/api/menu": _menu.handle_GET_menu,
     "/api/saves/list": _menu.handle_GET_saves_list,
@@ -120,6 +122,10 @@ POST_ROUTES = {
     "/api/trial/end": _trial.handle_POST_trial_end,
     # 🆕 v1.7.30 体验版管理（admin）
     "/api/admin/grant_trial_invite": _admin.handle_POST_admin_grant_trial_invite,
+    # 🆕 v1.8.0 admin session 端点
+    "/api/admin/login": _admin.handle_POST_admin_login,
+    "/api/admin/logout": _admin.handle_POST_admin_logout,
+    "/api/admin/kill_sessions": _admin.handle_POST_admin_kill_sessions,
 }
 
 

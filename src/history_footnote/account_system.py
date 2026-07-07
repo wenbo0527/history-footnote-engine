@@ -30,8 +30,10 @@ import re
 import secrets
 import string
 import threading
+import hashlib
+import base64
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -85,6 +87,11 @@ class Account:
     role: str = "user"  # admin / user / guest
     bound_at: str = field(default_factory=_now)
     last_login_at: str = ""
+    # 🆕 v1.8.0 scrypt password + 失败锁定
+    password_hash: str = ""
+    password_set_at: str = ""
+    fail_count: int = 0
+    lock_until: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -140,6 +147,74 @@ class AccountSystem:
     - {storage_root}/accounts/saves/{account_id}/{save_id}.json
     """
 
+# ----- 🆕 v1.8.0 scrypt helpers -----
+
+def _hash_password(password: str) -> str:
+    """scrypt 哈希
+
+    格式: scrypt:16384:8:1$<salt-b64>$<hash-b64>
+    🆕 v1.8.0 调整：n=16384（macOS OpenSSL 默认 maxscrypt=32MB 限制）
+    n=32768 需要 32MB，16384 仅需 16MB，安全性仍足够
+    """
+    salt = secrets.token_bytes(16)
+    h = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=16384, r=8, p=1, dklen=32)
+    return f"scrypt:16384:8:1${base64.b64encode(salt).decode()}${base64.b64encode(h).decode()}"
+
+
+def _verify_hash(stored: str, password: str) -> bool:
+    """验证 scrypt 哈希
+
+    处理 3 种情况：
+    1. 老数据无 password_hash（空字符串）→ False
+    2. 哈希不匹配 → False
+    3. 哈希匹配 → True
+    """
+    if not stored or not stored.startswith("scrypt:"):
+        return False
+    try:
+        parts = stored.split("$")
+        if len(parts) != 3:
+            return False
+        header, salt_b64, hash_b64 = parts
+        n_str, r_str, p_str = header.split(":")[1:]
+        salt = base64.b64decode(salt_b64)
+        expected = base64.b64decode(hash_b64)
+        actual = hashlib.scrypt(
+            password.encode("utf-8"),
+            salt=salt,
+            n=int(n_str), r=int(r_str), p=int(p_str),
+            dklen=len(expected),
+        )
+        return secrets.compare_digest(actual, expected)
+    except Exception:
+        return False
+
+
+def _now_iso(plus_seconds: int = 0) -> str:
+    """当前时间（ISO 格式），可加秒数"""
+    dt = datetime.now(timezone.utc) + timedelta(seconds=plus_seconds)
+    return dt.isoformat()
+
+
+def _now_ts() -> int:
+    """当前时间戳（秒）"""
+    return int(datetime.now(timezone.utc).timestamp())
+
+
+def _parse_iso(iso_str: str) -> int:
+    """解析 ISO 字符串为时间戳（秒）"""
+    if not iso_str:
+        return 0
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    except Exception:
+        return 0
+
+
+class AccountSystem:
     def __init__(self, storage_root: Path):
         self.storage_root = Path(storage_root)
         self.accounts_dir = self.storage_root / ACCOUNTS_DIR_NAME
@@ -280,6 +355,91 @@ class AccountSystem:
     def list_accounts(self) -> list[Account]:
         with self._lock:
             return self._load_accounts()
+
+    # ----- 🆕 v1.8.0 scrypt password -----
+
+    def set_password(self, account_id: str, password: str) -> bool:
+        """设置/重置密码（scrypt 哈希）
+
+        Returns:
+            True 成功
+        """
+        with self._lock:
+            accounts = self._load_accounts()
+            for a in accounts:
+                if a.account_id == account_id:
+                    a.password_hash = _hash_password(password)
+                    a.password_set_at = _now_iso()
+                    a.fail_count = 0
+                    a.lock_until = ""
+                    self._save_accounts(accounts)
+                    return True
+            return False
+
+    def verify_password(self, account_id: str, password: str) -> bool:
+        """验证密码"""
+        with self._lock:
+            accounts = self._load_accounts()
+            for a in accounts:
+                if a.account_id == account_id:
+                    return _verify_hash(a.password_hash or "", password)
+            return False
+
+    def is_locked(self, account_id: str) -> tuple[bool, int]:
+        """检查账户是否锁定
+
+        Returns:
+            (is_locked, retry_after_seconds)
+        """
+        with self._lock:
+            accounts = self._load_accounts()
+            for a in accounts:
+                if a.account_id == account_id:
+                    if not a.lock_until:
+                        return False, 0
+                    try:
+                        lock_ts = _parse_iso(a.lock_until)
+                    except Exception:
+                        return False, 0
+                    now = _now_ts()
+                    if lock_ts > now:
+                        return True, int(lock_ts - now)
+                    # 已过期：解锁
+                    a.lock_until = ""
+                    a.fail_count = 0
+                    self._save_accounts(accounts)
+                    return False, 0
+            return False, 0
+
+    def increment_fail_count(self, account_id: str) -> tuple[int, bool]:
+        """增加失败计数；达 5 次则锁定 15 min
+
+        Returns:
+            (current_fail_count, is_now_locked)
+        """
+        with self._lock:
+            accounts = self._load_accounts()
+            for a in accounts:
+                if a.account_id == account_id:
+                    a.fail_count = (a.fail_count or 0) + 1
+                    is_locked = False
+                    if a.fail_count >= 5:
+                        a.lock_until = _now_iso(plus_seconds=15 * 60)
+                        is_locked = True
+                    self._save_accounts(accounts)
+                    return a.fail_count, is_locked
+            return 0, False
+
+    def reset_fail_count(self, account_id: str) -> None:
+        """登录成功重置失败计数"""
+        with self._lock:
+            accounts = self._load_accounts()
+            for a in accounts:
+                if a.account_id == account_id:
+                    a.fail_count = 0
+                    a.lock_until = ""
+                    self._save_accounts(accounts)
+                    return
 
     def update_last_login(self, account_id: str) -> None:
         with self._lock:
