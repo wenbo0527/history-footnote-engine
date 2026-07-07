@@ -45,16 +45,25 @@ def handle_POST_generate_character(handler, body) -> bool:
     location_desc = body.get("location_description", "")
     identity_desc = body.get("identity_description", "")
     life_exp = body.get("life_expectation", "")
+    # 🆕 v1.9.4 玩家隔离（account_id 从 query 或 body 取）
+    account_id = ""
+    try:
+        from urllib.parse import parse_qs
+        qs = parse_qs(handler.path.split("?", 1)[1]) if "?" in handler.path else {}
+        account_id = qs.get("account_id", [None])[0] or body.get("account_id", "") or ""
+    except Exception:
+        account_id = body.get("account_id", "") or ""
     # 🆕 v1.9.2 缓存查询（精确 → 模糊 → 兜底）
     try:
         from history_footnote.llm_cache import get as cache_get, put as cache_put
-        cached = cache_get(era_id, gender, location, identity_desc, life_exp)
+        cached = cache_get(era_id, gender, location, identity_desc, life_exp, account_id=account_id)
         if cached:
-            logger.info(f"[generate_character] 缓存命中 (exact): {cached.get('character', {}).get('name', '?')}")
+            hit = cached.get("cache_hit", "exact")
+            logger.info(f"[generate_character] 缓存命中 ({hit}): {cached.get('character', {}).get('name', '?')}")
             handler._json(200, {
                 "character": cached["character"],
                 "raw": cached.get("raw", ""),
-                "cache_hit": "exact",
+                "cache_hit": hit,
             })
             return True
     except Exception as e:
@@ -75,10 +84,10 @@ def handle_POST_generate_character(handler, body) -> bool:
             HumanMessage(content=prompt),
         ])
         parsed = parse_character_response(resp.content)
-        # 🆕 v1.9.2 写缓存
+        # 🆕 v1.9.2 写缓存（v1.9.4 双层）
         try:
             from history_footnote.llm_cache import put as cache_put
-            cache_put(era_id, gender, location, identity_desc, life_exp, parsed, resp.content)
+            cache_put(era_id, gender, location, identity_desc, life_exp, parsed, resp.content, account_id=account_id)
         except Exception as e:
             logger.warning(f"[generate_character] 缓存写失败：{e}")
         handler._json(200, {"character": parsed, "raw": resp.content, "cache_hit": "miss"})
@@ -88,7 +97,7 @@ def handle_POST_generate_character(handler, body) -> bool:
         # 🆕 v1.9.2 降级：模糊匹配 → 兜底（最新）
         try:
             from history_footnote.llm_cache import find_similar, find_latest
-            fallback = find_similar(era_id, gender, location, identity_desc, life_exp) or find_latest(era_id)
+            fallback = find_similar(era_id, gender, location, identity_desc, life_exp, account_id=account_id) or find_latest(era_id, account_id=account_id)
             if fallback:
                 hit = fallback.get("cache_hit", "fallback")
                 logger.info(f"[generate_character] LLM 失败，降级用缓存 {hit}: {fallback.get('character', {}).get('name', '?')}")

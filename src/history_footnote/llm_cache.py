@@ -71,32 +71,65 @@ def _jaccard(a: set, b: set) -> float:
 
 
 def make_key(era_id: str, gender: str, location: str, identity: str, life_exp: str) -> str:
-    """生成缓存键（基于内容 hash）"""
+    """🆕 v1.9.4 双层缓存键（带 _type 区分公共/玩家层）"""
     raw = f"{era_id}|{gender}|{location}|{identity}|{life_exp}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
-def get(era_id: str, gender: str, location: str, identity: str, life_exp: str) -> Optional[dict]:
-    """查精确匹配"""
+def make_player_key(account_id: str, era_id: str, gender: str, location: str, identity: str, life_exp: str) -> str:
+    """🆕 v1.9.4 玩家层缓存键（带 account_id 隔离）"""
+    raw = f"player:{account_id}|{era_id}|{gender}|{location}|{identity}|{life_exp}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def get(era_id: str, gender: str, location: str, identity: str, life_exp: str, account_id: str = "") -> Optional[dict]:
+    """🆕 v1.9.4 查精确匹配：先玩家层（account_id），再公共层（无 account）"""
     cache = _load()
+    # 1. 玩家层
+    if account_id:
+        key = make_player_key(account_id, era_id, gender, location, identity, life_exp)
+        entry = cache.get(key)
+        if entry:
+            entry["cache_hit"] = "exact_player"
+            return entry
+    # 2. 公共层（不查精确，只模糊 + 兜底）
     key = make_key(era_id, gender, location, identity, life_exp)
     entry = cache.get(key)
     if entry:
-        entry["cache_hit"] = "exact"
+        entry["cache_hit"] = "exact_public"
         return entry
     return None
 
 
-def find_similar(era_id: str, gender: str, location: str, identity: str, life_exp: str) -> Optional[dict]:
-    """🆕 v1.9.2 模糊匹配：找最近一次同类（关键词 Jaccard ≥ 0.6）"""
+def find_similar(era_id: str, gender: str, location: str, identity: str, life_exp: str, account_id: str = "") -> Optional[dict]:
+    """🆕 v1.9.4 模糊匹配：先玩家层（account_id），再公共层"""
     cache = _load()
     target_kw = _extract_keywords(f"{location} {identity} {life_exp}")
-    # 按 timestamp 倒序遍历
+    # 1. 玩家层模糊
+    if account_id:
+        candidates = []
+        for k, entry in cache.items():
+            if not k.startswith("player:"):
+                continue
+            if entry.get("era_id") != era_id or entry.get("gender") != gender:
+                continue
+            if entry.get("account_id") != account_id:
+                continue
+            c_kw = _extract_keywords(f"{entry.get('location', '')} {entry.get('identity', '')} {entry.get('life_exp', '')}")
+            sim = _jaccard(target_kw, c_kw)
+            if sim >= _SIMILARITY_THRESHOLD:
+                candidates.append((sim, entry))
+        if candidates:
+            candidates.sort(key=lambda x: (x[0], x[1].get("ts", 0)), reverse=True)
+            best = candidates[0][1].copy()
+            best["cache_hit"] = f"similar_player:{candidates[0][0]:.2f}"
+            return best
+    # 2. 公共层模糊（不区分玩家）
     candidates = []
     for k, entry in cache.items():
-        if entry.get("era_id") != era_id:
-            continue
-        if entry.get("gender") != gender:
+        if k.startswith("player:"):
+            continue  # 跳过玩家层
+        if entry.get("era_id") != era_id or entry.get("gender") != gender:
             continue
         c_kw = _extract_keywords(f"{entry.get('location', '')} {entry.get('identity', '')} {entry.get('life_exp', '')}")
         sim = _jaccard(target_kw, c_kw)
@@ -104,19 +137,36 @@ def find_similar(era_id: str, gender: str, location: str, identity: str, life_ex
             candidates.append((sim, entry))
     if not candidates:
         return None
-    # 相似度最高 + 最新
     candidates.sort(key=lambda x: (x[0], x[1].get("ts", 0)), reverse=True)
     best = candidates[0][1].copy()
-    best["cache_hit"] = f"similar:{candidates[0][0]:.2f}"
+    best["cache_hit"] = f"similar_public:{candidates[0][0]:.2f}"
     return best
 
 
-def find_latest(era_id: str) -> Optional[dict]:
-    """🆕 v1.9.2 兜底：找同 era 最近一次（最差降级）"""
+def find_latest(era_id: str, account_id: str = "") -> Optional[dict]:
+    """🆕 v1.9.4 兜底：先玩家层（account_id），再公共层"""
     cache = _load()
-    latest = None
-    latest_ts = 0
+    # 1. 玩家层兜底
+    if account_id:
+        latest, latest_ts = None, 0
+        for k, entry in cache.items():
+            if not k.startswith("player:"):
+                continue
+            if entry.get("account_id") != account_id or entry.get("era_id") != era_id:
+                continue
+            ts = entry.get("ts", 0)
+            if ts > latest_ts:
+                latest_ts = ts
+                latest = entry
+        if latest:
+            latest = latest.copy()
+            latest["cache_hit"] = "latest_player"
+            return latest
+    # 2. 公共层兜底
+    latest, latest_ts = None, 0
     for k, entry in cache.items():
+        if k.startswith("player:"):
+            continue
         if entry.get("era_id") != era_id:
             continue
         ts = entry.get("ts", 0)
@@ -125,16 +175,19 @@ def find_latest(era_id: str) -> Optional[dict]:
             latest = entry
     if latest:
         latest = latest.copy()
-        latest["cache_hit"] = "latest"
+        latest["cache_hit"] = "latest_public"
     return latest
 
 
 def put(era_id: str, gender: str, location: str, identity: str, life_exp: str,
-        character: dict, raw: str) -> None:
-    """写缓存"""
+        character: dict, raw: str, account_id: str = "") -> None:
+    """🆕 v1.9.4 双层写：玩家层（account_id）+ 公共层"""
     cache = _load()
-    key = make_key(era_id, gender, location, identity, life_exp)
-    cache[key] = {
+    ts = int(time.time())
+    # 1. 公共层（无 account）
+    public_key = make_key(era_id, gender, location, identity, life_exp)
+    cache[public_key] = {
+        "type": "public",
         "era_id": era_id,
         "gender": gender,
         "location": location,
@@ -142,12 +195,27 @@ def put(era_id: str, gender: str, location: str, identity: str, life_exp: str,
         "life_exp": life_exp,
         "character": character,
         "raw": raw,
-        "ts": int(time.time()),
+        "ts": ts,
     }
-    # 限制大小（保留最新 200 条）
-    if len(cache) > 200:
+    # 2. 玩家层（带 account_id）
+    if account_id:
+        player_key = make_player_key(account_id, era_id, gender, location, identity, life_exp)
+        cache[player_key] = {
+            "type": "player",
+            "account_id": account_id,
+            "era_id": era_id,
+            "gender": gender,
+            "location": location,
+            "identity": identity,
+            "life_exp": life_exp,
+            "character": character,
+            "raw": raw,
+            "ts": ts,
+        }
+    # 限制大小（保留最新 500 条总）
+    if len(cache) > 500:
         sorted_keys = sorted(cache.keys(), key=lambda k: cache[k].get("ts", 0), reverse=True)
-        for k in sorted_keys[200:]:
+        for k in sorted_keys[500:]:
             del cache[k]
     _save(cache)
 
