@@ -164,6 +164,66 @@ async function withLoading(message, fn, options = {}) {
   }
 }
 
+/** 🆕 v1.8.4 长 narrative 折叠/展开
+ * 默认折叠长于 COLLAPSE_THRESHOLD 字符的 narrative
+ * 用法: <div>${collapseNarrative(text, round)}</div>
+ */
+function collapseNarrative(text, options = {}) {
+  const COLLAPSE_THRESHOLD = options.threshold || 400;
+  const FADE_HEIGHT = options.fadeHeight || 200;
+  if (!text) return "";
+  // HTML 内容（已是结构化的）不需要折叠
+  if (/<(div|p|h[1-6])\s/i.test(text)) {
+    return `<div class="narrative-body ${options.expanded ? 'expanded' : 'auto'}">${text}</div>`;
+  }
+  // 纯文本：按字符数折叠
+  if (text.length <= COLLAPSE_THRESHOLD) {
+    return `<div class="narrative-body">${escapeHtmlInline(text).replace(/\n/g, "<br>")}</div>`;
+  }
+  const id = `narrative-${Math.random().toString(36).slice(2, 10)}`;
+  // 截断到 FADE_HEIGHT 字符（在词边界）
+  let preview = text.slice(0, FADE_HEIGHT);
+  const lastSpace = preview.lastIndexOf(' ');
+  if (lastSpace > FADE_HEIGHT * 0.6) {
+    preview = preview.slice(0, lastSpace);
+  }
+  preview += "…";
+  return `
+    <div class="narrative-collapse">
+      <div class="narrative-preview" id="${id}-preview">${escapeHtmlInline(preview).replace(/\n/g, "<br>")}</div>
+      <div class="narrative-full" id="${id}-full" style="display:none">${escapeHtmlInline(text).replace(/\n/g, "<br>")}</div>
+      <div class="narrative-actions" style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <button onclick="narrativeToggle('${id}')" data-target="${id}" data-state="collapsed"
+          style="padding:6px 12px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:13px">
+          📖 展开全文（${text.length} 字符）
+        </button>
+        <span style="color:#8b6f47;font-size:12px">长篇叙事</span>
+      </div>
+    </div>
+  `;
+}
+
+/** 切换 narrative 折叠状态 */
+function narrativeToggle(id) {
+  const preview = document.getElementById(`${id}-preview`);
+  const full = document.getElementById(`${id}-full`);
+  const btn = document.querySelector(`button[data-target="${id}"]`);
+  if (!preview || !full || !btn) return;
+  if (btn.dataset.state === "collapsed") {
+    preview.style.display = "none";
+    full.style.display = "block";
+    btn.dataset.state = "expanded";
+    btn.textContent = "📕 折叠";
+    HAPTIC.tap();
+  } else {
+    preview.style.display = "block";
+    full.style.display = "none";
+    btn.dataset.state = "collapsed";
+    btn.textContent = `📖 展开全文`;
+    HAPTIC.tap();
+  }
+}
+
 async function api(path, method = "GET", body = null) {
   // Patch 2026-07-05 v1.7.24: adaptive pathname prefix
   //   - subpath deploy (wenbodemo.com/history-footnote-engine/) : add prefix
@@ -1658,11 +1718,11 @@ api("/api/sanitize", "POST", {text: rawNarrative}).then(sanitizeData => {
   }).then(renderData => {
     let bodyHtml;
     if (renderData && !renderData.error && renderData.html) {
-      // 结构化 blocks → CSS 渲染
+      // 结构化 blocks → CSS 渲染（不需要折叠）
       bodyHtml = `<div class="narrative-body" data-round="${n.round}">${renderData.html}</div>`;
     } else {
-      // fallback：纯文本
-      bodyHtml = `<div class="narrative-body plain" data-round="${n.round}">${escapeHtml(cleanedNarrative)}</div>`;
+      // 🆕 v1.8.4 fallback：纯文本 → 长 narrative 折叠
+      bodyHtml = collapseNarrative(cleanedNarrative, { threshold: 400, fadeHeight: 200 });
     }
     div.innerHTML = tag + bodyHtml;
     $main.insertBefore(div, $main.lastElementChild);
