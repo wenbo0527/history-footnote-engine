@@ -76,7 +76,7 @@ def get(path):
         return json.loads(r.read().decode("utf-8"))
 
 
-def call_with_retry(name, body, max_attempts=3, base_backoff=60):
+def call_with_retry(name, body, max_attempts=3, base_backoff=90):
     """真实 LLM 调用 + 退避重试"""
     for attempt in range(1, max_attempts + 1):
         t0 = time.time()
@@ -130,7 +130,17 @@ def test_real_llm_30_rounds():
 
     assert len(ROUNDS) == 30, f"应 30 轮，实际 {len(ROUNDS)}"
     print(f"  准备 {len(ROUNDS)} 轮（万历十五年→万历二十九年）")
-    print(f"  限流：30/300s = 平均 10s/次（单次 27-30s 足够）")
+    # 读当前真实限流
+    try:
+        s = get("/api/version")
+        print(f"  服务版本：{s.get('version', '?')}")
+    except Exception:
+        pass
+    # 限流从环境读
+    import os
+    llm_max = int(os.environ.get("LLM_MAX_REQUESTS", 30))
+    llm_win = float(os.environ.get("LLM_WINDOW_SECONDS", 300))
+    print(f"  限流：{llm_max}/{llm_win}s（实时）")
     print()
 
     results = []

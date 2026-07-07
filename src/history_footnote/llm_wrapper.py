@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # 配置
 # ============================================================
-DEFAULT_TIMEOUT = 30.0  # 单次调用超时（秒）
+DEFAULT_TIMEOUT = 90.0  # 单次调用超时（秒）🆕 v1.8.7 30→90（minimax 完整 JSON 需 40-60s）
 DEFAULT_RETRY_ON_SAME = 1  # 同 provider 重试次数
 FALLBACK_CHAIN = ["minimax-anthropic", "deepseek", "minimax-openai"]
 # JSONL 日志文件路径
