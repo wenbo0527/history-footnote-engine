@@ -279,13 +279,96 @@ const SHENGZE_LOCATIONS = [
 },
 ];
 
-function renderStart() {
-// 🆕 v1.7.30：如果已登录，直接显示存档列表；否则显示账户登录
-if (restoreAccountFromStorage()) {
-  showSavesList();
-} else {
-  showAccountLogin();
+// 🆕 v1.8.2 renderMenu：统一入口（4 板块）
+async function renderMenu() {
+  const $main = document.getElementById("main");
+  if (!$main) return;
+  // 调 /api/menu（无 account_id 后端自动建 guest）
+  const menu = await api(`/api/menu?account_id=${encodeURIComponent(state.account_id || "")}`, "GET", null);
+  if (!menu || menu.error) {
+    $main.innerHTML = `<div class="start-screen"><p style="color:#c0392b">加载菜单失败：${menu?.error || "未知错误"}</p><button class="btn-primary" onclick="location.reload()">重试</button></div>`;
+    return;
+  }
+  // 存 account_id（让后续 API 调都带这个 id）
+  if (menu.user && menu.user.account_id) {
+    state.account_id = menu.user.account_id;
+    if (menu.user.username) state.account_username = menu.user.username;
+    if (menu.user.role) state.account_role = menu.user.role;
+    localStorage.setItem("hfe_account_id", state.account_id);
+    localStorage.setItem("hfe_account_username", state.account_username);
+    localStorage.setItem("hfe_account_role", state.account_role);
+  }
+  // 渲染 4 板块
+  const sectionsHtml = menu.sections.map(s => `
+    <div class="menu-section" style="background:#faf3e0;border:1px solid #c4a878;border-radius:6px;padding:20px;margin-bottom:12px;cursor:pointer;transition:transform 0.15s" onclick="menuSectionClick('${s.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="font-size:36px;line-height:1">${s.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:18px;color:#5a3e1f;font-weight:600;margin-bottom:4px">${escapeHtml(s.title)}</div>
+          <div style="font-size:13px;color:#8b6f47">${escapeHtml(s.description || "")}</div>
+          ${s.id === "saves" && menu.stats?.saves_count !== undefined ? `<div style="font-size:12px;color:#5a3e1f;margin-top:4px">📊 共 ${menu.stats.saves_count} / ${menu.stats.saves_max} 个存档</div>` : ""}
+        </div>
+        <div style="color:#c4a878;font-size:24px">→</div>
+      </div>
+    </div>
+  `).join("");
+  $main.innerHTML = `
+    <div class="start-screen" style="max-width:680px;margin:40px auto;padding:24px">
+      <h2 style="color:#5a3e1f;font-size:24px;margin:0 0 8px">🎭 历史注脚体验引擎</h2>
+      <p style="color:#8b6f47;font-size:14px;margin:0 0 24px">
+        欢迎，<strong style="color:#5a3e1f">${escapeHtml(menu.user.username)}</strong>
+        <span style="font-size:12px;color:#a08858">(${escapeHtml(menu.user.account_id)} · ${escapeHtml(menu.user.role)})</span>
+      </p>
+      ${sectionsHtml}
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #c4a878;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:#8b6f47">v1.8.2 · 4 板块统一入口</span>
+        <button onclick="logoutAccount()" style="padding:6px 12px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:12px">切换账户</button>
+      </div>
+    </div>
+  `;
 }
+
+// 🆕 v1.8.2 4 板块点击
+async function menuSectionClick(sectionId) {
+  if (sectionId === "new_game") {
+    // 开始新游戏：进入 wizard
+    if (typeof renderWizard === "function") {
+      wizard = {step: 1, era_id: "wanli1587", era_data: null, gender: null, location: null, identity_description: "", life_expectation: "", character: null, world_dwell: null};
+      renderWizard();
+    }
+  } else if (sectionId === "saves") {
+    // 我的存档
+    if (typeof showSavesList === "function") {
+      showSavesList();
+    }
+  } else if (sectionId === "settings") {
+    // 系统
+    if (typeof showSettings === "function") {
+      showSettings();
+    } else {
+      // 简化版 settings
+      const $main = document.getElementById("main");
+      $main.innerHTML = `
+        <div class="start-screen" style="max-width:680px;margin:40px auto;padding:24px">
+          <h2 style="color:#5a3e1f">⚙️ 系统</h2>
+          <p style="color:#8b6f47">关于 / 反馈 / 退出登录</p>
+          <button class="btn-primary" onclick="renderMenu()">← 返回菜单</button>
+        </div>
+      `;
+    }
+  } else if (sectionId === "admin") {
+    // 管理员面板
+    if (typeof showAdminPanel === "function") {
+      showAdminPanel();
+    } else {
+      location.reload();
+    }
+  }
+}
+
+function renderStart() {
+// 🆕 v1.8.2：统一入口（4 板块菜单）
+renderMenu();
 }
 
 function renderWizard() {

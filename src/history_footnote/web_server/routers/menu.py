@@ -49,15 +49,17 @@ def handle_GET_menu(handler, query: str) -> bool:
     from urllib.parse import parse_qs
     params = parse_qs(query)
     account_id = (params.get("account_id", [""])[0]).strip()
-    if not account_id:
-        handler._json(400, {"error": "account_id required"})
-        return True
-    # 查账户
     sys_inst = _get_account_system_local()
-    account = sys_inst.get_account(account_id)
-    if not account:
-        handler._json(404, {"error": "account not found"})
-        return True
+
+    # 🆕 v1.8.2: 无 account_id → 自动建 guest
+    if not account_id:
+        account = sys_inst.create_guest()
+        account_id = account.account_id
+    else:
+        account = sys_inst.get_account(account_id)
+        # 🆕 v1.8.2: 找不到 account → 自动建 guest（不返 404）
+        if not account:
+            account = sys_inst.create_guest(account_id=account_id)
     # 4 板块
     sections = [
         {"id": "new_game", "title": "开始新游戏", "icon": "🎮",
@@ -111,15 +113,15 @@ def handle_GET_saves_list(handler, query: str) -> bool:
     from urllib.parse import parse_qs
     params = parse_qs(query)
     account_id = (params.get("account_id", [""])[0]).strip()
-    if not account_id:
-        handler._json(400, {"error": "account_id required"})
-        return True
-    # 查账户
     sys_inst = _get_account_system_local()
-    account = sys_inst.get_account(account_id)
-    if not account:
-        handler._json(404, {"error": "account not found"})
-        return True
+    # 🆕 v1.8.2: 无 account_id / 找不到 account → 自动建 guest（不返 400/404）
+    if not account_id:
+        account = sys_inst.create_guest()
+        account_id = account.account_id
+    else:
+        account = sys_inst.get_account(account_id)
+        if not account:
+            account = sys_inst.create_guest(account_id=account_id)
     saves_dir = Path("saves") / account_id
     saves = []
     if saves_dir.exists():

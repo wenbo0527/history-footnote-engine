@@ -356,6 +356,44 @@ class AccountSystem:
         with self._lock:
             return self._load_accounts()
 
+    # ----- 🆕 v1.8.2 guest 账户 -----
+
+    def create_guest(self, account_id: str = "") -> Account:
+        """🆕 v1.8.2 创建临时 guest 账户
+
+        - 不传 account_id → 自动生成 `guest_<8hex>`
+        - 传 account_id → 用该 id（保证幂等：如果已存在则返回旧的）
+        - role=guest / username=guest_xxx
+        - 不需要密码（不能登录 admin 面板）
+        """
+        with self._lock:
+            accounts = self._load_accounts()
+            if not account_id:
+                # 自动生成
+                import secrets
+                for _ in range(10):
+                    candidate = f"guest_{secrets.token_hex(4)}"
+                    if not any(a.account_id == candidate for a in accounts):
+                        account_id = candidate
+                        break
+                else:
+                    account_id = f"guest_{secrets.token_hex(8)}"
+            else:
+                # 幂等：已存在则返回
+                for a in accounts:
+                    if a.account_id == account_id:
+                        return a
+            a = Account(
+                account_id=account_id,
+                username=f"guest_{account_id[:8]}",
+                email="",
+                role="guest",
+                invite_code_used="",
+            )
+            accounts.append(a)
+            self._save_accounts(accounts)
+            return a
+
     # ----- 🆕 v1.8.0 scrypt password -----
 
     def set_password(self, account_id: str, password: str) -> bool:
