@@ -11,6 +11,26 @@ era_id: "wanli1587",
 account_id: null,
 account_username: null,
 account_role: "user",
+// 🆕 v1.9.0 游戏运行时（UI 重构）
+game: {
+  round_current: 1,
+  year_current: 1587,           // 万历十五年
+  year_max: 1601,               // 万历二十九年
+  city: "苏州府",
+  cash: 50,                     // 银两
+  looms: 1,                     // 织机数
+  reputation: 5,                // 声望
+  family: [],                   // 家庭成员
+  skills: [],                   // 技能
+  history: [],                  // 历史输入
+  quick_actions: ["问行情", "去机房", "问税关", "闲逛"],
+  timeline: [                   // 时代大事记
+    { year: 1587, event: "你出生", highlight: false },
+    { year: 1588, event: "入行学徒", highlight: false },
+    { year: 1596, event: "矿税监设立", highlight: false },
+    { year: 1601, event: "葛贤抗税", highlight: true },
+  ],
+},
 };
 
 const $main = document.getElementById("main");
@@ -487,6 +507,171 @@ const SHENGZE_LOCATIONS = [
   traits: "离权力更近——知道镇上谁家纳了税、谁家出了事，但也被里长看得紧。",
 },
 ];
+
+// ============================================================
+// 🆕 v1.9.0 UI 重构：游戏界面 5 组件
+// ============================================================
+
+/** 顶部时代背景横幅 */
+function renderGameHeader() {
+  const g = state.game;
+  const yearLabel = `万历${g.year_current - 1573}年（${g.year_current}）`;
+  const yearMaxLabel = `万历${g.year_max - 1573}年（${g.year_max}）`;
+  const progress = Math.min(100, ((g.year_current - 1587) / (g.year_max - 1587)) * 100);
+  return `
+    <div class="game-header" style="background:linear-gradient(135deg, #5a3e1f 0%, #3a2a17 100%);color:#f5e6c8;padding:16px 24px;border-radius:0 0 8px 8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-size:24px">🎭</div>
+        <div>
+          <div style="font-size:18px;font-weight:600">${yearLabel} → ${yearMaxLabel}</div>
+          <div style="font-size:12px;color:#c4a878">第 ${g.round_current} 轮 · ${escapeHtmlInline(g.city)} · ${escapeHtmlInline(state.account_username || "游客")}</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px;max-width:400px">
+        <div style="font-size:11px;color:#c4a878;margin-bottom:4px">时代进度 ${progress.toFixed(0)}%</div>
+        <div style="height:6px;background:rgba(255,255,255,0.2);border-radius:3px;overflow:hidden">
+          <div style="height:100%;background:linear-gradient(90deg, #d4a574, #f5e6c8);width:${progress}%;transition:width 0.5s"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:13px">
+        <div title="银两">💰 ${g.cash}</div>
+        <div title="织机">🧵 ${g.looms}</div>
+        <div title="声望">⭐ ${g.reputation}</div>
+      </div>
+    </div>
+  `;
+}
+
+/** 角色卡侧栏（可折叠） */
+function renderCharacterCard() {
+  const g = state.game;
+  const char = state.character || {};
+  const family = g.family.length > 0 ? g.family : [
+    { relation: "妻", name: "张氏", age: 26, status: "在世" },
+    { relation: "母", name: "沈王氏", age: 58, status: "在世" },
+  ];
+  const skills = g.skills.length > 0 ? g.skills : [
+    { name: "挽丝", level: 3 },
+    { name: "织绸", level: 2 },
+  ];
+  return `
+    <aside class="char-card" style="background:#faf3e0;border:1px solid #c4a878;border-radius:8px;padding:16px;width:240px;flex-shrink:0">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:48px">👤</div>
+        <div style="font-size:18px;font-weight:600;color:#5a3e1f;margin-top:4px">${escapeHtmlInline(char.name || state.account_username || "未命名")}</div>
+        <div style="font-size:12px;color:#8b6f47">${escapeHtmlInline(char.occupation || "织工")} · ${char.age || "?"}岁</div>
+        <div style="font-size:11px;color:#a08858">${escapeHtmlInline(char.location || g.city)}</div>
+      </div>
+      <div style="border-top:1px solid #c4a878;padding-top:8px;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:600;color:#5a3e1f;margin-bottom:4px">家庭</div>
+        ${family.map(f => `<div style="font-size:12px;color:#5a3e1f;display:flex;justify-content:space-between"><span>${escapeHtmlInline(f.relation)}：${escapeHtmlInline(f.name)}</span><span style="color:#8b6f47">${f.age}岁</span></div>`).join("")}
+      </div>
+      <div style="border-top:1px solid #c4a878;padding-top:8px">
+        <div style="font-size:12px;font-weight:600;color:#5a3e1f;margin-bottom:4px">技能</div>
+        ${skills.map(s => `<div style="font-size:12px;color:#5a3e1f">${escapeHtmlInline(s.name)} <span style="color:#d4a574">${"⭐".repeat(s.level)}</span></div>`).join("")}
+      </div>
+    </aside>
+  `;
+}
+
+/** 时代大事记侧栏 */
+function renderTimeline() {
+  const g = state.game;
+  return `
+    <aside class="timeline" style="background:#faf3e0;border:1px solid #c4a878;border-radius:8px;padding:16px;width:200px;flex-shrink:0">
+      <div style="font-size:14px;font-weight:600;color:#5a3e1f;margin-bottom:12px">📜 大事记</div>
+      ${g.timeline.map(t => `
+        <div style="display:flex;gap:8px;margin-bottom:8px;${t.highlight ? "background:#fff3cd;padding:6px;border-radius:4px" : ""}">
+          <div style="font-size:12px;color:#5a3e1f;font-weight:600;min-width:36px">${t.year}</div>
+          <div style="font-size:12px;color:${t.highlight ? "#c0392b" : "#8b6f47"};flex:1">${escapeHtmlInline(t.event)}${t.highlight ? " 🔥" : ""}</div>
+        </div>
+      `).join("")}
+      <div style="font-size:11px;color:#a08858;margin-top:12px;padding-top:8px;border-top:1px solid #c4a878">
+        💡 时代大事影响你的选择
+      </div>
+    </aside>
+  `;
+}
+
+/** 行动 + 历史复合输入区 */
+function renderActionBar() {
+  const g = state.game;
+  const history = g.history.slice(-3).reverse();
+  return `
+    <div class="action-bar" style="background:#faf3e0;border:1px solid #c4a878;border-radius:8px;padding:12px;margin-top:16px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <span style="font-size:18px">💭</span>
+        <input id="action-input" type="text" placeholder="你想做什么？例如：问行情 / 去税关 / 和工人聊天"
+          style="flex:1;padding:10px 12px;border:1px solid #c4a878;border-radius:4px;background:#fff;font-size:14px"
+          onkeydown="if(event.key==='Enter') submitAction()">
+        <button onclick="submitAction()" style="padding:10px 20px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px">发送</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${g.quick_actions.map(a => `<button onclick="useQuickAction('${escapeHtmlInline(a)}')" style="padding:6px 12px;background:#fff;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:12px">${escapeHtmlInline(a)}</button>`).join("")}
+      </div>
+      ${history.length > 0 ? `
+      <div style="border-top:1px solid #c4a878;padding-top:8px;font-size:12px;color:#8b6f47">
+        📜 历史：
+        ${history.map((h, i) => `<div style="margin:2px 0">&gt; ${i + 1}. ${escapeHtmlInline(h)}</div>`).join("")}
+      </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+/** 主游戏布局：3 栏（角色 | narrative | 大事记） */
+function renderGameLayout(content) {
+  return `
+    <div class="game-layout" style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;padding:16px">
+      ${renderCharacterCard()}
+      <main class="narrative-area" style="flex:1;min-width:300px;max-width:calc(100% - 480px);background:#faf3e0;border:1px solid #c4a878;border-radius:8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.05)">
+        ${content}
+      </main>
+      ${renderTimeline()}
+    </div>
+  `;
+}
+
+/** 完整游戏界面（顶部 + 3 栏 + 底部输入） */
+function renderGameFull(narrativeContent) {
+  return `
+    <div class="game-container" style="min-height:100vh;background:#f0e6c8">
+      ${renderGameHeader()}
+      <div style="max-width:1200px;margin:0 auto">
+        ${renderGameLayout(narrativeContent)}
+        ${renderActionBar()}
+      </div>
+    </div>
+  `;
+}
+
+/** 🆕 v1.9.0 提交行动（占位，待 /api/play 接入）*/
+async function submitAction() {
+  const input = document.getElementById("action-input")?.value?.trim();
+  if (!input) {
+    showToast("请输入想做的事", "warning");
+    return;
+  }
+  // 简化版：直接用 fallback 渲染一段
+  showToast("行动已发送：" + input, "info", 2000);
+  HAPTIC.tap();
+  // 加到 history
+  state.game.history.push(input);
+  document.getElementById("action-input").value = "";
+  // 重新渲染
+  if (typeof renderGame === "function") {
+    renderGame();
+  }
+}
+
+/** 🆕 v1.9.0 快捷行动 */
+function useQuickAction(action) {
+  const input = document.getElementById("action-input");
+  if (input) {
+    input.value = action;
+    submitAction();
+  }
+}
 
 // 🆕 v1.8.2 renderMenu：统一入口（4 板块）
 async function renderMenu() {

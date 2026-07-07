@@ -2065,3 +2065,46 @@ body {
     color: #1a1410 !important;
   }
 }
+
+/* ============================================================
+ * 🆕 v1.9.0 UI 重构：游戏布局响应式
+ * ============================================================ */
+
+/* 移动端：3 栏折叠为单列 */
+@media (max-width: 900px) {
+  .game-layout {
+    flex-direction: column !important;
+  }
+  .game-layout .char-card,
+  .game-layout .timeline {
+    width: 100% !important;
+  }
+  .game-layout .narrative-area {
+    max-width: 100% !important;
+  }
+}
+
+/* 超小屏：顶部 banner 简化 */
+@media (max-width: 600px) {
+  .game-header {
+    padding: 12px 16px !important;
+  }
+  .game-header > div:first-child > div:first-child {
+    font-size: 20px !important;
+  }
+}
+
+/* 暗色模式适配游戏组件 */
+@media (prefers-color-scheme: dark) {
+  .game-container {
+    background: #1a1410 !important;
+  }
+  .game-header {
+    background: linear-gradient(135deg, #2a201a 0%, #1a1410 100%) !important;
+  }
+  .char-card, .timeline, .narrative-area, .action-bar {
+    background: #2a201a !important;
+    border-color: #3a2a17 !important;
+    color: #f5e6c8 !important;
+  }
+}
