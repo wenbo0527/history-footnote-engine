@@ -3515,6 +3515,14 @@ async function renderAdminSettings() {
           📝 改完点"💾 保存"——写入 <code>.env</code>，<strong style="color:#c0392b">重启服务后生效</strong>。
         </p>
         <div style="display:grid;grid-template-columns:200px 100px 1fr;gap:12px;align-items:center">
+          <label>LLM 主 provider</label>
+          <select id="set-llm-provider" style="padding:6px 10px;border:1px solid #c4a878;border-radius:4px;font-size:14px;background:#fff">
+            <option value="minimax-anthropic" ${(s.LLM_PRIMARY_PROVIDER || "minimax-anthropic") === "minimax-anthropic" ? "selected" : ""}>🟢 minimax-anthropic（主）</option>
+            <option value="deepseek" ${s.LLM_PRIMARY_PROVIDER === "deepseek" ? "selected" : ""}>💰 deepseek（需余额）</option>
+            <option value="minimax-openai" ${s.LLM_PRIMARY_PROVIDER === "minimax-openai" ? "selected" : ""}>🟡 minimax-openai（备）</option>
+          </select>
+          <span style="color:#8b6f47;font-size:12px">🆕 v1.8.8 热加载切换</span>
+
           <label>LLM 最大请求数</label>
           <input id="set-llm-max" type="number" min="1" value="${s.LLM_MAX_REQUESTS || 20}" style="padding:6px 10px;border:1px solid #c4a878;border-radius:4px;font-size:14px">
           <span style="color:#8b6f47;font-size:12px">30 轮/5 分钟 足够</span>
@@ -3565,10 +3573,11 @@ async function adminSaveSettings() {
     LLM_WINDOW_SECONDS: parseFloat(document.getElementById("set-llm-win")?.value || "0"),
     GLOBAL_MAX_REQUESTS: parseInt(document.getElementById("set-g-max")?.value || "0"),
     GLOBAL_WINDOW_SECONDS: parseFloat(document.getElementById("set-g-win")?.value || "0"),
+    LLM_PRIMARY_PROVIDER: document.getElementById("set-llm-provider")?.value || "minimax-anthropic",  // 🆕 v1.8.8
   };
-  // 简单校验
+  // 简单校验（数字字段）
   for (const [k, v] of Object.entries(updates)) {
-    if (!v || v < 1) {
+    if (typeof v === "number" && (!v || v < 1)) {
       showToast(`${k} 必须 ≥ 1`, "error");
       return;
     }
@@ -3580,7 +3589,7 @@ async function adminSaveSettings() {
     showToast(`保存失败：${data.error}`, "error");
     return;
   }
-  showToast(data.message || "已保存", "success", 5000);
+  showToast((data.message || "已保存") + "（LLM provider 已热加载，立即生效）", "success", 5000);
   HAPTIC.success();
 }
 

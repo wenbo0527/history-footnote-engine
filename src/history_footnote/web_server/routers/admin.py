@@ -818,6 +818,7 @@ def _read_env_settings() -> dict:
         "LLM_WINDOW_SECONDS": 60.0,
         "GLOBAL_MAX_REQUESTS": 60,
         "GLOBAL_WINDOW_SECONDS": 60.0,
+        "LLM_PRIMARY_PROVIDER": "minimax-anthropic",  # 🆕 v1.8.8
         "ADMIN_TOKEN": "",
     }
     try:
@@ -898,12 +899,13 @@ def handle_POST_admin_settings(handler, body: dict) -> bool:
     if not isinstance(body, dict):
         handler._json(400, {"error": "body must be dict"})
         return True
-    # 白名单（限整数 / 浮点）
+    # 白名单（限整数 / 浮点 / 字符串）
     ALLOWED = {
         "LLM_MAX_REQUESTS": int,
         "LLM_WINDOW_SECONDS": float,
         "GLOBAL_MAX_REQUESTS": int,
         "GLOBAL_WINDOW_SECONDS": float,
+        "LLM_PRIMARY_PROVIDER": str,  # 🆕 v1.8.8 LLM 主 provider
     }
     updates = {}
     for k, v in body.items():
@@ -912,7 +914,8 @@ def handle_POST_admin_settings(handler, body: dict) -> bool:
         try:
             updates[k] = ALLOWED[k](v)
         except (ValueError, TypeError):
-            handler._json(400, {"error": f"{k} 必须为 {'int' if ALLOWED[k] is int else 'float'}"})
+            type_name = "int" if ALLOWED[k] is int else ("float" if ALLOWED[k] is float else "string")
+            handler._json(400, {"error": f"{k} 必须为 {type_name}"})
             return True
         # 范围校验
         if ALLOWED[k] is int and updates[k] < 1:
@@ -921,6 +924,11 @@ def handle_POST_admin_settings(handler, body: dict) -> bool:
         if ALLOWED[k] is float and updates[k] < 1.0:
             handler._json(400, {"error": f"{k} 必须 ≥ 1.0"})
             return True
+        if ALLOWED[k] is str and k == "LLM_PRIMARY_PROVIDER":
+            # 🆕 v1.8.8 provider 校验
+            if updates[k] not in ("minimax-anthropic", "deepseek", "minimax-openai"):
+                handler._json(400, {"error": f"LLM_PRIMARY_PROVIDER 必须为 minimax-anthropic/deepseek/minimax-openai"})
+                return True
     if not updates:
         handler._json(400, {"error": "未提供有效字段", "allowed": list(ALLOWED.keys())})
         return True
@@ -953,6 +961,7 @@ def handle_POST_admin_settings_reset(handler, body: dict) -> bool:
         "LLM_WINDOW_SECONDS": 60.0,
         "GLOBAL_MAX_REQUESTS": 60,
         "GLOBAL_WINDOW_SECONDS": 60.0,
+        "LLM_PRIMARY_PROVIDER": "minimax-anthropic",
     }
     ok, msg = _write_env_settings(defaults)
     if not ok:

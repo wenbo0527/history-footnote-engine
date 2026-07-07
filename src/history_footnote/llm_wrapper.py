@@ -32,6 +32,28 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 90.0  # 单次调用超时（秒）🆕 v1.8.7 30→90（minimax 完整 JSON 需 40-60s）
 DEFAULT_RETRY_ON_SAME = 1  # 同 provider 重试次数
 FALLBACK_CHAIN = ["minimax-anthropic", "deepseek", "minimax-openai"]
+# 🆕 v1.8.8 provider 配置（可热加载）
+PRIMARY_PROVIDER = "minimax-anthropic"  # 默认主 provider
+HEALTHY_PROVIDERS = set()  # 失败后自动从 fallback 移除，恢复后重加
+PROVIDER_FAILURE_COUNT = {}  # 失败计数
+
+
+def get_active_provider() -> str:
+    """🆕 v1.8.8 热加载 provider：先 env，再 settings"""
+    import os
+    # 1. env (启动时设)
+    env_p = os.environ.get("LLM_PRIMARY_PROVIDER")
+    if env_p and env_p.strip():
+        return env_p.strip()
+    # 2. settings (.env 文件，运行时可改)
+    try:
+        from history_footnote.runtime_config import get_setting
+        s_p = get_setting("LLM_PRIMARY_PROVIDER", "")
+        if s_p and s_p.strip():
+            return s_p.strip()
+    except Exception:
+        pass
+    return PRIMARY_PROVIDER
 # JSONL 日志文件路径
 USAGE_LOG_PATH = Path(os.environ.get(
     "LLM_USAGE_LOG",
@@ -195,13 +217,13 @@ class LLMWrapper:
 
     def __init__(
         self,
-        primary_provider: str = "minimax-anthropic",
+        primary_provider: str = None,  # 🆕 v1.8.8 None = 用 get_active_provider()
         fallback_chain: Optional[List[str]] = None,
         timeout: float = DEFAULT_TIMEOUT,
         retry_on_same: int = DEFAULT_RETRY_ON_SAME,
         era_config: Optional[Dict] = None,
     ):
-        self.primary_provider = primary_provider
+        self.primary_provider = primary_provider or get_active_provider()  # 🆕 v1.8.8
         self.fallback_chain = fallback_chain or FALLBACK_CHAIN
         # 确保 primary 在最前
         if self.primary_provider not in self.fallback_chain:
