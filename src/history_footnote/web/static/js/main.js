@@ -779,7 +779,11 @@ wizard.step = 5;
 renderWizard();
 }
 
-async function generateCharacter() {
+async function generateCharacter(options = {}) {
+const MAX_ATTEMPTS = 3;
+const TIMEOUT_MS = 30000;  // 30s 单次超时
+const BACKOFF_MS = [0, 1500, 4000];  // 立即 / 1.5s / 4s
+
 // 防止重入：如果已经在生成中，直接返回
 if (wizard._generating_character) return;
 wizard._generating_character = true;
@@ -791,29 +795,137 @@ if (wizard.step === 7) {
   $main.innerHTML = renderWizardStep(7);
 }
 
+let lastError = null;
+let attempt = 0;
 try {
-  const data = await api("/api/generate_character", "POST", {
-    era_id: wizard.era_id,
-    gender: wizard.gender,
-    location: wizard.location,
-    location_description: getLocationDescription(wizard.location),
-    identity_description: wizard.identity_description,
-    life_expectation: wizard.life_expectation,
-  });
-  if (data.error) {
-    const $el = document.getElementById("char-area");
-    if ($el) $el.innerHTML = "<div class='error'>" + data.error + "</div>";
-  } else {
-    wizard.character = data.character;
-    // 重新渲染 step 7 显示结果（不重新 attach，因为 character 已设置）
+  while (attempt < MAX_ATTEMPTS) {
+    attempt++;
+    // 退避延迟（第 2/3 次重试前等）
+    if (BACKOFF_MS[attempt - 1] > 0) {
+      showToast(`第 ${attempt}/${MAX_ATTEMPTS} 次重试…`, "info", 1500);
+      await new Promise(r => setTimeout(r, BACKOFF_MS[attempt - 1]));
+    }
+    // 渲染当前 attempt 状态
     if (wizard.step === 7) {
-      const $main = document.getElementById("main");
-      $main.innerHTML = renderWizardStep(7);
+      const $el = document.getElementById("char-area");
+      if ($el && attempt > 1) {
+        $el.innerHTML = `<div class='info' style='padding:24px;text-align:center;color:#5a3e1f'>
+          <div style='font-size:36px;margin-bottom:12px'>⏳</div>
+          <div style='font-size:14px'>正在重新生成（第 ${attempt}/${MAX_ATTEMPTS} 次）…</div>
+          <div style='font-size:12px;color:#8b6f47;margin-top:8px'>LLM 可能需要时间，请稍候</div>
+        </div>`;
+      }
+    }
+    // 🆕 v1.8.3 30s 超时控制
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const resp = await fetch("/api/generate_character", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          era_id: wizard.era_id,
+          gender: wizard.gender,
+          location: wizard.location,
+          location_description: getLocationDescription(wizard.location),
+          identity_description: wizard.identity_description,
+          life_expectation: wizard.life_expectation,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await resp.json();
+      if (resp.ok && !data.error) {
+        // 成功
+        wizard.character = data.character;
+        if (wizard.step === 7) {
+          const $main = document.getElementById("main");
+          $main.innerHTML = renderWizardStep(7);
+        }
+        if (attempt > 1) {
+          showToast(`✅ 第 ${attempt} 次重试成功`, "success");
+          HAPTIC.success();
+        }
+        return;  // 成功，结束
+      }
+      // 服务器返 error
+      lastError = { type: classifyError(resp.status, data.error), message: data.error || "生成失败" };
+      // 4xx（用户错误）不重试
+      if (resp.status >= 400 && resp.status < 500) {
+        break;
+      }
+    } catch (e) {
+      clearTimeout(timeoutId);
+      // 网络/超时/Abort
+      if (e.name === "AbortError") {
+        lastError = { type: "timeout", message: `生成超时（${TIMEOUT_MS / 1000}s）` };
+      } else {
+        lastError = { type: "network", message: `网络错误：${e.message}` };
+      }
     }
   }
+  // 重试完仍失败
+  if (wizard.step === 7) {
+    renderCharacterError(lastError, attempt);
+  }
+  showToast(`❌ 人设生成失败：${lastError?.message || "未知错误"}`, "error", 5000);
+  HAPTIC.error();
 } finally {
   wizard._generating_character = false;
 }
+}
+
+/** 错误类型分类 */
+function classifyError(status, msg) {
+  if (status === 429) return "rate_limit";
+  if (status === 503) return "service_unavailable";
+  if (status >= 500) return "server_error";
+  if (status === 408) return "timeout";
+  return "client_error";
+}
+
+/** 渲染失败状态（带重试按钮） */
+function renderCharacterError(err, attempts) {
+  const $el = document.getElementById("char-area");
+  if (!$el) return;
+  const typeLabel = {
+    timeout: "⏰ 请求超时",
+    network: "📡 网络异常",
+    rate_limit: "🚦 请求限流",
+    service_unavailable: "🔧 服务暂不可用",
+    server_error: "⚙️ 服务错误",
+    client_error: "❌ 请求错误",
+  }[err?.type] || "❌ 未知错误";
+  const adviceText = {
+    timeout: "LLM 响应较慢，可稍后重试或换网络",
+    network: "请检查网络连接",
+    rate_limit: "1 分钟后再试",
+    service_unavailable: "服务维护中，请稍后",
+    server_error: "服务器异常，请稍后重试",
+    client_error: "请检查输入内容",
+  }[err?.type] || "请稍后重试";
+  $el.innerHTML = `
+    <div style='background:#fdf3f3;border:2px solid #c0392b;border-radius:8px;padding:24px;margin:16px 0'>
+      <div style='display:flex;align-items:center;gap:12px;margin-bottom:12px'>
+        <span style='font-size:32px'>😢</span>
+        <div>
+          <h3 style='margin:0;color:#c0392b;font-size:18px'>人设生成失败</h3>
+          <p style='margin:4px 0 0;color:#8b6f47;font-size:13px'>已重试 ${attempts} 次</p>
+        </div>
+      </div>
+      <div style='background:#fff;padding:12px;border-radius:4px;margin-bottom:16px'>
+        <div style='font-size:13px;color:#5a3e1f;margin-bottom:4px'><strong>${typeLabel}</strong></div>
+        <div style='font-size:14px;color:#c0392b'>${escapeHtmlInline(err?.message || "")}</div>
+        <div style='font-size:12px;color:#8b6f47;margin-top:8px'>💡 ${adviceText}</div>
+      </div>
+      <div style='display:flex;gap:8px;flex-wrap:wrap'>
+        <button onclick="generateCharacter()" style='padding:10px 20px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px'>🔄 重新生成</button>
+        <button onclick="wizard.step=5;renderWizard()" style='padding:10px 20px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:14px'>← 修改身份</button>
+        <button onclick="renderMenu()" style='padding:10px 20px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:14px'>返回菜单</button>
+      </div>
+    </div>
+  `;
 }
 
 // 🐛 Bug #3 修复：位置 → identity 映射
