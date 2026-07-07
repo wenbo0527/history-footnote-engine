@@ -14,6 +14,7 @@ POST /api/admin/saves/delete    — 删除指定存档
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -42,9 +43,11 @@ def _get_account_system() -> AccountSystem:
 
 
 def _require_admin(handler, body_or_query: dict) -> tuple[bool, str | None]:
-    """验证 admin 权限
+    """验证 admin 权限（v1.7.46+ 必须通过 token + admin role 双检）
     Returns: (is_admin, account_id)
     """
+    if not _check_admin_token(handler, body_or_query):
+        return False, None
     account_id = body_or_query.get("account_id") or ""
     if not account_id:
         return False, "account_id 必填"
@@ -63,12 +66,40 @@ def _admin_get_account_id(handler, query: str) -> str | None:
     return qs.get("account_id", [None])[0]
 
 
+def _admin_get_token(handler, query: str) -> str:
+    """从 query 拿 token"""
+    qs = parse_qs(query)
+    return qs.get("token", [""])[0] or ""
+
+
+def _check_admin_token(handler, params: dict) -> bool:
+    """🆕 v1.7.46 鉴权加固：所有 admin 路由需 ADMIN_TOKEN
+    Returns: True=通过；False=已写 401/500 拒绝
+    优先级：body.token > X-Admin-Token header
+    """
+    expected = os.environ.get("ADMIN_TOKEN", "")
+    if not expected:
+        logger.exception("[/api/admin/*] ADMIN_TOKEN 未配置")
+        handler._json(500, {"error": "服务器未配置 ADMIN_TOKEN"})
+        return False
+    provided = (
+        params.get("token", "")
+        or handler.headers.get("X-Admin-Token", "")
+    )
+    if provided != expected:
+        handler._json(401, {"error": "需要有效 token"})
+        return False
+    return True
+
+
 # ============= 路由 =============
 
 def handle_GET_admin_users(handler, query: str) -> bool:
     """GET /api/admin/users?account_id=xxx
     Returns: 完整账户列表
     """
+    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
+        return True
     admin_id = _admin_get_account_id(handler, query)
     if not admin_id:
         handler._json(400, {"error": "account_id 必填"})
@@ -104,6 +135,8 @@ def handle_GET_admin_saves(handler, query: str) -> bool:
     """GET /api/admin/saves?account_id=xxx[&target_account_id=yyy]
     Returns: 存档列表（默认所有账户；可指定 target_account_id）
     """
+    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
+        return True
     admin_id = _admin_get_account_id(handler, query)
     if not admin_id:
         handler._json(400, {"error": "account_id 必填"})
@@ -148,6 +181,8 @@ def handle_GET_admin_tokens(handler, query: str) -> bool:
     """GET /api/admin/tokens?account_id=xxx[&recent_limit=20]
     Returns: token 消耗统计（全局 + 近期调用）
     """
+    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
+        return True
     admin_id = _admin_get_account_id(handler, query)
     if not admin_id:
         handler._json(400, {"error": "account_id 必填"})
@@ -179,6 +214,8 @@ def handle_GET_admin_config(handler, query: str) -> bool:
     """GET /api/admin/config?account_id=xxx
     Returns: era.json 部分配置（不返回 secret）
     """
+    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
+        return True
     admin_id = _admin_get_account_id(handler, query)
     if not admin_id:
         handler._json(400, {"error": "account_id 必填"})
@@ -215,6 +252,8 @@ def handle_POST_admin_config(handler, body: dict) -> bool:
     Body: {account_id, updates: {key: value, ...}}
     只能更新白名单字段
     """
+    if not _check_admin_token(handler, body):
+        return True
     admin_id = body.get("account_id", "")
     updates = body.get("updates", {})
     if not admin_id:
@@ -264,6 +303,8 @@ def handle_POST_admin_user_role(handler, body: dict) -> bool:
     Body: {admin_id, target_account_id, new_role}
     修改账户 role（admin/user/guest）
     """
+    if not _check_admin_token(handler, body):
+        return True
     admin_id = body.get("admin_id", "")
     target_id = body.get("target_account_id", "")
     new_role = body.get("new_role", "")
@@ -307,6 +348,8 @@ def handle_DELETE_admin_user(handler, body: dict) -> bool:
     Body: {admin_id, target_account_id}
     删除账户（不删存档）
     """
+    if not _check_admin_token(handler, body):
+        return True
     admin_id = body.get("admin_id", "")
     target_id = body.get("target_account_id", "")
     if not all([admin_id, target_id]):
@@ -345,6 +388,8 @@ def handle_DELETE_admin_save(handler, body: dict) -> bool:
     Body: {admin_id, target_account_id, save_id}
     删除指定存档（含 meta + 数据文件）
     """
+    if not _check_admin_token(handler, body):
+        return True
     admin_id = body.get("admin_id", "")
     target_id = body.get("target_account_id", "")
     save_id = body.get("save_id", "")
@@ -381,6 +426,8 @@ def handle_GET_admin_trials(handler, query: str) -> bool:
     """GET /api/admin/trials?account_id=xxx
     列出所有 trial 记录（current + history）
     """
+    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
+        return True
     admin_id = _admin_get_account_id(handler, query)
     if not admin_id:
         handler._json(400, {"error": "account_id 必填"})
@@ -423,6 +470,8 @@ def handle_POST_admin_grant_trial_invite(handler, body: dict) -> bool:
     Body: {admin_id, contact}
     给某个 trial user 奖励邀请码（被采纳意见时调用）
     """
+    if not _check_admin_token(handler, body):
+        return True
     admin_id = body.get("admin_id", "")
     contact = body.get("contact", "")
     if not admin_id:
