@@ -21,6 +21,7 @@ async function api(path, method = "GET", body = null) {
   //   - subpath deploy (wenbodemo.com/history-footnote-engine/) : add prefix
   //   - subdomain deploy (footnote.wenbodemo.com/) : direct fetch
   //   - root deploy (wenbodemo.com/) : direct fetch
+  // 🆕 v1.7.46: 自动从 sessionStorage 带 X-Admin-Token（admin 路由需要）
   let fullPath = path;
   if (path.startsWith("/api/")) {
     if (window.location.pathname.startsWith("/history-footnote-engine")) {
@@ -28,9 +29,36 @@ async function api(path, method = "GET", body = null) {
     }
   }
   const opts = { method, headers: {"Content-Type": "application/json"} };
+  const adminToken = sessionStorage.getItem("hfe_admin_token");
+  if (adminToken) opts.headers["X-Admin-Token"] = adminToken;
   if (body) opts.body = JSON.stringify(body);
   const resp = await fetch(fullPath, opts);
   return await resp.json();
+}
+
+/**
+ * 🆕 v1.7.46 admin token 输入框 + 验证
+ * Returns: true=有有效 token；false=user 取消
+ */
+async function adminAuthPrompt() {
+  // 已存有效 token 直接过
+  const existing = sessionStorage.getItem("hfe_admin_token");
+  if (existing) {
+    const test = await api(`/api/admin/config?account_id=${state.account_id || "00000000"}`);
+    if (!test.error) return true;
+    sessionStorage.removeItem("hfe_admin_token");
+  }
+  while (true) {
+    const token = window.prompt("🛡️ 输入 ADMIN_TOKEN（见 .env 或 admin-bootstrap 邀请记录）:");
+    if (token === null) return false; // user 取消
+    sessionStorage.setItem("hfe_admin_token", token.trim());
+    const test = await api(`/api/admin/config?account_id=${state.account_id || "00000000"}`);
+    if (!test.error) return true;
+    sessionStorage.removeItem("hfe_admin_token");
+    const errMsg = test.error || "未知错误";
+    const retry = window.confirm(`❌ Token 无效（${errMsg}）\n\n点确定重试，点取消返回`);
+    if (!retry) return false;
+  }
 }
 
 let wizard = {
@@ -2149,6 +2177,9 @@ async function showAdminPanel() {
     alert("需要 admin 权限");
     return;
   }
+  // 🆕 v1.7.46: admin 面板需 ADMIN_TOKEN 二次验证
+  const ok = await adminAuthPrompt();
+  if (!ok) return;
   $main.innerHTML = `
     <div class="start-screen">
       <h2>🛠 管理员面板</h2>
