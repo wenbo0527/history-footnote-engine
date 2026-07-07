@@ -77,6 +77,8 @@ GET_ROUTES = {
     # 🆕 v1.7.47 通用菜单
     "/api/menu": _menu.handle_GET_menu,
     "/api/saves/list": _menu.handle_GET_saves_list,
+    # 🆕 v1.8.0 version 端点双轨
+    "/api/version": _misc.handle_GET_version,
 }
 
 # POST 路由
@@ -94,7 +96,7 @@ POST_ROUTES = {
     "/api/task/complete": _tasks.handle_POST_task_complete,
     "/api/task/add": _tasks.handle_POST_task_add,
     "/api/sanitize_patterns": _glossary.handle_GET_sanitize_patterns,
-    "/api/version": _misc.handle_GET_version,  # 原 do_POST 中也响应这 3 个 GET 端点（向后兼容）
+    "/api/version": _misc.handle_POST_version,  # 🆕 v1.8.0 POST 包装
     "/api/feedback": _misc.handle_POST_feedback,
     "/api/feedback_categories": _misc.handle_GET_feedback_categories,  # 同上
     "/api/merge_voice_options": _input.handle_POST_merge_voice_options,

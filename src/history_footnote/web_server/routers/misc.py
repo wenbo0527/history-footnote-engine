@@ -98,6 +98,13 @@ def handle_GET_version(handler) -> bool:
     return True
 
 
+def handle_POST_version(handler, body) -> bool:
+    """🆕 v1.8.0 POST /api/version（与 GET 同效）
+    main.js loadVersionBadge 用 POST { } 调用
+    """
+    return handle_GET_version(handler)
+
+
 def handle_POST_feedback(handler, body) -> bool:
     try:
         from history_footnote.issue_reporter import (
