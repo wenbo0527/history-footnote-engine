@@ -209,12 +209,12 @@ function collapseNarrative(text, options = {}) {
   }
   preview += "…";
   return `
-    <div class="narrative-collapse">
-      <div class="narrative-preview" id="${id}-preview">${escapeHtmlInline(preview).replace(/\n/g, "<br>")}</div>
-      <div class="narrative-full" id="${id}-full" style="display:none">${escapeHtmlInline(text).replace(/\n/g, "<br>")}</div>
-      <div class="narrative-actions" style="margin-top:8px;display:flex;gap:8px;align-items:center">
-        <button onclick="narrativeToggle('${id}')" data-target="${id}" data-state="collapsed"
-          style="padding:6px 12px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:13px">
+    <div class="narrative-collapse" data-collapse-id="${id}">
+      <div class="narrative-preview" id="${id}-preview" style="background:transparent;padding:0">${escapeHtmlInline(preview).replace(/\n/g, "<br>")}</div>
+      <div class="narrative-full" id="${id}-full" style="display:none;background:transparent;padding:0">${escapeHtmlInline(text).replace(/\n/g, "<br>")}</div>
+      <div class="narrative-actions" style="margin-top:12px;display:flex;gap:8px;align-items:center;padding:8px;background:rgba(90,62,31,0.05);border-radius:4px">
+        <button data-collapse-toggle="${id}" data-state="collapsed"
+          style="padding:8px 16px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600">
           📖 展开全文（${text.length} 字符）
         </button>
         <span style="color:#8b6f47;font-size:12px">长篇叙事</span>
@@ -227,22 +227,35 @@ function collapseNarrative(text, options = {}) {
 function narrativeToggle(id) {
   const preview = document.getElementById(`${id}-preview`);
   const full = document.getElementById(`${id}-full`);
-  const btn = document.querySelector(`button[data-target="${id}"]`);
-  if (!preview || !full || !btn) return;
+  const btn = document.querySelector(`button[data-collapse-toggle="${id}"]`);
+  if (!preview || !full || !btn) {
+    console.warn("narrativeToggle: elements not found", id);
+    return;
+  }
   if (btn.dataset.state === "collapsed") {
     preview.style.display = "none";
     full.style.display = "block";
     btn.dataset.state = "expanded";
-    btn.textContent = "📕 折叠";
+    btn.innerHTML = "📕 折叠";
     HAPTIC.tap();
   } else {
     preview.style.display = "block";
     full.style.display = "none";
     btn.dataset.state = "collapsed";
-    btn.textContent = `📖 展开全文`;
+    btn.innerHTML = `📖 展开全文`;
     HAPTIC.tap();
   }
 }
+
+/** 🆕 v1.9.1 事件代理：document 监听 narrative 折叠按钮（解决重渲染时 onclick 失效）*/
+document.addEventListener("click", function(e) {
+  const btn = e.target.closest("button[data-collapse-toggle]");
+  if (btn) {
+    e.preventDefault();
+    const id = btn.dataset.collapseToggle;
+    narrativeToggle(id);
+  }
+});
 
 async function api(path, method = "GET", body = null) {
   // Patch 2026-07-05 v1.7.24: adaptive pathname prefix
@@ -578,15 +591,15 @@ function renderCharacterCard() {
 function renderTimeline() {
   const g = state.game;
   return `
-    <aside class="timeline" style="background:#faf3e0;border:1px solid #c4a878;border-radius:8px;padding:16px;width:200px;flex-shrink:0">
-      <div style="font-size:14px;font-weight:600;color:#5a3e1f;margin-bottom:12px">📜 大事记</div>
+    <aside class="timeline" style="border-radius:8px;padding:16px;width:200px;flex-shrink:0">
+      <div class="timeline-title" style="font-size:14px;font-weight:600;margin-bottom:12px">📜 大事记</div>
       ${g.timeline.map(t => `
-        <div style="display:flex;gap:8px;margin-bottom:8px;${t.highlight ? "background:#fff3cd;padding:6px;border-radius:4px" : ""}">
-          <div style="font-size:12px;color:#5a3e1f;font-weight:600;min-width:36px">${t.year}</div>
-          <div style="font-size:12px;color:${t.highlight ? "#c0392b" : "#8b6f47"};flex:1">${escapeHtmlInline(t.event)}${t.highlight ? " 🔥" : ""}</div>
+        <div class="timeline-item" style="display:flex;gap:8px">
+          <div class="timeline-year" style="font-size:13px;font-weight:700;min-width:36px">${t.year}</div>
+          <div class="timeline-event ${t.highlight ? "highlight" : ""}" style="font-size:13px;flex:1">${escapeHtmlInline(t.event)}${t.highlight ? " 🔥" : ""}</div>
         </div>
       `).join("")}
-      <div style="font-size:11px;color:#a08858;margin-top:12px;padding-top:8px;border-top:1px solid #c4a878">
+      <div style="font-size:11px;color:#8b6f47;margin-top:12px;padding-top:8px;border-top:1px solid rgba(90,62,31,0.2)">
         💡 时代大事影响你的选择
       </div>
     </aside>

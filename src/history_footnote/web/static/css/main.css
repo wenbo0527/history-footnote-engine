@@ -573,14 +573,15 @@ body {
   font-size: 12px;
 }
 .narrative {
-  background: rgba(255, 250, 235, 0.7);
-  border-left: 4px solid #8b6f47;
+  background: #fffaf0;  /* 🆕 v1.9.1 不透明（之前 rgba 0.7 透明导致看不清）*/
+  border-left: 4px solid #5a3e1f;  /* 🆕 加深左边框（之前 #8b6f47）*/
   padding: 16px 20px;
   margin: 16px 0;
   border-radius: 2px;
   line-height: 1.9;
   font-size: 16px;
   white-space: pre-wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);  /* 🆕 加微阴影 */
 }
 .narrative .round-tag {
   color: #8b6f47;
@@ -1295,7 +1296,7 @@ body {
 .recap-entry {
   margin: 8px 0;
   padding: 8px 12px;
-  background: rgba(255, 250, 235, 0.7);
+  background: #fffaf0;
   border-left: 3px solid #8b6f47;
   border-radius: 3px;
 }
@@ -1499,7 +1500,7 @@ body {
 }
 .glossary-item {
   padding: 10px;
-  background: rgba(255, 250, 235, 0.7);
+  background: #fffaf0;
   border-left: 3px solid #8b6f47;
   border-radius: 3px;
 }
@@ -2104,7 +2105,75 @@ body {
   }
   .char-card, .timeline, .narrative-area, .action-bar {
     background: #2a201a !important;
-    border-color: #3a2a17 !important;
-    color: #f5e6c8 !important;
-  }
+  border-color: #3a2a17 !important;
+  color: #f5e6c8 !important;
+}
+
+/* ============================================================
+ * 🆕 v1.9.1 narrative 折叠 + 大事记对比度优化
+ * ============================================================ */
+
+/* narrative 折叠：preview/full 透明（继承 .narrative 背景）*/
+.narrative-collapse .narrative-preview,
+.narrative-collapse .narrative-full {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: inherit !important;
+}
+
+/* 折叠按钮 hover */
+.narrative-collapse button[data-collapse-toggle]:hover {
+  background: #3a2a17 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.narrative-collapse button[data-collapse-toggle]:active {
+  transform: translateY(0);
+}
+
+/* 折叠区 action 区域：明确背景区分 */
+.narrative-collapse .narrative-actions {
+  background: #f5e6c8 !important;  /* 🆕 不透明米色 */
+  border: 1px solid #c4a878;
+  border-radius: 4px;
+  padding: 10px 14px !important;
+}
+
+/* 🆕 v1.9.1 大事记高对比（与 narrative 区分）*/
+.timeline {
+  background: #f0e6c8 !important;  /* 🆕 比 narrative 暗一档 */
+  border: 2px solid #5a3e1f !important;  /* 🆕 边框加深 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.timeline .timeline-title {
+  color: #3a2a17 !important;  /* 🆕 标题更深 */
+  border-bottom: 2px solid #5a3e1f;
+  padding-bottom: 8px;
+}
+.timeline .timeline-item {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(90, 62, 31, 0.1);  /* 🆕 淡分隔线 */
+}
+.timeline .timeline-item:last-child {
+  border-bottom: none;
+}
+.timeline .timeline-year {
+  color: #3a2a17 !important;  /* 🆕 年份加深 */
+  font-weight: 700;
+}
+.timeline .timeline-event {
+  color: #5a3e1f !important;  /* 🆕 事件深棕 */
+}
+.timeline .timeline-event.highlight {
+  color: #c0392b !important;  /* 🆕 高亮红色 */
+  font-weight: 600;
+}
+
+/* 🆕 v1.9.1 角色卡：明确背景区分 */
+.char-card {
+  background: #faf3e0 !important;  /* 保持米色 */
+  border: 2px solid #c4a878 !important;  /* 🆕 边框加深 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
 }
