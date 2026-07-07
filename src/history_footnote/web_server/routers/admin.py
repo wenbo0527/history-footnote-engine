@@ -197,11 +197,39 @@ def handle_GET_admin_tokens(handler, query: str) -> bool:
         recent_limit = int(qs.get("recent_limit", ["20"])[0])
         from history_footnote.llm_wrapper import get_usage_logger
         usage = get_usage_logger()
-        stats = usage.get_stats()
+        raw_stats = usage.get_stats()
         recent = usage.get_recent(limit=recent_limit)
+        # 🆕 v1.7.47 字段对齐前端期望：
+        # 前端用 s.total_calls / s.total_tokens / s.total_prompt_tokens / s.total_completion_tokens / s.error_count
+        # 后端用 totals.calls / totals.tokens / totals.input_tokens / totals.output_tokens
+        totals = raw_stats.get("totals", {})
+        flat_stats = {
+            "total_calls": totals.get("calls", 0),
+            "total_tokens": totals.get("tokens", 0),
+            "total_prompt_tokens": totals.get("input_tokens", 0),
+            "total_completion_tokens": totals.get("output_tokens", 0),
+            "total_latency_ms": totals.get("latency_ms", 0),
+            "error_count": totals.get("fallback_count", 0) + totals.get("timeout_count", 0),
+            "fallback_count": totals.get("fallback_count", 0),
+            "timeout_count": totals.get("timeout_count", 0),
+        }
+        # 近期调用：每条改 prompt_tokens/completion_tokens
+        normalized_recent = []
+        for r in recent:
+            normalized_recent.append({
+                "model": r.get("model", ""),
+                "prompt_tokens": r.get("input_tokens", r.get("prompt_tokens", 0)),
+                "completion_tokens": r.get("output_tokens", r.get("completion_tokens", 0)),
+                "total_tokens": r.get("total_tokens", 0),
+                "latency_ms": r.get("latency_ms", 0),
+                "timestamp": r.get("timestamp", ""),
+                "fallback": r.get("fallback", False),
+                "timeout": r.get("timeout", False),
+            })
         handler._json(200, {
-            "stats": stats,
-            "recent": recent,
+            "stats": flat_stats,  # 前端期望的扁平字段
+            "stats_raw": raw_stats,  # 完整原始数据（保留）
+            "recent": normalized_recent,
             "recent_limit": recent_limit,
         })
     except Exception as e:
@@ -254,8 +282,19 @@ def handle_POST_admin_config(handler, body: dict) -> bool:
     """
     if not _check_admin_token(handler, body):
         return True
-    admin_id = body.get("account_id", "")
-    updates = body.get("updates", {})
+    # 🆕 v1.7.47 兼容 query 传 account_id
+    if isinstance(body, dict):
+        admin_id = body.get("account_id", "") or body.get("admin_id", "")
+    else:
+        admin_id = ""
+    if not admin_id and hasattr(handler, 'path'):
+        from urllib.parse import urlparse, parse_qs
+        try:
+            parsed = urlparse(handler.path)
+            admin_id = parse_qs(parsed.query).get("account_id", [""])[0]
+        except Exception:
+            admin_id = ""
+    updates = body.get("updates", {}) if isinstance(body, dict) else {}
     if not admin_id:
         handler._json(400, {"error": "account_id 必填"})
         return True
@@ -472,8 +511,19 @@ def handle_POST_admin_grant_trial_invite(handler, body: dict) -> bool:
     """
     if not _check_admin_token(handler, body):
         return True
-    admin_id = body.get("admin_id", "")
-    contact = body.get("contact", "")
+    # 🆕 v1.7.47 兼容 query 传 admin_id
+    if isinstance(body, dict):
+        admin_id = body.get("admin_id", "") or body.get("account_id", "")
+    else:
+        admin_id = ""
+    if not admin_id and hasattr(handler, 'path'):
+        from urllib.parse import urlparse, parse_qs
+        try:
+            parsed = urlparse(handler.path)
+            admin_id = parse_qs(parsed.query).get("admin_id", [""])[0] or parse_qs(parsed.query).get("account_id", [""])[0]
+        except Exception:
+            admin_id = ""
+    contact = body.get("contact", "") if isinstance(body, dict) else ""
     if not admin_id:
         handler._json(400, {"error": "admin_id 必填"})
         return True

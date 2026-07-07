@@ -23,6 +23,7 @@ from history_footnote.web_server.routers import (
     eras as _eras,
     glossary as _glossary,
     input as _input,
+    menu as _menu,
     misc as _misc,
     observability as _observability,
     session as _session_router,
@@ -71,6 +72,9 @@ GET_ROUTES = {
     "/api/trial/history": _trial.handle_GET_trial_history,
     # 🆕 v1.7.30 体验版管理（admin）
     "/api/admin/trials": _admin.handle_GET_admin_trials,
+    # 🆕 v1.7.47 通用菜单
+    "/api/menu": _menu.handle_GET_menu,
+    "/api/saves/list": _menu.handle_GET_saves_list,
 }
 
 # POST 路由
