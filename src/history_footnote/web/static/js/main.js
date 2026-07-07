@@ -40,25 +40,172 @@ async function api(path, method = "GET", body = null) {
  * 🆕 v1.7.46 admin token 输入框 + 验证
  * Returns: true=有有效 token；false=user 取消
  */
+// 🆕 v1.8.0 admin 登录（form modal 替代 prompt）
+// 返回 true=已登录；false=取消
 async function adminAuthPrompt() {
-  // 已存有效 token 直接过
+  // 1. 先试 session cookie（已登录直接过）
+  const me = await api("/api/admin/whoami");
+  if (me && me.account && me.account.role === "admin") {
+    return true;
+  }
+  // 2. 兼容老 sessionStorage token（v1.7.47 兼容，提示用户升级到密码登录）
   const existing = sessionStorage.getItem("hfe_admin_token");
   if (existing) {
     const test = await api(`/api/admin/config?account_id=${state.account_id || "00000000"}`);
-    if (!test.error) return true;
-    sessionStorage.removeItem("hfe_admin_token");
+    if (!test.error) {
+      // 老 token 仍可用，建议用户升级到密码登录
+      const upgrade = window.confirm(
+        "🛡️ 检测到旧版 ADMIN_TOKEN（v1.7.47 兼容模式）。\n\n" +
+        "v1.8.0 已升级为 scrypt 密码 + session cookie（更安全）。\n" +
+        "建议：点确定 → 用 username + password 登录\n" +
+        "      点取消 → 继续用旧 token"
+      );
+      if (!upgrade) return true;
+      sessionStorage.removeItem("hfe_admin_token");
+    } else {
+      sessionStorage.removeItem("hfe_admin_token");
+    }
   }
-  while (true) {
-    const token = window.prompt("🛡️ 输入 ADMIN_TOKEN（见 .env 或 admin-bootstrap 邀请记录）:");
-    if (token === null) return false; // user 取消
-    sessionStorage.setItem("hfe_admin_token", token.trim());
-    const test = await api(`/api/admin/config?account_id=${state.account_id || "00000000"}`);
-    if (!test.error) return true;
-    sessionStorage.removeItem("hfe_admin_token");
-    const errMsg = test.error || "未知错误";
-    const retry = window.confirm(`❌ Token 无效（${errMsg}）\n\n点确定重试，点取消返回`);
-    if (!retry) return false;
+  // 3. 弹出 form modal
+  return await adminLoginForm();
+}
+
+// 🆕 v1.8.0 form modal（username + password）
+// 异步等待用户提交或取消
+function adminLoginForm() {
+  return new Promise((resolve) => {
+    // 移除旧 modal（如果有）
+    const old = document.getElementById("hfe-admin-login-modal");
+    if (old) old.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "hfe-admin-login-modal";
+    modal.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:system-ui";
+    modal.innerHTML = `
+      <div style="background:#faf3e0;border:2px solid #c4a878;border-radius:8px;padding:24px;min-width:380px;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+        <h2 style="margin:0 0 16px;color:#5a3e1f;font-size:20px">🛡️  管理员登录</h2>
+        <form id="hfe-admin-login-form" autocomplete="on">
+          <div style="margin-bottom:12px">
+            <label style="display:block;color:#5a3e1f;font-size:14px;margin-bottom:4px">账户 ID</label>
+            <input id="hfe-admin-input-account" type="text" autocomplete="username"
+              style="width:100%;padding:8px 10px;border:1px solid #c4a878;border-radius:4px;background:#fff;color:#3a2a17;font-size:15px;box-sizing:border-box"
+              placeholder="00000000" value="${escapeHtml(state.account_id || "00000000")}" required />
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="display:block;color:#5a3e1f;font-size:14px;margin-bottom:4px">密码</label>
+            <input id="hfe-admin-input-password" type="password" autocomplete="current-password"
+              style="width:100%;padding:8px 10px;border:1px solid #c4a878;border-radius:4px;background:#fff;color:#3a2a17;font-size:15px;box-sizing:border-box"
+              placeholder="管理员密码" required />
+          </div>
+          <div id="hfe-admin-login-error" style="color:#c0392b;font-size:13px;min-height:18px;margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button type="button" id="hfe-admin-login-cancel"
+              style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;font-size:14px">
+              取消
+            </button>
+            <button type="submit" id="hfe-admin-login-submit"
+              style="padding:8px 16px;background:#5a3e1f;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;font-size:14px">
+              登录
+            </button>
+          </div>
+          <p style="margin:16px 0 0;color:#8b6f47;font-size:12px">
+            ⚠️ 5 次错将锁定 15 分钟<br>
+            首次使用？运行 <code>python -c "from history_footnote.account_system import AccountSystem; AccountSystem(storage_root=__import__('pathlib').Path('saves')).set_password('00000000', 'your_password')"</code> 设密
+          </p>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const $err = modal.querySelector("#hfe-admin-login-error");
+    const $form = modal.querySelector("#hfe-admin-login-form");
+    const $cancel = modal.querySelector("#hfe-admin-login-cancel");
+    const $account = modal.querySelector("#hfe-admin-input-account");
+    const $password = modal.querySelector("#hfe-admin-input-password");
+    $account.focus();
+
+    const close = (ok) => {
+      modal.remove();
+      resolve(ok);
+    };
+
+    $cancel.onclick = () => close(false);
+    modal.onclick = (e) => {
+      if (e.target === modal) close(false);
+    };
+
+    $form.onsubmit = async (e) => {
+      e.preventDefault();
+      $err.textContent = "";
+      const account_id = $account.value.trim();
+      const password = $password.value;
+      if (!account_id || !password) {
+        $err.textContent = "请填账户和密码";
+        return;
+      }
+      const $submit = modal.querySelector("#hfe-admin-login-submit");
+      $submit.disabled = true;
+      $submit.textContent = "登录中…";
+      try {
+        const r = await fetch("/api/admin/login", {
+          method: "POST",
+          credentials: "include",  // 关键：带 cookie
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ account_id, password }),
+        });
+        const data = await r.json();
+        if (r.ok && data.ok) {
+          // 成功：cookie 已自动存到浏览器
+          close(true);
+        } else if (r.status === 429) {
+          // 锁定
+          if (data.locked) {
+            $err.textContent = "❌ 账户已锁定 15 min（5 次错）";
+          } else {
+            $err.textContent = `❌ 账户已锁定，${data.retry_after || 900} 秒后重试`;
+          }
+          $submit.disabled = false;
+          $submit.textContent = "登录";
+        } else if (r.status === 401) {
+          // 错密
+          const remaining = data.remaining;
+          if (remaining !== undefined) {
+            $err.textContent = `❌ 密码错误（剩余 ${remaining} 次机会）`;
+          } else {
+            $err.textContent = `❌ 密码错误`;
+          }
+          $submit.disabled = false;
+          $submit.textContent = "登录";
+          $password.select();
+        } else {
+          $err.textContent = `❌ 错误：${data.error || r.statusText}`;
+          $submit.disabled = false;
+          $submit.textContent = "登录";
+        }
+      } catch (err) {
+        $err.textContent = `❌ 网络错误：${err.message}`;
+        $submit.disabled = false;
+        $submit.textContent = "登录";
+      }
+    };
+  });
+}
+
+// 🆕 v1.8.0 admin logout
+async function adminLogout() {
+  if (!confirm("确认登出？")) return;
+  try {
+    await fetch("/api/admin/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (e) {
+    console.warn("logout error:", e);
   }
+  // 清 sessionStorage token（兼容）
+  sessionStorage.removeItem("hfe_admin_token");
+  // 跳回主页（重新选择）
+  location.reload();
 }
 
 let wizard = {
@@ -2199,8 +2346,8 @@ async function showAdminPanel() {
         <button onclick="adminShowTab('config')" class="admin-tab-btn" data-tab="config" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer">
           ⚙️ 配置
         </button>
-        <button onclick="logoutAccount()" style="padding:8px 16px;background:transparent;color:#5a3e1f;border:1px solid #c4a878;border-radius:4px;cursor:pointer;margin-left:auto">
-          退出
+        <button onclick="adminLogout()" style="padding:8px 16px;background:#c0392b;color:#f5e6c8;border:none;border-radius:4px;cursor:pointer;margin-left:auto" title="🆕 v1.8.0 scrypt session 登出">
+          🚪 登出
         </button>
       </div>
       <div id="admin-tab-content" style="margin-top:16px"></div>
