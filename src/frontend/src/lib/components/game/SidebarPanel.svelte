@@ -12,6 +12,9 @@
    */
   import type { GameState } from '$lib/api/types';
   import { Chapter } from '$lib/components/design-system';
+  import { locationList } from '$lib/api/location';
+  import type { LocationListResponse } from '$lib/api/types';
+  import LocationPanel from './LocationPanel.svelte';
 
   interface Props {
     game: GameState;
@@ -19,12 +22,25 @@
 
   let { game }: Props = $props();
 
+  // 🆕 v2.4: location data（侧栏顶部显示）
+  let locationData = $state<LocationListResponse | null>(null);
+  $effect(() => {
+    if (game?.session_id) {
+      locationList(game.session_id).then(d => locationData = d).catch(() => {});
+    }
+  });
+
   // 财务告警
   const cashWarning = $derived(game.cash < 1);
   const debtWarning = $derived(game.debt > 5);
 </script>
 
 <div class="sidebar-panel">
+  <!-- 🆕 v2.4: 当前位置 + 移动选项 -->
+  {#if locationData}
+    <LocationPanel data={locationData} />
+  {/if}
+
   <!-- 财务 -->
   <section class="sidebar-section">
     <Chapter title="💰 银钱往来" level={4} />

@@ -102,6 +102,10 @@ POST_ROUTES = {
     "/api/feedback": _misc.handle_POST_feedback,
     "/api/feedback_categories": _misc.handle_GET_feedback_categories,  # 同上
     "/api/merge_voice_options": _input.handle_POST_merge_voice_options,
+    # 🆕 v2.4 文字地图系统
+    "/api/location/move": _input.handle_POST_location_move,
+    "/api/location/list": _input.handle_GET_location_list,
+    "/api/location/detail": _input.handle_GET_location_detail,
     "/api/render_narrative": _input.handle_POST_render_narrative,
     "/api/character_wiki_update": _character.handle_POST_character_wiki_update,
     "/api/input": _input.handle_POST_input,

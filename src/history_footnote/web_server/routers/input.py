@@ -447,3 +447,239 @@ def handle_POST_input_stream(handler, body) -> bool:
             **format_state(game),
         })
     return True
+
+
+# ============================================================
+# /api/location/* — v2.4 文字地图系统
+# ============================================================
+
+def _get_location_service_for_session(sid: str):
+    """从 session 中获取 location_service 实例"""
+    from history_footnote.location_service import build_location_service
+    entry = session_get(sid)
+    if not entry:
+        return None, None, None
+    game = entry[0]
+    era_config = getattr(game, "era_config", None)
+    if not era_config:
+        return None, None, None
+    return build_location_service(era_config), game, entry[1]
+
+
+def handle_POST_location_move(handler, body) -> bool:
+    """POST /api/location/move — 移动到目标地点（消耗 AP）
+
+    Request:
+        {
+            "session_id": "...",
+            "target": "tooth_market"  // 目标 location id
+        }
+
+    Response:
+        {
+            "success": true,
+            "from_location": "home",
+            "to_location": "tooth_market",
+            "ap_cost": 1.0,
+            "time_mode": "now_time",
+            "new_ap": 2.0,
+            "new_voice_options": [...],  // 新地点的选项（包含移动）
+            "narrative": "你沿着青石板路往西走..."  // 简短移动叙事
+        }
+    """
+    sid = body.get("session_id")
+    target = body.get("target", "").strip()
+    if not sid or not target:
+        handler._json(400, {"error": "missing session_id or target"})
+        return True
+
+    svc, game, lock = _get_location_service_for_session(sid)
+    if not svc or not game:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    with lock:
+        from_id = game.state.current_location or svc.get_default()
+        visited = list(game.state.visited_locations or [])
+        heard = list(game.state.heard_locations or [])
+        ap = float(getattr(game.state, "action_points_current", 3) or 3)
+
+        result = svc.can_move(from_id, target, visited, heard, ap)
+        if not result.success:
+            handler._json(400, {
+                "error": "cannot_move",
+                "reason": result.reason,
+                "from_location": from_id,
+                "to_location": target,
+            })
+            return True
+
+        # 移动成功：更新 state
+        game.state.current_location = target
+        if target not in visited:
+            visited.append(target)
+            game.state.visited_locations = visited
+        game.state.action_points_current = max(0, ap - result.ap_cost)
+
+        # 触发 heard 解锁检查
+        newly_heard = svc.check_unlock_hooks(game.state)
+        if newly_heard:
+            cur_heard = list(game.state.heard_locations or [])
+            for h in newly_heard:
+                if h not in cur_heard:
+                    cur_heard.append(h)
+            game.state.heard_locations = cur_heard
+
+        # 生成"新地点"选项（含移动选项）
+        new_voices = svc.get_move_options(
+            target, visited, list(game.state.heard_locations or []),
+            game.state.action_points_current,
+        )
+
+        # 简单移动叙事（不调 LLM，节省 token）
+        to_loc = svc.get(target)
+        narrative = f"你到了{to_loc.name}。{to_loc.description}"
+
+        logger.info(
+            f"[v2.4 location] sid={sid[:8]} {from_id}→{target} AP={result.ap_cost} "
+            f"new_heard={[svc.get_name(h) for h in newly_heard]}"
+        )
+
+        handler._json(200, {
+            "success": True,
+            "from_location": from_id,
+            "to_location": target,
+            "to_location_name": to_loc.name,
+            "ap_cost": result.ap_cost,
+            "time_mode": result.time_mode,
+            "new_ap": game.state.action_points_current,
+            "new_voice_options": new_voices,
+            "narrative": narrative,
+            "newly_heard": [svc.get_name(h) for h in newly_heard],
+            "location": {
+                "id": to_loc.id,
+                "name": to_loc.name,
+                "tier": to_loc.tier,
+                "description": to_loc.description,
+                "atmosphere_sound": to_loc.atmosphere_sound,
+                "npcs_default": to_loc.npcs_default,
+                "neighbors": [svc.get_name(n) for n in to_loc.neighbors],
+            },
+            **format_state(game),
+        })
+    return True
+
+
+def handle_GET_location_list(handler, body) -> bool:
+    """GET /api/location/list — 获取地图信息（已访问 + 听过 + 当前）
+
+    Request:
+        {"session_id": "..."}
+
+    Response:
+        {
+            "current_location": {...},
+            "visited": [{...}],
+            "heard": [...],  // 听过没去过（标 ❓）
+            "unseen": [...]   // 存在但玩家不知道
+        }
+    """
+    sid = body.get("session_id")
+    if not sid:
+        handler._json(400, {"error": "missing session_id"})
+        return True
+
+    svc, game, lock = _get_location_service_for_session(sid)
+    if not svc or not game:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    with lock:
+        current = game.state.current_location or svc.get_default()
+        visited = set(game.state.visited_locations or [])
+        heard = set(game.state.heard_locations or [])
+
+        def fmt(loc_id: str) -> dict:
+            loc = svc.get(loc_id)
+            if not loc:
+                return {"id": loc_id, "name": loc_id, "unknown": True}
+            return {
+                "id": loc.id,
+                "name": loc.name,
+                "tier": loc.tier,
+                "type": loc.type,
+                "description": loc.description,
+            }
+
+        # 触发 heard 解锁检查（玩家可能满足新条件）
+        newly_heard = svc.check_unlock_hooks(game.state)
+        if newly_heard:
+            cur_heard = list(game.state.heard_locations or [])
+            for h in newly_heard:
+                if h not in cur_heard:
+                    cur_heard.append(h)
+            game.state.heard_locations = cur_heard
+            heard.update(newly_heard)
+
+        all_locs = svc.all_l1_l2()
+        visited_l = [fmt(l.id) for l in all_locs if l.id in visited]
+        heard_l = [fmt(l.id) for l in all_locs if l.id in heard and l.id not in visited]
+        unseen_l = [fmt(l.id) for l in all_locs if l.id not in visited and l.id not in heard]
+
+        handler._json(200, {
+            "city_name": svc.city_name,
+            "city_intro": svc.city_intro,
+            "current_location": fmt(current),
+            "visited": visited_l,
+            "heard": heard_l,
+            "unseen": unseen_l,
+            "newly_heard": [svc.get_name(h) for h in newly_heard],
+        })
+    return True
+
+
+def handle_GET_location_detail(handler, body) -> bool:
+    """GET /api/location/detail — 获取某个地点的详情 + 可去选项
+
+    Request:
+        {"session_id": "...", "location_id": "tooth_market"}
+    """
+    sid = body.get("session_id")
+    loc_id = body.get("location_id", "").strip()
+    if not sid or not loc_id:
+        handler._json(400, {"error": "missing session_id or location_id"})
+        return True
+
+    svc, game, lock = _get_location_service_for_session(sid)
+    if not svc or not game:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    with lock:
+        loc = svc.get(loc_id)
+        if not loc:
+            handler._json(404, {"error": "location not found"})
+            return True
+
+        visited = list(game.state.visited_locations or [])
+        heard = list(game.state.heard_locations or [])
+        ap = float(getattr(game.state, "action_points_current", 3) or 3)
+
+        # 从此地点出发的"可去"选项
+        move_opts = svc.get_move_options(loc_id, visited, heard, ap)
+
+        handler._json(200, {
+            "id": loc.id,
+            "name": loc.name,
+            "tier": loc.tier,
+            "type": loc.type,
+            "tone": loc.tone,
+            "description": loc.description,
+            "atmosphere_sound": loc.atmosphere_sound,
+            "npcs_default": loc.npcs_default,
+            "neighbors": [svc.get_name(n) for n in loc.neighbors],
+            "events": loc.events,
+            "move_options": move_opts,
+        })
+    return True
+

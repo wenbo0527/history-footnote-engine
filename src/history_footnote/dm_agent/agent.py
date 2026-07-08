@@ -957,6 +957,8 @@ class DMAgent(MockHelpersMixin):
             character_wiki_summary=wiki_summary,
             # 🆕 v1.7.30 城市 sensory 注入
             current_city=self._build_current_city_section(),
+            # 🆕 v2.4 当前位置 sensory 注入（v2.4 文字地图）
+            current_location=self._build_current_location_section(),
         )
 
     def _load_dm_persona(self) -> str | None:
@@ -1009,6 +1011,30 @@ class DMAgent(MockHelpersMixin):
             lines.append("")
         lines.append(f"**危险等级**：{danger}/5  **机会等级**：{opportunity}/5")
         return "\n".join(lines)
+
+    def _build_current_location_section(self) -> str:
+        """🆕 v2.4 文字地图系统：注入"当前位置" sensory + 邻居
+
+        为什么重要：
+        - LLM 必须知道"玩家在 home 还是 tooth_market"才能写出符合空间的叙事
+        - 不注入会导致叙事跑出位置（"你去了染坊"但玩家实际在 home）
+        - 同时注入 neighbors（"可移动到"），让 LLM 知道"可以建议玩家去哪里"
+        - 注入 heard 地点（"听过没去过"），让 LLM 能引用"NPC 提起过"作为解锁钩子
+
+        Returns:
+            Markdown 格式的"当前位置"段（如果未启用则空串）
+        """
+        # 优先用 location_service（统一管理）
+        try:
+            from history_footnote.location_service import build_location_service
+            svc = build_location_service(self.era_config)
+            current_loc_id = getattr(self.state, "current_location", "") or svc.get_default()
+            visited = list(getattr(self.state, "visited_locations", []) or [])
+            heard = list(getattr(self.state, "heard_locations", []) or [])
+            return svc.build_prompt_context(current_loc_id, visited, heard)
+        except Exception as e:
+            logger.exception(f"[v2.4] _build_current_location_section 失败: {e}")
+            return ""
 
     def _build_recent_context_for_prompt(self) -> str:
         """🆕 v1.6.4 P0 Bug 修复：构建最近叙事上下文

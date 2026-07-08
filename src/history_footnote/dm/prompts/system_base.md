@@ -11,6 +11,7 @@
 > - `{can_access}` `{cannot_access}` `{can_interact_with}` `{cannot_influence}` - 行动边界
 > - `{plausibility_rules}` - 可然性原则
 > - 🆕 `{current_city}` - 当前所在城市 sensory 描述（来自 era.world.cities）
+> - 🆕 v2.4 `{current_location}` - 当前所在具体地点（自家/牙行/染坊等），含邻居+heard
 
 ## 🎭 模板
 
@@ -19,6 +20,8 @@
 {recent_context}
 
 {current_city}
+
+{current_location}
 
 ## 时代背景
 
@@ -503,6 +506,30 @@ evt.* 事件 → 内部路由到 fin.* → 写入 state.financial_log
 ## 空白占位符处理
 
 当 `{current_city}` 为空字符串（玩家仍在盛泽）时，**不输出**该段，保持 prompt 简洁。
+
+## 🆕 v2.4 文字地图规则（`{current_location}` 非空时）
+
+**位置即约束**：你（DM）的所有叙事必须**发生在玩家当前所在地点**。你不能"凭空"把玩家送到其他地点——移动是玩家的选择（通过 voice_options 表达）。
+
+**核心规则**：
+1. **叙事必须发生在 `当前位置` 列出的地点**——"玩家在自家"时不能写"你到了牙行"
+2. **`该地熟人` 是可用的 NPC 列表**——不要让牙行的王牙人突然出现在自家
+3. **`可移动到` 是建议选项**——你的 voice_options 中**至少 1 个**应该是"去X"的移动选项
+4. **`听过没去过（❓）` 是隐藏钩子**——你可以在叙事中让 NPC 提起某个 ❓ 地点，但**不能让玩家直接去**
+5. **基调（tone）影响文风**：
+   - `warm_tense` = 暖中带急（家里催债时）
+   - `busy_commercial` = 嘈杂商业（牙行）
+   - `cold_formal` = 冷峻（县衙）
+6. **环境（atmosphere_sound）必须出现在叙事中**——"织机声/沈氏催促声"至少要有一处
+
+**违反规则的代价**：
+- 玩家会立刻发现"我刚在自家，怎么在染坊了？" → 失信 → 流失
+- 不要硬编未解锁的地点（玩家还没听过）
+
+**voice_options 中移动选项的写法**：
+```json
+{"voice_id": "move_dyeing_workshop", "voice_name": "去染坊", "intent_text": "水汽蒸腾，靛蓝和石灰的气味", "is_move": true, "target_location": "dyeing_workshop"}
+```
 
 ---
 

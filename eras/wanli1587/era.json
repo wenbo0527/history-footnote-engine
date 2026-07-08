@@ -371,7 +371,26 @@
           "fm_son": "儿子（阿宝）",
           "fm_daughter": "女儿（小妹）"
         },
-        "action_points_max": 3
+        "action_points_max": 3,
+        "base_state": {
+          "cash": 1.2,
+          "debt": 3.0,
+          "rice": 0.0,
+          "monthly_burn": 0.42,
+          "family_members": [
+            {"id": "fm_wife", "name": "沈氏", "relation": "wife", "age": 26, "location": "shengze", "alive": true, "notes": "操持家务也帮忙缫丝"},
+            {"id": "fm_son", "name": "阿宝", "relation": "son", "age": 8, "location": "shengze", "alive": true, "notes": "在学徒"},
+            {"id": "fm_daughter", "name": "小妹", "relation": "daughter", "age": 4, "location": "shengze", "alive": true, "notes": ""}
+          ],
+          "active_tasks": [
+            {"title": "还牙行旧账（3两，月利三分）", "urgency": "high", "status": "pending"},
+            {"title": "阿宝下月束脩", "urgency": "normal", "status": "pending"}
+          ],
+          "upcoming_deadlines": [
+            {"name": "春税折银", "date": "5月", "days_estimate": 60, "amount": "约0.42两", "status": "pending"},
+            {"name": "牙行欠债利息", "date": "30天后", "days_estimate": 30, "amount": "0.09两/月", "status": "pending"}
+          ]
+        }
       },
       "weaving_female": {
         "id": "weaving_female",
@@ -436,7 +455,24 @@
           "闺阁网络": "可以进入男性无法进入的女性社交空间",
           "三姑六婆": "卖婆/牙婆/媒婆是潜在的信息来源与合作对象"
         },
-        "action_points_max": 3
+        "action_points_max": 3,
+        "base_state": {
+          "cash": 0.8,
+          "debt": 1.5,
+          "rice": 0.0,
+          "monthly_burn": 0.5,
+          "family_members": [
+            {"id": "fm_husband", "name": "夫家某", "relation": "husband", "age": 30, "location": "shengze", "alive": true, "notes": "在外接单"},
+            {"id": "fm_son", "name": "阿宝", "relation": "son", "age": 6, "location": "shengze", "alive": true, "notes": ""}
+          ],
+          "active_tasks": [
+            {"title": "协助夫家还旧账", "urgency": "high", "status": "pending"},
+            {"title": "春蚕前备桑叶", "urgency": "normal", "status": "pending"}
+          ],
+          "upcoming_deadlines": [
+            {"name": "春税折银", "date": "5月", "days_estimate": 60, "amount": "约0.4两", "status": "pending"}
+          ]
+        }
       },
       "scholar_male": {
         "id": "scholar_male",
@@ -483,7 +519,23 @@
           "fm_father": "父亲（织户）",
           "fm_mother": "母亲"
         },
-        "action_points_max": 2
+        "action_points_max": 2,
+        "base_state": {
+          "cash": 2.0,
+          "debt": 0.0,
+          "rice": 0.5,
+          "monthly_burn": 0.6,
+          "family_members": [
+            {"id": "fm_mother", "name": "母亲", "relation": "mother", "age": 55, "location": "shengze", "alive": true, "notes": "寡居"}
+          ],
+          "active_tasks": [
+            {"title": "县试备考（今年秋闱）", "urgency": "high", "status": "pending"},
+            {"title": "买书（墨+纸）", "urgency": "normal", "status": "pending"}
+          ],
+          "upcoming_deadlines": [
+            {"name": "县试", "date": "8月", "days_estimate": 180, "amount": "报名约0.5两", "status": "pending"}
+          ]
+        }
       },
       "scholar_female": {
         "id": "scholar_female",
@@ -541,7 +593,23 @@
           "闺塾教学": "教富户女儿读书——稀缺资源",
           "女性视角的诗文": "进入男性无法进入的闺阁"
         },
-        "action_points_max": 2
+        "action_points_max": 2,
+        "base_state": {
+          "cash": 3.0,
+          "debt": 0.0,
+          "rice": 0.0,
+          "monthly_burn": 0.8,
+          "family_members": [
+            {"id": "fm_mother", "name": "母亲", "relation": "mother", "age": 50, "location": "shengze", "alive": true, "notes": ""}
+          ],
+          "active_tasks": [
+            {"title": "诗会（女伴圈）", "urgency": "normal", "status": "pending"},
+            {"title": "抄经换笔墨钱", "urgency": "low", "status": "pending"}
+          ],
+          "upcoming_deadlines": [
+            {"name": "诗社雅集", "date": "下月", "days_estimate": 30, "amount": "", "status": "pending"}
+          ]
+        }
       },
       "merchant_male": {
         "id": "merchant_male",
@@ -584,7 +652,25 @@
         "starting_relationships": {
           "npc_wang": "王掌柜（行会头目）"
         },
-        "action_points_max": 4
+        "action_points_max": 4,
+        "base_state": {
+          "cash": 15.0,
+          "debt": 5.0,
+          "rice": 1.0,
+          "monthly_burn": 1.5,
+          "family_members": [
+            {"id": "fm_wife", "name": "妻子", "relation": "wife", "age": 28, "location": "shengze", "alive": true, "notes": "管账"},
+            {"id": "fm_son", "name": "长子", "relation": "son", "age": 7, "location": "shengze", "alive": true, "notes": ""}
+          ],
+          "active_tasks": [
+            {"title": "本月丝价行情探听", "urgency": "high", "status": "pending"},
+            {"title": "行会月例钱（1两）", "urgency": "normal", "status": "pending"}
+          ],
+          "upcoming_deadlines": [
+            {"name": "行会月例", "date": "月底", "days_estimate": 25, "amount": "1两", "status": "pending"},
+            {"name": "牙行牙钱（5两）", "date": "60天后", "days_estimate": 60, "amount": "5两", "status": "pending"}
+          ]
+        }
       },
       "merchant_female": {
         "id": "merchant_female",
@@ -638,8 +724,200 @@
           "三姑六婆信息": "掌握各家未婚女性、丫鬟、婚姻信息",
           "成事说合": "撮合买卖、婚事——佣金收入"
         },
-        "action_points_max": 4
+        "action_points_max": 4,
+        "base_state": {
+          "cash": 8.0,
+          "debt": 0.0,
+          "rice": 0.5,
+          "monthly_burn": 1.0,
+          "family_members": [
+            {"id": "fm_husband", "name": "丈夫", "relation": "husband", "age": 32, "location": "shengze", "alive": true, "notes": "在外跑商"},
+            {"id": "fm_daughter", "name": "女儿", "relation": "daughter", "age": 9, "location": "shengze", "alive": true, "notes": ""}
+          ],
+          "active_tasks": [
+            {"title": "本月撮合佣金（待结）", "urgency": "normal", "status": "pending"}
+          ],
+          "upcoming_deadlines": [
+            {"name": "春茶会（女客专场）", "date": "下月", "days_estimate": 30, "amount": "", "status": "pending"}
+          ]
+        }
       }
+    },
+    "locations": {
+      "city_name": "盛泽镇",
+      "city_intro": "太湖东南，盛泽丝绸之乡。镇上三百织户，丝行茶馆林立，绸缎经小船运至苏州、上海。",
+      "default_location": "home",
+      "list": [
+        {
+          "id": "home",
+          "name": "自家",
+          "tier": "L1",
+          "type": "family",
+          "tone": "warm_tense",
+          "description": "院里有两台织机，墙角堆着桑叶和丝。沈氏在灶台前忙活，日子虽紧但家里还是热的。",
+          "atmosphere_sound": "织机声/沈氏催促声/远处鸡鸣",
+          "npcs_default": ["沈氏", "阿宝", "小妹"],
+          "neighbors": ["tooth_market", "weaving_house", "zhou_home", "tea_house"],
+          "events": [
+            {"id": "weave_basic", "title": "织一匹素缎", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"},
+            {"id": "family_dinner", "title": "晚饭", "ap_cost": 0, "time_mode": "now_time", "trigger": "evening"},
+            {"id": "tidy_up", "title": "整理账本", "ap_cost": 0, "time_mode": "now_time", "trigger": "default"},
+            {"id": "loom_breaks", "title": "织机坏", "ap_cost": 1, "time_mode": "slow_time", "trigger": "cash<1 || round>=3"}
+          ]
+        },
+        {
+          "id": "tooth_market",
+          "name": "牙行",
+          "tier": "L1",
+          "type": "public",
+          "tone": "busy_commercial",
+          "description": "镇上最大的丝行，王牙人的地盘。柜台后总堆着账本，屋梁上吊着几盏油灯。",
+          "atmosphere_sound": "算盘声/讨价还价/茶碗碰撞",
+          "npcs_default": ["王牙人"],
+          "neighbors": ["home", "tea_house", "dyeing_workshop"],
+          "events": [
+            {"id": "sell_silk", "title": "卖素缎", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"},
+            {"id": "borrow_money", "title": "借钱/赊账", "ap_cost": 1, "time_mode": "slow_time", "trigger": "default"},
+            {"id": "ask_price", "title": "问市价", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"}
+          ]
+        },
+        {
+          "id": "weaving_house",
+          "name": "自家织坊",
+          "tier": "L1",
+          "type": "work",
+          "tone": "rhythmic_quiet",
+          "description": "和自家院子紧挨着，放着两台织机。门板上那张催税文书还贴着。",
+          "atmosphere_sound": "织机声/梭子穿过丝线的细响",
+          "npcs_default": [],
+          "neighbors": ["home", "tooth_market"],
+          "events": [
+            {"id": "full_day_weave", "title": "全力织布", "ap_cost": 1, "time_mode": "now_time", "trigger": "default"},
+            {"id": "repair_loom", "title": "修织机", "ap_cost": 1, "time_mode": "slow_time", "trigger": "loom_breaks"}
+          ]
+        },
+        {
+          "id": "zhou_home",
+          "name": "周大娘家",
+          "tier": "L1",
+          "type": "neighbor",
+          "tone": "warm_familiar",
+          "description": "巷子东头紧挨着，织机声从门缝里传出来。周大娘是热心肠，邻居十几年了。",
+          "atmosphere_sound": "织机声/孩童打闹/狗吠",
+          "npcs_default": ["周大娘"],
+          "neighbors": ["home", "tooth_market"],
+          "events": [
+            {"id": "borrow_rice", "title": "借米", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "cash<1"},
+            {"id": "gossip", "title": "聊闲天", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"},
+            {"id": "ask_favor", "title": "托她办事", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"}
+          ]
+        },
+        {
+          "id": "tea_house",
+          "name": "茶馆",
+          "tier": "L1",
+          "type": "social",
+          "tone": "noisy_lively",
+          "description": "镇中心的吴记茶馆，是消息集散地。茶碗一端，闲话就开。",
+          "atmosphere_sound": "茶碗声/说书人/小二吆喝",
+          "npcs_default": ["说书先生"],
+          "neighbors": ["tooth_market", "home", "county_office"],
+          "events": [
+            {"id": "hear_news", "title": "打听消息", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"},
+            {"id": "buy_drink", "title": "喝茶", "ap_cost": 0, "time_mode": "now_time", "trigger": "default"}
+          ]
+        },
+        {
+          "id": "county_office",
+          "name": "县衙",
+          "tier": "L1",
+          "type": "authority",
+          "tone": "cold_formal",
+          "description": "镇西头的县衙，青砖黑瓦。赵里长管着税粮和治安，去一次都紧张。",
+          "atmosphere_sound": "衙役吆喝/板子声/算盘声",
+          "npcs_default": ["赵里长", "衙役"],
+          "neighbors": ["tea_house", "home"],
+          "events": [
+            {"id": "pay_tax", "title": "交税", "ap_cost": 1, "time_mode": "now_time", "trigger": "default"},
+            {"id": "ask_for_favor", "title": "求情", "ap_cost": 1, "time_mode": "slow_time", "trigger": "round>=3"}
+          ]
+        },
+        {
+          "id": "dyeing_workshop",
+          "name": "染坊",
+          "tier": "L2",
+          "type": "work",
+          "tone": "humid_colorful",
+          "description": "镇南的染坊，五口大染缸一字排开，水汽蒸腾，空气中是靛蓝和石灰。",
+          "atmosphere_sound": "水汽嘶嘶/工人吆喝/染料翻滚",
+          "npcs_default": ["染坊陈老板"],
+          "unlock_hooks": [
+            {"trigger": "round>=3", "narrative": "周大娘提起：'染坊那家这阵子出价低，要不你去看看？'"},
+            {"trigger": "tooth_market_visit>=2", "narrative": "王牙人念叨：'你那素缎要是染了色，能多卖三成。'"}
+          ],
+          "neighbors": ["tooth_market"],
+          "events": [
+            {"id": "dye_silk", "title": "代染素缎", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"},
+            {"id": "ask_price_dye", "title": "问染色行情", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"}
+          ]
+        },
+        {
+          "id": "hengsheng_pawn",
+          "name": "恒生典",
+          "tier": "L2",
+          "type": "service",
+          "tone": "guarded_professional",
+          "description": "镇西街尾的当铺，柜台高高的，张寡妇说能抵押银簪。",
+          "atmosphere_sound": "算盘声/木牌碰撞/门口风铃",
+          "npcs_default": ["恒生典掌柜"],
+          "unlock_hooks": [
+            {"trigger": "loans_total>=2 || cash<0.5", "narrative": "王牙人叹了口气：'你这样下去不行，去恒生典看看吧。'"},
+            {"trigger": "family_argument_occurs", "narrative": "沈氏摊牌：'要不……把我那簪子当了？'"}
+          ],
+          "neighbors": ["county_office"],
+          "events": [
+            {"id": "pawn_item", "title": "抵押物件", "ap_cost": 1, "time_mode": "slow_time", "trigger": "default"},
+            {"id": "redeem_item", "title": "赎回物件", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"}
+          ]
+        },
+        {
+          "id": "cangqiao_grain",
+          "name": "仓桥米行",
+          "tier": "L2",
+          "type": "service",
+          "tone": "rustic_market",
+          "description": "镇北仓桥边，米行和粮铺挤在一起。",
+          "atmosphere_sound": "米袋碰撞/秤砣声/牛车轱辘",
+          "npcs_default": ["米行老板"],
+          "unlock_hooks": [
+            {"trigger": "rice<3", "narrative": "周大娘说：'米快没了，去仓桥看看吧。'"},
+            {"trigger": "tooth_market_visit>=1", "narrative": "王牙人：'要买粮得去仓桥。'"}
+          ],
+          "neighbors": ["home"],
+          "events": [
+            {"id": "buy_rice", "title": "买米", "ap_cost": 0.5, "time_mode": "now_time", "trigger": "default"},
+            {"id": "check_price", "title": "问米价", "ap_cost": 0, "time_mode": "now_time", "trigger": "default"}
+          ]
+        },
+        {
+          "id": "county_school",
+          "name": "县学",
+          "tier": "L3",
+          "type": "education",
+          "tone": "quiet_antiquarian",
+          "description": "镇北的县学，院子里有棵老槐树。阿宝每天走半个时辰来这里。",
+          "atmosphere_sound": "孩童诵书声/砚台磨墨/树鸟",
+          "npcs_default": ["李秀才"],
+          "unlock_hooks": [
+            {"trigger": "ah_bao_event_occurs", "narrative": "阿宝哭着回来：'爹，他们说我……'"}
+          ],
+          "neighbors": ["cangqiao_grain"],
+          "events": [
+            {"id": "visit_school", "title": "看望阿宝", "ap_cost": 1, "time_mode": "slow_time", "trigger": "default"},
+            {"id": "ask_li", "title": "找李秀才问事", "ap_cost": 1, "time_mode": "slow_time", "trigger": "default"}
+          ]
+        }
+      ]
     },
     "default_identity": "weaving_male",
     "identity_switch_offers": [

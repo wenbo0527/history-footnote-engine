@@ -108,6 +108,58 @@ export interface VoiceOption {
     intent?: string;
     probability?: number;
   };
+  // 🆕 v2.4: 移动选项（来自 location_service.get_move_options）
+  is_move?: boolean;
+  target_location?: string;
+  ap_cost?: number;
+  time_mode?: 'abstract_time' | 'now_time' | 'slow_time' | 'sharp_cut';
+}
+
+// ============ v2.4 Location 地点 ============
+export type LocationTier = 'L1' | 'L2' | 'L3';
+export type LocationType = 'family' | 'public' | 'work' | 'neighbor' | 'social' | 'authority' | 'service' | 'education';
+
+export interface LocationInfo {
+  id: string;
+  name: string;
+  tier: LocationTier;
+  type?: LocationType;
+  description: string;
+  tone?: string;
+  atmosphere_sound?: string;
+  npcs_default?: string[];
+  neighbors?: string[] | { id: string; name: string }[];
+  events?: Array<{
+    id: string;
+    title: string;
+    ap_cost: number;
+    time_mode: string;
+    trigger?: string;
+  }>;
+}
+
+export interface LocationListResponse {
+  city_name: string;
+  city_intro: string;
+  current_location: LocationInfo;
+  visited: LocationInfo[];
+  heard: LocationInfo[];   // 听过没去过
+  unseen: LocationInfo[];  // 玩家完全不知道
+  newly_heard: string[];  // 本次请求新解锁的
+}
+
+export interface LocationMoveResponse {
+  success: boolean;
+  from_location: string;
+  to_location: string;
+  to_location_name: string;
+  ap_cost: number;
+  time_mode: string;
+  new_ap: number;
+  new_voice_options: VoiceOption[];  // 新地点的"脑海中的声音"（含移动）
+  narrative: string;                 // 简单移动叙事
+  newly_heard: string[];
+  location: LocationInfo;            // 新地点的完整信息
 }
 
 // ============ Narrative 叙事 ============

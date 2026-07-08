@@ -33,8 +33,18 @@ class GameState:
     player_gender: str = ""  # male/female（冗余字段便于快速访问）
 
     # === 🆕 v1.7.30 当前位置 ===
-    # 玩家当前所在城市（"shengze" 表示在盛泽；"suzhou"/"hangzhou"/"songjiang"/"nanjing" 表示离乡）
+    # 玩家当前所在城市（"shengze" 表示在盛泽；"suzhou"/"hangzhou"/"nanjing" 表示离乡）
     current_city: str = "shengze"  # 城市 id（对应 era.world.cities 中的 key）
+
+    # === 🆕 v2.4 当前位置（具体地点）===
+    # 玩家当前在哪个地点（对应 era.world.locations.list 中的 id）
+    # 如 "home"（自家）、"tooth_market"（牙行）
+    # 默认与 era.world.locations.default_location 一致
+    current_location: str = ""
+    # 已去过的地点（用于展示足迹 + 防止 narrative 跑出位置）
+    visited_locations: list = field(default_factory=list)
+    # 听过但没去过的地点（❓ 状态，用于"未知道点"探索）
+    heard_locations: list = field(default_factory=list)
 
     # === 时间进度 ===
     round_number: int = 1
@@ -151,6 +161,11 @@ class GameState:
     # 人物知识图谱：仅本存档，删除/重置存档时清空
     # 用于 LLM 上下文 + 侧边栏 UI + 支线一致性
     character_wiki: dict = field(default_factory=dict)  # CharacterWiki.to_dict()
+
+    # === 🆕 v1.7.30 账户隔离 ===
+    # 存档绑定的账户 ID（v1.7.30 账户系统）
+    # 空字符串 = 旧存档/未登录/访客
+    account_id: str = ""
 
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
