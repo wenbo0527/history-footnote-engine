@@ -1,0 +1,125 @@
+/* ============================================================
+ * Reset & Base 样式
+ * ============================================================ */
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 文档 */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-body-fluid);
+  line-height: var(--leading-normal);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  letter-spacing: var(--tracking-cjk);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+/* 标题 */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  color: var(--color-ink);
+}
+
+h1 { font-size: var(--text-3xl); }
+h2 { font-size: var(--text-2xl); }
+h3 { font-size: var(--text-xl); }
+h4 { font-size: var(--text-lg); }
+h5 { font-size: var(--text-md); }
+h6 { font-size: var(--text-base); }
+
+/* 链接 */
+a {
+  color: var(--color-bronze-dark);
+  text-decoration: none;
+  transition: color var(--duration-quick) var(--ease-ink);
+}
+
+a:hover {
+  color: var(--color-cinnabar);
+}
+
+/* 按钮重置 */
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* 列表重置 */
+ul, ol {
+  list-style: none;
+}
+
+/* 图片 */
+img, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 选中文本 */
+::selection {
+  background: var(--color-bronze-light);
+  color: var(--color-paper);
+}
+
+/* 焦点环（a11y） */
+:focus-visible {
+  outline: 2px solid var(--color-bronze-light);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* 滚动条（webkit） */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-paper-aged);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-bronze);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bronze-dark);
+}
+
+/* reduced motion 适配 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

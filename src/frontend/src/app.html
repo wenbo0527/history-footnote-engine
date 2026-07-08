@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#2c2416" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="description" content="AI 驱动的明朝万历年间生存模拟" />
+    <link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+    <!--
+      🆕 v1.7.32: 移除 Google Fonts 外链。
+      原因：大陆网络环境（GFW）会拦截 fonts.gstatic.com，导致 console 持续出现
+      net::ERR_CONNECTION_RESET（每个 unicode-range 一个 .woff2 子集，共 18+ 条），
+      实际字体回退到系统栈（"宋体"/"苹方"），未对国风设计造成视觉损失。
+      fallback 链见 src/lib/styles/tokens.css 的 --font-display / --font-body：
+        "Noto Serif SC", "Source Han Serif SC", "宋体", "Songti SC", serif
+      未来若要恢复，外网环境可直接改回 <link href="fonts.googleapis.com">，
+      或采用自托管方案（static/fonts/ + @font-face）。
+    -->
+    <title>万历十五年 · 历史注脚</title>
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

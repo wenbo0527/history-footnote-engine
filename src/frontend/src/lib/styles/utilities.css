@@ -1,0 +1,177 @@
+/* ============================================================
+ * 工具类
+ * ============================================================ */
+
+/* === 入场动画 === */
+@keyframes hf-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hf-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hf-fade-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hf-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hf-slide-right {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* 墨水晕染 - 国风特色 */
+@keyframes hf-ink-emerge {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+    filter: blur(6px);
+  }
+  50% {
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 笔触往返 - 加载用 */
+@keyframes hf-brush-stroke {
+  0%   { stroke-dashoffset: 80; opacity: 0.4; }
+  50%  { stroke-dashoffset: 0;  opacity: 1; }
+  100% { stroke-dashoffset: -80; opacity: 0.4; }
+}
+
+/* 印章脉冲 - 国风特色 */
+@keyframes hf-seal-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(160, 40, 40, 0.5); }
+  70%  { box-shadow: 0 0 0 12px rgba(160, 40, 40, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(160, 40, 40, 0); }
+}
+
+/* === 应用类 === */
+.hf-fade-in {
+  animation: hf-fade-in var(--duration-slow) var(--ease-ink) both;
+}
+
+.hf-fade-up {
+  animation: hf-fade-up var(--duration-normal) var(--ease-ink) both;
+}
+
+.hf-fade-down {
+  animation: hf-fade-down var(--duration-normal) var(--ease-ink) both;
+}
+
+.hf-scale-in {
+  animation: hf-scale-in var(--duration-normal) var(--ease-out) both;
+}
+
+.hf-slide-right {
+  animation: hf-slide-right var(--duration-normal) var(--ease-ink) both;
+}
+
+.hf-ink-emerge {
+  animation: hf-ink-emerge var(--duration-grand) var(--ease-ink) both;
+}
+
+.hf-seal-pulse {
+  animation: hf-seal-pulse 2s var(--ease-ink) infinite;
+}
+
+/* === Stagger 延迟（30ms 步进） === */
+.hf-stagger > * { animation-delay: 0ms; }
+.hf-stagger > *:nth-child(1) { animation-delay: 30ms; }
+.hf-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.hf-stagger > *:nth-child(3) { animation-delay: 90ms; }
+.hf-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.hf-stagger > *:nth-child(5) { animation-delay: 150ms; }
+.hf-stagger > *:nth-child(6) { animation-delay: 180ms; }
+.hf-stagger > *:nth-child(7) { animation-delay: 210ms; }
+.hf-stagger > *:nth-child(8) { animation-delay: 240ms; }
+
+/* === 滚动动画（IntersectionObserver 触发） === */
+.hf-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity var(--duration-slow) var(--ease-ink),
+    transform var(--duration-slow) var(--ease-ink);
+}
+
+.hf-reveal.hf-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* === 玻璃拟态 === */
+.hf-glass {
+  background: rgba(245, 239, 225, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.hf-glass-dark {
+  background: rgba(44, 36, 22, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* === 性能优化 === */
+.hf-gpu {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.hf-contain {
+  contain: layout style paint;
+}
+
+/* === 文字省略 === */
+.hf-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hf-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hf-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* === Reduced motion === */
+@media (prefers-reduced-motion: reduce) {
+  .hf-fade-in,
+  .hf-fade-up,
+  .hf-fade-down,
+  .hf-scale-in,
+  .hf-slide-right,
+  .hf-ink-emerge,
+  .hf-seal-pulse {
+    animation: none !important;
+  }
+  .hf-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

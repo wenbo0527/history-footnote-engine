@@ -1,0 +1,13 @@
+/* ============================================================
+ * 全局样式入口
+ * ============================================================
+ * 顺序：tokens → base → utilities → Tailwind
+ * ============================================================ */
+
+@import './tokens.css';
+@import './base.css';
+@import './utilities.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

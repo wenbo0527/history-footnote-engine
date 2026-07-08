@@ -1,0 +1,179 @@
+/* ============================================================
+ * 万历十五年 · 国风雅致设计令牌
+ * ============================================================
+ * 设计原则：
+ * 1. 宣纸 / 墨色 / 朱砂（主色调）
+ * 2. 宋体优先（typography）
+ * 3. 大量留白（"计白当黑"）
+ * 4. 慢节奏（800-1500ms 动效）
+ * 5. 阴影极弱（避免破坏素雅）
+ * ============================================================ */
+
+:root {
+  /* ===== 色彩：宣纸 / 墨色 / 朱砂 ===== */
+
+  /* 纸张（背景） */
+  --color-paper: #f5efe1;
+  --color-paper-aged: #ede4cc;
+  --color-paper-dark: #d4c4a0;
+  --color-paper-shadow: rgba(44, 36, 22, 0.06);
+
+  /* 墨色（文字） */
+  --color-ink: #2c2416;
+  --color-ink-mid: #5a4a32;
+  --color-ink-light: #8b7355;
+  --color-ink-faint: #b8a890;
+
+  /* 主色（强调） */
+  --color-bronze: #8b6f47;
+  --color-bronze-dark: #5a3e1f;
+  --color-bronze-light: #b8924a;
+
+  /* 朱砂（关键） */
+  --color-cinnabar: #a02828;
+  --color-cinnabar-dark: #7a1f1f;
+  --color-cinnabar-light: #c44545;
+
+  /* 语义色 */
+  --color-success: #4a7258;
+  --color-warning: #d4a017;
+  --color-danger: var(--color-cinnabar);
+  --color-info: #5a7a8b;
+
+  /* 中性 */
+  --color-bg: var(--color-paper);
+  --color-text: var(--color-ink);
+  --color-text-muted: var(--color-ink-light);
+  --color-border: var(--color-bronze);
+
+  /* ===== 字体 ===== */
+  --font-display: "Noto Serif SC", "Source Han Serif SC", "宋体", "Songti SC", serif;
+  --font-body: "Noto Serif SC", "宋体", serif;
+  --font-numeric: "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --font-en: "Cormorant Garamond", "EB Garamond", Georgia, serif;
+
+  /* ===== 字号（Major Third 1.25） ===== */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.5rem;
+  --text-4xl: 3.5rem;
+
+  /* 流体字号 */
+  --text-body-fluid: clamp(0.9375rem, 1.2vw, 1.0625rem);
+  --text-title-fluid: clamp(1.5rem, 3vw, 1.75rem);
+  --text-hero-fluid: clamp(2rem, 5vw, 2.5rem);
+
+  /* ===== 行高 ===== */
+  --leading-tight: 1.3;
+  --leading-snug: 1.5;
+  --leading-normal: 1.7;
+  --leading-relaxed: 1.9;
+  --leading-loose: 2.2;
+
+  /* ===== 字间距 ===== */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.1em;
+  --tracking-cjk: 0.05em;
+  --tracking-mega: 0.3em;
+
+  /* ===== 空间（大量留白） ===== */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 5rem;
+  --space-10: 6rem;
+  --space-12: 8rem;
+
+  /* 流体空间 */
+  --space-fluid-sm: clamp(0.5rem, 1vw, 1rem);
+  --space-fluid-md: clamp(1rem, 2vw, 2rem);
+  --space-fluid-lg: clamp(2rem, 4vw, 4rem);
+
+  /* ===== 圆角 ===== */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-full: 9999px;
+
+  /* ===== 边框 ===== */
+  --border-width: 1px;
+  --border-width-thick: 2px;
+  --border: var(--border-width) solid var(--color-border);
+
+  /* ===== 阴影（极弱） ===== */
+  --shadow-none: none;
+  --shadow-paper: 0 1px 2px var(--color-paper-shadow);
+  --shadow-fold: 0 2px 8px var(--color-paper-shadow);
+  --shadow-ink: 0 4px 16px rgba(44, 36, 22, 0.08);
+  --shadow-ink-lg: 0 8px 32px rgba(44, 36, 22, 0.12);
+
+  /* ===== 时长（慢节奏） ===== */
+  --duration-instant: 100ms;
+  --duration-quick: 200ms;
+  --duration-normal: 400ms;
+  --duration-slow: 800ms;
+  --duration-grand: 1500ms;
+
+  /* ===== 缓动（墨水晕染） ===== */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-ink: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-brush: cubic-bezier(0.7, 0, 0.3, 1);
+  --ease-paper: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ===== Z-index ===== */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-modal: 100;
+  --z-popover: 200;
+  --z-tooltip: 300;
+  --z-toast: 400;
+
+  /* ===== 视口 ===== */
+  --viewport-height: 100dvh;
+  --viewport-height-fallback: 100vh;
+
+  /* ===== 容器 ===== */
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+  --container-2xl: 1536px;
+  --container-max: 1600px;
+
+  /* ===== 阅读宽度（中文 32 字/行） ===== */
+  --reading-width: 32em;
+  --reading-width-narrow: 28em;
+  --reading-width-wide: 40em;
+}
+
+/* ===== 暗色模式（可选） ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #1a1612;
+    --color-paper-aged: #221d18;
+    --color-paper-dark: #2c2520;
+    --color-ink: #f5efe1;
+    --color-ink-mid: #d4c4a0;
+    --color-ink-light: #b8a890;
+    --color-ink-faint: #8b7355;
+    --color-paper-shadow: rgba(245, 239, 225, 0.08);
+  }
+}
