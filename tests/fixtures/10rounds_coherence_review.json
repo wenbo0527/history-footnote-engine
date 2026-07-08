@@ -1,0 +1,152 @@
+[
+  {
+    "round": 1,
+    "player_input": "我在织机前织湖绫",
+    "narrative": "你坐到织机前，开始理经线，手指机械地穿梭。\n\n又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 56,
+    "state_summary": {
+      "round_number": 1,
+      "current_date": "1587年1月",
+      "variables_count": 9,
+      "events_count": 1,
+      "insights_count": 1,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 2,
+    "player_input": "我把织好的湖绫拿到牙行去卖",
+    "narrative": "你坐到织机前，开始理经线，手指机械地穿梭。\n\n又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 56,
+    "state_summary": {
+      "round_number": 1,
+      "current_date": "1587年1月",
+      "variables_count": 9,
+      "events_count": 2,
+      "insights_count": 1,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 3,
+    "player_input": "我听说今年第一批洋船要来了",
+    "narrative": "又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 33,
+    "state_summary": {
+      "round_number": 3,
+      "current_date": "1587年3月",
+      "variables_count": 9,
+      "events_count": 3,
+      "insights_count": 2,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 4,
+    "player_input": "我去苏州城里走走",
+    "narrative": "又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 33,
+    "state_summary": {
+      "round_number": 3,
+      "current_date": "1587年3月",
+      "variables_count": 9,
+      "events_count": 4,
+      "insights_count": 3,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 5,
+    "player_input": "我听说今年丝税要加",
+    "narrative": "你算了算今年的税单，叹了口气。\n\n又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 50,
+    "state_summary": {
+      "round_number": 3,
+      "current_date": "1587年3月",
+      "variables_count": 9,
+      "events_count": 5,
+      "insights_count": 4,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 6,
+    "player_input": "我去里长那里问今年的税单",
+    "narrative": "你算了算今年的税单，叹了口气。\n\n又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 50,
+    "state_summary": {
+      "round_number": 5,
+      "current_date": "1587年5月",
+      "variables_count": 9,
+      "events_count": 6,
+      "insights_count": 4,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 7,
+    "player_input": "我听邻居说李秀才中了举人",
+    "narrative": "又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 33,
+    "state_summary": {
+      "round_number": 5,
+      "current_date": "1587年5月",
+      "variables_count": 9,
+      "events_count": 7,
+      "insights_count": 4,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 8,
+    "player_input": "我决定扩大织机规模",
+    "narrative": "你坐到织机前，开始理经线，手指机械地穿梭。\n\n又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 56,
+    "state_summary": {
+      "round_number": 5,
+      "current_date": "1587年5月",
+      "variables_count": 9,
+      "events_count": 8,
+      "insights_count": 5,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 9,
+    "player_input": "我听说朝廷党争严重",
+    "narrative": "又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 33,
+    "state_summary": {
+      "round_number": 7,
+      "current_date": "1587年7月",
+      "variables_count": 9,
+      "events_count": 9,
+      "insights_count": 5,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  },
+  {
+    "round": 10,
+    "player_input": "我看到县衙贴出告示",
+    "narrative": "又是一天。织机声在巷子里响着，和往常一样。\n\n**你想做什么？**",
+    "narrative_len": 33,
+    "state_summary": {
+      "round_number": 7,
+      "current_date": "1587年7月",
+      "variables_count": 9,
+      "events_count": 10,
+      "insights_count": 6,
+      "npc_levels": {},
+      "value_shifts": {}
+    }
+  }
+]
