@@ -917,6 +917,38 @@
             {"id": "ask_li", "title": "找李秀才问事", "ap_cost": 1, "time_mode": "slow_time", "trigger": "default"}
           ]
         }
+      ],
+      "npc_locations": {
+        "沈氏": {"home": "home", "mood_when_home": "warm_stress"},
+        "阿宝": {"home": "home", "default": "county_school", "schedule": "白天在县学"},
+        "小妹": {"home": "home"},
+        "王牙人": {"home": "tooth_market", "mood_when_work": "calculating"},
+        "周大娘": {"home": "zhou_home"},
+        "赵里长": {"home": "county_office", "mood_when_work": "stern"},
+        "染坊陈老板": {"home": "dyeing_workshop"},
+        "恒生典掌柜": {"home": "hengsheng_pawn"},
+        "米行老板": {"home": "cangqiao_grain"},
+        "李秀才": {"home": "county_school"},
+        "施家老板": {"home": "tooth_market", "schedule": "常来牙行卖货"},
+        "张寡妇": {"home": "zhou_home", "schedule": "常在周大娘家串门"}
+      },
+      "npc_relationships": [
+        {"from": "王牙人", "to": "沈氏", "type": "生意人/客户", "description": "王牙人知道你家情况，沈氏常去牙行卖素缎。"},
+        {"from": "王牙人", "to": "周大娘", "type": "生意人/客户", "description": "周大娘是王牙人老客户。"},
+        {"from": "周大娘", "to": "沈氏", "type": "邻居/姐妹", "description": "周大娘和沈氏是闺中密友，常一起洗衣裳。"},
+        {"from": "赵里长", "to": "王牙人", "type": "官/牙", "description": "赵里长管税，王牙人管账，两人配合。"},
+        {"from": "李秀才", "to": "阿宝", "type": "师生", "description": "李秀才是阿宝的塾师。"},
+        {"from": "施家老板", "to": "王牙人", "type": "竞争对手/同行", "description": "施家也是织户，但和牙行关系近。"},
+        {"from": "染坊陈老板", "to": "王牙人", "type": "供应商/客户", "description": "染坊常从牙行拿生丝。"},
+        {"from": "恒生典掌柜", "to": "王牙人", "type": "同行/合作", "description": "王牙人介绍欠债的织户去恒生典吃差价。"}
+      ],
+      "encounter_table": [
+        {"from": "home", "to": "tooth_market", "npc": "周大娘", "probability": 0.3, "event": "路遇周大娘去牙行问价"},
+        {"from": "home", "to": "tooth_market", "npc": "施家老板", "probability": 0.2, "event": "路上碰见施家老板赶着去卖布"},
+        {"from": "tooth_market", "to": "dyeing_workshop", "npc": "染坊陈老板", "probability": 0.3, "event": "在半路碰见陈老板在歇脚"},
+        {"from": "home", "to": "tea_house", "npc": "说书先生", "probability": 0.4, "event": "在茶馆门口听见说书先生讲故事"},
+        {"from": "home", "to": "county_office", "npc": "赵里长", "probability": 0.25, "event": "路上被赵里长叫住问税"},
+        {"from": "zhou_home", "to": "tooth_market", "npc": "张寡妇", "probability": 0.3, "event": "路上碰见张寡妇去买粮"}
       ]
     },
     "default_identity": "weaving_male",

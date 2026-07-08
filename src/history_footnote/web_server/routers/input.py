@@ -540,6 +540,20 @@ def handle_POST_location_move(handler, body) -> bool:
         to_loc = svc.get(target)
         narrative = f"你到了{to_loc.name}。{to_loc.description}"
 
+        # 🆕 v2.4.1 路遇事件（30% 概率触发）
+        encounter = None
+        try:
+            encounter = svc.roll_encounter(from_id, target)
+            if encounter:
+                encounter_text = svc.build_encounter_narrative(encounter)
+                narrative = encounter_text + " " + narrative
+                logger.info(f"[v2.4.1] 路遇触发: {encounter.get('npc')} ({from_id}→{target})")
+        except Exception as e:
+            logger.warning(f"[v2.4.1] roll_encounter 失败: {e}")
+
+        # 🆕 v2.4.1 该地 NPC
+        npcs_at_dest = svc.get_npcs_at(target)
+
         logger.info(
             f"[v2.4 location] sid={sid[:8]} {from_id}→{target} AP={result.ap_cost} "
             f"new_heard={[svc.get_name(h) for h in newly_heard]}"
@@ -556,6 +570,8 @@ def handle_POST_location_move(handler, body) -> bool:
             "new_voice_options": new_voices,
             "narrative": narrative,
             "newly_heard": [svc.get_name(h) for h in newly_heard],
+            "encounter": encounter,  # 🆕 v2.4.1 路遇事件（None 或 {npc, event}）
+            "npcs_at": npcs_at_dest,  # 🆕 v2.4.1 该地所有 NPC
             "location": {
                 "id": to_loc.id,
                 "name": to_loc.name,

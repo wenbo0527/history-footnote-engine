@@ -90,6 +90,16 @@
       <span class="location-tier">L{data.current_location.tier.replace('L', '')}</span>
     </div>
 
+    <!-- 🆕 v2.4.1: 该地 NPC -->
+    {#if data.current_location.npcs_default && data.current_location.npcs_default.length > 0}
+      <div class="location-npcs">
+        <span class="location-npcs-label">在场：</span>
+        {#each data.current_location.npcs_default as npc (npc)}
+          <span class="location-npc-chip">{npc}</span>
+        {/each}
+      </div>
+    {/if}
+
     <!-- 2. 移动选项（横向胶囊） -->
     {#if allReachable.length > 0}
       <div class="location-moves">
@@ -196,6 +206,31 @@
     background: var(--color-paper-aged);
     padding: 1px 6px;
     border-radius: 8px;
+  }
+
+  /* 🆕 v2.4.1 NPC 显示 */
+  .location-npcs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 2px 0;
+  }
+
+  .location-npcs-label {
+    font-size: var(--text-xs);
+    color: var(--color-ink-light);
+    flex: 0 0 auto;
+  }
+
+  .location-npc-chip {
+    font-size: var(--text-xs);
+    font-family: var(--font-body);
+    color: var(--color-bronze-dark);
+    background: rgba(184, 134, 11, 0.1);
+    padding: 1px 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(184, 134, 11, 0.3);
   }
 
   /* 移动选项条 */

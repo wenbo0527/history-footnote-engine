@@ -1013,16 +1013,17 @@ class DMAgent(MockHelpersMixin):
         return "\n".join(lines)
 
     def _build_current_location_section(self) -> str:
-        """🆕 v2.4 文字地图系统：注入"当前位置" sensory + 邻居
+        """🆕 v2.4 文字地图系统：注入"当前位置" sensory + 邻居 + NPC 关系
 
         为什么重要：
         - LLM 必须知道"玩家在 home 还是 tooth_market"才能写出符合空间的叙事
         - 不注入会导致叙事跑出位置（"你去了染坊"但玩家实际在 home）
         - 同时注入 neighbors（"可移动到"），让 LLM 知道"可以建议玩家去哪里"
         - 注入 heard 地点（"听过没去过"），让 LLM 能引用"NPC 提起过"作为解锁钩子
+        - 🆕 v2.4.1 注入 NPC 当前位置 + 关系网（让 LLM 知道"王牙人在牙行"+ "他和沈氏是客户关系"）
 
         Returns:
-            Markdown 格式的"当前位置"段（如果未启用则空串）
+            Markdown 格式的"当前位置 + NPC"段（如果未启用则空串）
         """
         # 优先用 location_service（统一管理）
         try:
@@ -1031,9 +1032,13 @@ class DMAgent(MockHelpersMixin):
             current_loc_id = getattr(self.state, "current_location", "") or svc.get_default()
             visited = list(getattr(self.state, "visited_locations", []) or [])
             heard = list(getattr(self.state, "heard_locations", []) or [])
-            return svc.build_prompt_context(current_loc_id, visited, heard)
+            # 1) 地点段
+            loc_section = svc.build_prompt_context(current_loc_id, visited, heard)
+            # 2) NPC 段（v2.4.1 新增）
+            npc_section = svc.build_npc_prompt_section(current_loc_id, max_relationships=4)
+            return "\n\n".join([s for s in [loc_section, npc_section] if s])
         except Exception as e:
-            logger.exception(f"[v2.4] _build_current_location_section 失败: {e}")
+            logger.exception(f"[v2.4.1] _build_current_location_section 失败: {e}")
             return ""
 
     def _build_recent_context_for_prompt(self) -> str:

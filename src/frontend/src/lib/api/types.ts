@@ -160,6 +160,9 @@ export interface LocationMoveResponse {
   narrative: string;                 // 简单移动叙事
   newly_heard: string[];
   location: LocationInfo;            // 新地点的完整信息
+  // 🆕 v2.4.1: 路遇事件 + 该地 NPC
+  encounter?: { npc: string; event: string; probability: number } | null;
+  npcs_at?: string[];                // 该地所有 NPC
 }
 
 // ============ Narrative 叙事 ============

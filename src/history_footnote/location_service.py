@@ -72,6 +72,13 @@ class LocationService:
                 unlock_hooks=loc.get("unlock_hooks", []),
             )
 
+        # 🆕 v2.4.1 NPC 当前位置表（默认在 home）
+        self.npc_locations: dict[str, dict] = self.locations_cfg.get("npc_locations", {})
+        # 🆕 NPC 关系网
+        self.npc_relationships: list[dict] = self.locations_cfg.get("npc_relationships", [])
+        # 🆕 路遇事件表
+        self.encounter_table: list[dict] = self.locations_cfg.get("encounter_table", [])
+
     # ============ 查询 ============
 
     def get(self, loc_id: str) -> Optional[Location]:
@@ -351,6 +358,118 @@ class LocationService:
             lines.append(f"**听过没去过（❓）**：{'、'.join(heard_names)}")
 
         return "\n".join(lines)
+
+    # ============ 🆕 v2.4.1 NPC 当前位置系统 ============
+
+    def get_npc_location(self, npc_name: str) -> str | None:
+        """查询 NPC 默认位置（玩家想找某 NPC 时）"""
+        info = self.npc_locations.get(npc_name)
+        if not info:
+            return None
+        return info.get("default") or info.get("home")
+
+    def get_npcs_at(self, location_id: str) -> list[str]:
+        """查询某地点的所有 NPC（默认 + 在此地 home 的）"""
+        npcs = set()
+        # 1) 地点本身的 npcs_default
+        loc = self.get(location_id)
+        if loc:
+            for n in loc.npcs_default:
+                npcs.add(n)
+        # 2) 任何 NPC 的 home = 此地
+        for npc_name, info in self.npc_locations.items():
+            home = info.get("home")
+            if home == location_id:
+                npcs.add(npc_name)
+        # 3) 任何 NPC 的 default = 此地
+        for npc_name, info in self.npc_locations.items():
+            if info.get("default") == location_id:
+                npcs.add(npc_name)
+        return sorted(npcs)
+
+    def get_npc_relationships(self, npc_name: str | None = None) -> list[dict]:
+        """查询 NPC 关系网（None=全部, str=涉及某 NPC 的）"""
+        if npc_name is None:
+            return list(self.npc_relationships)
+        return [
+            r for r in self.npc_relationships
+            if r.get("from") == npc_name or r.get("to") == npc_name
+        ]
+
+    def build_npc_prompt_section(
+        self,
+        current_loc_id: str,
+        max_relationships: int = 6,
+    ) -> str:
+        """
+        构建 NPC 上下文段（注入到 LLM prompt）
+
+        包含：
+        - 当前位置的所有 NPC
+        - 当前 NPC 涉及的关系（前 N 条）
+        """
+        loc_npcs = self.get_npcs_at(current_loc_id)
+        if not loc_npcs:
+            return ""
+
+        lines = [f"## 🏠 该地 NPC（{current_loc_id}）"]
+        lines.append(f"**当前在 {self.get_name(current_loc_id)} 的人**：{'、'.join(loc_npcs)}")
+
+        # 当前 NPC 涉及的关系
+        all_rels: list[dict] = []
+        for n in loc_npcs:
+            for r in self.get_npc_relationships(n):
+                # 只显示"本地点相关的另一方"的关系
+                other = r.get("to") if r.get("from") == n else r.get("from")
+                all_rels.append({**r, "current": n, "other": other})
+
+        # 去重
+        seen = set()
+        unique_rels = []
+        for r in all_rels:
+            key = (r.get("from"), r.get("to"))
+            if key not in seen:
+                seen.add(key)
+                unique_rels.append(r)
+
+        if unique_rels:
+            lines.append(f"**涉及关系**（最多 {max_relationships} 条）：")
+            for r in unique_rels[:max_relationships]:
+                lines.append(
+                    f"- {r['from']} ↔ {r['to']}（{r.get('type', '')}）：{r.get('description', '')}"
+                )
+
+        return "\n".join(lines)
+
+    # ============ 🆕 v2.4.1 路遇事件系统 ============
+
+    def roll_encounter(self, from_id: str, to_id: str) -> dict | None:
+        """
+        投掷"路遇"事件：从 from → to 的移动可能触发的 NPC 偶遇
+
+        Returns:
+            None 或 {npc, event, probability}
+        """
+        import random
+        candidates = [
+            e for e in self.encounter_table
+            if e.get("from") == from_id and e.get("to") == to_id
+        ]
+        if not candidates:
+            return None
+        # 加权随机（按 probability）
+        weights = [e.get("probability", 0.1) for e in candidates]
+        chosen = random.choices(candidates, weights=weights, k=1)[0]
+        # 再掷一次看是否真的触发（用 probability）
+        if random.random() > chosen.get("probability", 0.1):
+            return None
+        return chosen
+
+    def build_encounter_narrative(self, encounter: dict) -> str:
+        """生成"路遇"叙事（30-80 字，节省 token）"""
+        npc = encounter.get("npc", "")
+        event = encounter.get("event", "")
+        return f"路上你碰见了 {npc}。{event}。"
 
 
 # ============ 工厂函数 ============
