@@ -21,7 +21,15 @@ def handle_POST_start(handler, body) -> bool:
     identity = body.get("identity", "weaving_male")
     gender = body.get("gender", "male")
     custom_character = body.get("character")
+    # 🆕 v1.7.30: 接 account_id（账户隔离）
+    account_id = body.get("account_id", "") or ""
     game = new_session(era_id, identity, gender, custom_character=custom_character)
+    # 把 account_id 绑定到 game.state（供 save 时持久化）
+    if account_id and hasattr(game, 'state'):
+        try:
+            game.state.account_id = account_id
+        except Exception:
+            pass
     # 捕获开场白到 narrative_history
     buf = io.StringIO()
     with redirect_stdout(buf):
@@ -33,6 +41,21 @@ def handle_POST_start(handler, body) -> bool:
     state = format_state(game)
     state.pop("last_voice_options", None)
     state["last_voice_options"] = []
+    # 🆕 v1.7.32: 开局也要生成"脑海中的声音"，否则 format_state 兜底只塞一个
+    # 「自由输入」，玩家首屏只剩单个选项（Bug：开头没有声音）
+    # 🆕 v2.3: 传 game 给 LLM 驱动（基于开场叙事的具体情境生成 3-4 个可执行动作）
+    if opening_text:
+        try:
+            from history_footnote.web_server.routers.input import _context_aware_voices
+            opening_voices = _context_aware_voices(opening_text, game=game)
+            if opening_voices:
+                state["last_voice_options"] = list(opening_voices)
+                game.state.last_voice_options = list(opening_voices)
+                logger.info(
+                    f"[start] 注入 {len(opening_voices)} voice_options (context-aware from opening)"
+                )
+        except Exception as e:
+            logger.exception(f"[start] 开场 voice_options 注入失败: {e}")
     handler._json(200, {"session_id": game.session.session_id, **state})
     return True
 
@@ -41,11 +64,13 @@ def handle_GET_archives(handler, query) -> bool:
     from urllib.parse import parse_qs
     qs = parse_qs(query)
     era_id = qs.get("era_id", [None])[0]
+    # 🆕 v1.7.30: 接 account 过滤
+    account = qs.get("account", [None])[0]
     try:
         save_manager = get_save_manager_cached()
-        sessions = save_manager.list_sessions(era_id=era_id)
+        sessions = save_manager.list_sessions(era_id=era_id, account_id=account)
         out = []
-        for s in sessions[:10]:
+        for s in sessions[:20]:  # 增加 limit 到 20
             out.append({
                 "session_id": s.session_id,
                 "era_id": s.era_id,
@@ -56,6 +81,7 @@ def handle_GET_archives(handler, query) -> bool:
                 "last_saved_at": getattr(s, "last_saved_at", ""),
                 "selected_identity": getattr(s, "selected_identity", ""),
                 "player_gender": getattr(s, "player_gender", ""),
+                "account_id": getattr(s, "account_id", ""),
             })
         handler._json(200, {"archives": out})
     except Exception as e:

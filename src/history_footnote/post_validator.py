@@ -171,18 +171,20 @@ def _validate_format(dm_response: dict, narrative: str) -> list[ValidationIssue]
             message="narrative 字段为空",
         ))
 
-    # narrative 长度检查
+    # 🆕 v2.3 narrative 长度检查（按时间模式分档，详见 system_base.md "字数控制"）
+    # 默认上限 800 字；具体上限由 time_mode 决定（在 dm_agent 里用）
+    # 这里只兜底：> 1500 一定是错的（即使是慢时间也不该写这么长）
     if narrative and len(narrative) < 100:
         issues.append(ValidationIssue(
             layer=ValidationLayer.FORMAT.value,
             severity="warning",
             message=f"叙事过短（{len(narrative)} 字），可能不够丰富",
         ))
-    if narrative and len(narrative) > 2000:
+    if narrative and len(narrative) > 1500:
         issues.append(ValidationIssue(
             layer=ValidationLayer.FORMAT.value,
-            severity="warning",
-            message=f"叙事过长（{len(narrative)} 字），可能包含冗余内容",
+            severity="error",  # 升级为 error，配合 agent 重试
+            message=f"叙事过长（{len(narrative)} 字），违反字数控制（慢时间上限 700）",
         ))
 
     # voice_options 检查
