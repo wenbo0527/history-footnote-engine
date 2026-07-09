@@ -7,7 +7,8 @@
    *
    * 数据来源：state.game.character + state.game.family + state.game.skills
    */
-  import type { Character, FamilyMember, Skill } from '$lib/api/types';
+  import type { Character, FamilyMember, Skill, FateCard } from '$lib/api/types';
+  import { game } from '$lib/stores';
 
   interface Props {
     character: Character;
@@ -19,6 +20,15 @@
   let { character, family = [], skills = [], collapsible = true }: Props = $props();
 
   let expanded = $state(true);
+
+  // 🆕 v2.7 命运卡：从 game store 拉（不再依赖外部 prop）
+  const fateHand: FateCard[] = $derived(
+    ($game as any)?.fate_hand ?? []
+  );
+  const unusedFate = $derived(fateHand.filter(c => !c.used));
+  const usedFate = $derived(fateHand.filter(c => c.used));
+  // 最多显示 3 张（剩余的折叠）
+  const visibleFate = $derived(unusedFate.slice(0, 3));
 </script>
 
 <aside class="char-card" class:char-card-collapsed={collapsible && !expanded}>
@@ -70,6 +80,43 @@
           {/each}
         </section>
       {/if}
+
+      <!-- 🆕 v2.7: 命运卡预览（始终可见，玩家一打开就看到自己的卡） -->
+      {#if fateHand.length > 0}
+        <section class="char-card-section char-card-fate">
+          <h4 class="char-card-section-title">
+            🎴 我的命运
+            <span class="char-card-fate-count">{unusedFate.length} / {fateHand.length} 未用</span>
+          </h4>
+          {#if visibleFate.length > 0}
+            <div class="char-card-fate-list">
+              {#each visibleFate as c (c.id)}
+                <span
+                  class="char-card-fate-chip"
+                  style="--card-color: {c.color}"
+                  title={c.description}
+                >
+                  <span class="char-card-fate-icon" aria-hidden="true">{c.icon}</span>
+                  <span class="char-card-fate-name">{c.name}</span>
+                </span>
+              {/each}
+              {#if unusedFate.length > 3}
+                <span class="char-card-fate-more">+{unusedFate.length - 3} 张</span>
+              {/if}
+            </div>
+          {/if}
+          {#if usedFate.length > 0}
+            <div class="char-card-fate-used">
+              <span class="char-card-fate-used-label">已用：</span>
+              {#each usedFate as c (c.id)}
+                <span class="char-card-fate-chip char-card-fate-chip-used" style="--card-color: {c.color}" title={c.description}>
+                  <span class="char-card-fate-icon" aria-hidden="true">{c.icon}</span>
+                </span>
+              {/each}
+            </div>
+          {/if}
+        </section>
+      {/if}
     </div>
   {/if}
 </aside>
@@ -86,6 +133,7 @@
   }
 
   .char-card-header {
+    flex: 0 0 auto;  /* 🆕 v2.7 不收缩，按内容定高 */
     padding: var(--space-5);
     text-align: center;
     background: linear-gradient(180deg, var(--color-paper-aged) 0%, var(--color-paper) 100%);
@@ -144,6 +192,9 @@
   }
 
   .char-card-body {
+    flex: 1 1 auto;     /* 🆕 v2.7 占满剩余高度 */
+    min-height: 0;      /* 🆕 flex 子项可滚动关键 */
+    overflow-y: auto;   /* 🆕 溢出滚动（避免覆盖 header） */
     padding: var(--space-4) var(--space-5);
   }
 
@@ -160,6 +211,77 @@
     color: var(--color-bronze-dark);
     letter-spacing: var(--tracking-wide);
     margin: 0 0 var(--space-2);
+  }
+
+  /* 🆕 v2.7 命运卡预览段 */
+  .char-card-fate-count {
+    font-family: var(--font-numeric);
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--color-ink-faint);
+    margin-left: var(--space-1);
+  }
+
+  .char-card-fate-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .char-card-fate-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    background: var(--color-paper);
+    border: 1px solid var(--card-color, var(--color-bronze));
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 10px;
+    color: var(--color-ink);
+    transition: all var(--duration-normal) var(--ease-ink);
+  }
+
+  .char-card-fate-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(58, 42, 26, 0.15);
+  }
+
+  .char-card-fate-chip-used {
+    opacity: 0.4;
+    filter: grayscale(60%);
+    padding: 2px 4px;
+  }
+
+  .char-card-fate-icon {
+    font-size: var(--text-xs);
+    line-height: 1;
+  }
+
+  .char-card-fate-name {
+    font-family: var(--font-display);
+    color: var(--color-ink);
+  }
+
+  .char-card-fate-more {
+    font-family: var(--font-numeric);
+    font-size: 10px;
+    color: var(--color-ink-faint);
+  }
+
+  .char-card-fate-used {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: var(--space-2);
+  }
+
+  .char-card-fate-used-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    color: var(--color-ink-faint);
   }
 
   .char-card-family-row {
