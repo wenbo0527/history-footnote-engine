@@ -61,7 +61,11 @@ def handle_POST_start(handler, body) -> bool:
             {
                 "id": c.id, "name": c.name, "icon": c.icon, "color": c.color,
                 "description": c.description, "effect_type": c.effect_type,
-                "effect_params": c.effect_params, "used": False
+                "effect_params": c.effect_params, "used": False,
+                # 🆕 v2.6 主动使用字段
+                "use_type": c.use_type,
+                "use_constraints": c.use_constraints,
+                "use_hint": c.use_hint,
             }
             for c in fate_cards
         ]

@@ -109,6 +109,13 @@ interface BackendState {
   completed_tasks_count: number;
   skills?: Skill[];
   timeline?: any[];
+  // 🆕 v2.5: 命运卡 + seed + 关系 + buff（让 CharCard 直接显示）
+  seed?: number;
+  fate_hand?: any[];
+  fate_used?: string[];
+  fate_event_flags?: string[];
+  npc_relations?: Record<string, number>;
+  active_buffs?: any[];
 }
 
 /**
@@ -210,6 +217,13 @@ export function mapBackendState(b: BackendState): GameState {
     timeline,
     sidebar,
     narrative,
+    // 🆕 v2.5: 透传命运卡 + seed + 关系 + buff（让 CharCard 直接显示）
+    fate_hand: b.fate_hand ?? [],
+    fate_used: b.fate_used ?? [],
+    fate_event_flags: b.fate_event_flags ?? [],
+    npc_relations: b.npc_relations ?? {},
+    active_buffs: b.active_buffs ?? [],
+    seed: b.seed ?? 0,
     narrative_history: (b.recent_narratives ?? []).slice(0, -1).map(n => ({
       round: n.round,
       content: n.narrative,
