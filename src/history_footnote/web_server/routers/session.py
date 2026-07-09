@@ -99,6 +99,26 @@ def handle_POST_start(handler, body) -> bool:
                 )
         except Exception as e:
             logger.exception(f"[start] 开场 voice_options 注入失败: {e}")
+
+    # 🆕 v2.7: session 创建后立即存档（保证命运卡等持久化）
+    # 之前：玩家调 /api/start → 抽卡 + 叙事，但 state 没保存到磁盘
+    # 后果：服务器重启后，state.fate_hand 等丢失（meta.json 只存元数据）
+    try:
+        from history_footnote.resource_cache import get_save_manager as get_save_manager_cached
+        sm = get_save_manager_cached()
+        state_data = game.state.to_dict()
+        # 🆕 把 v2.5 字段显式写进 state_data（不依赖 to_dict 自动）
+        state_data["fate_hand"] = list(getattr(game.state, "fate_hand", []) or [])
+        state_data["fate_used"] = list(getattr(game.state, "fate_used", []) or [])
+        state_data["fate_event_flags"] = list(getattr(game.state, "fate_event_flags", []) or [])
+        state_data["npc_relations"] = dict(getattr(game.state, "npc_relations", {}) or {})
+        state_data["active_buffs"] = list(getattr(game.state, "active_buffs", []) or [])
+        state_data["seed"] = int(getattr(game.state, "seed", 0) or 0)
+        sm.save_state(game.session, "auto", state_data, summary="新游戏")
+        logger.info(f"[v2.7] session 创建后立即存档: {game.session.session_id[:8]}")
+    except Exception as e:
+        logger.exception(f"[v2.7] session 创建后存档失败: {e}")
+
     handler._json(200, {
         "session_id": game.session.session_id,
         "seed": getattr(game.state, "seed", 0),  # 🆕 v2.5: 返回 seed（玩家可重玩）
