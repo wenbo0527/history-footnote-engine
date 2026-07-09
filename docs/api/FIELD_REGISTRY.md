@@ -1,4 +1,51 @@
-# API 字段名规范（v1.7.23）
+# API 字段名规范（v2.7 - 命运卡完整闭环）
+
+> **v2.7 更新**：加命运卡 5 字段（seed / fate_hand / fate_used / fate_event_flags / npc_relations / active_buffs）
+> 完整记录见 [docs/log/2026-07-09_v2.5-v2.7-work-log.md](../log/2026-07-09_v2.5-v2.7-work-log.md)
+
+## 🆕 v2.5-v2.7 新增字段
+
+| 字段 | 类型 | 来源 | 说明 |
+|---|---|---|---|
+| `seed` | int | `format_state.py` (v2.7) | 全局 seed（玩家分享可重玩）|
+| `fate_hand` | array | `format_state.py` (v2.7) | 5 张命运卡手牌 |
+| `fate_used` | array | `format_state.py` (v2.7) | 已用卡 id 列表 |
+| `fate_event_flags` | array | `format_state.py` (v2.7) | 命运卡触发的特殊事件标记 |
+| `npc_relations` | object | `format_state.py` (v2.7) | NPC 关系网（从 game_state）|
+| `active_buffs` | array | `format_state.py` (v2.7) | 当前生效 buff |
+
+### 命运卡 schema
+
+```json
+{
+  "id": "windfall",
+  "name": "天降横财",
+  "icon": "💰",
+  "color": "#6b8b5a",
+  "description": "获得 3 两",
+  "effect_type": "modify_state",
+  "effect_params": { "cash_delta": 3.0 },
+  "used": false,
+  "use_type": "immediate",
+  "use_constraints": { "min_cash": 0 },
+  "use_hint": "现金不够时用"
+}
+```
+
+### use_type 枚举
+
+| 值 | 触发 | 例子 |
+|---|---|---|
+| `immediate` | 玩家主动 | 💰天降横财、❤️沈氏倾心 |
+| `round_start` | 回合开始 | ⏳时光悠悠、⚡精力充沛 |
+| `emergency` | 自动弹出 | ✨吉星高照、🛡️护身符 |
+
+### 端点
+
+- `GET /api/fate/hand?session_id=X` — 获取手牌
+- `POST /api/fate/use` — 主动使用
+- `GET /api/fate/available?session_id=X` — 实时可用性
+- `POST /api/fate/emergency_check` — 检查紧急情况
 
 ## 核心原则
 
