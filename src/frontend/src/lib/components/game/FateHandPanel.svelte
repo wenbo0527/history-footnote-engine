@@ -96,6 +96,61 @@
     }
     return groups;
   });
+
+  // 🆕 v2.6.2 分享手牌到剪贴板
+  let sharing = $state(false);
+  async function handleShare() {
+    if (sharing || hand.length === 0) return;
+    sharing = true;
+    try {
+      const lines: string[] = [];
+      lines.push('🎴 万历十五年 · 我的命运开局');
+      lines.push('─'.repeat(20));
+      // 角色名
+      if ($game?.character) {
+        lines.push(`👤 ${$game.character.name || '玩家'}（${$game.character.occupation || ''}）`);
+      }
+      lines.push(`🌱 seed: ${$game ? (($game as any).seed ?? '?') : '?'}`);
+      lines.push('');
+      // 按 use_type 分组展示
+      for (const [type, cards] of Object.entries(grouped)) {
+        if (cards.length === 0) continue;
+        const label = type === 'emergency' ? '⚠️ 应急卡' : type === 'round_start' ? '🌅 回合卡' : '🎯 即时卡';
+        lines.push(`【${label}】`);
+        for (const c of cards) {
+          const usedMark = c.used ? ' ✓已用' : '';
+          lines.push(`  ${c.icon} ${c.name}${usedMark} — ${c.description}`);
+          if (c.use_hint) {
+            lines.push(`    💡 ${c.use_hint}`);
+          }
+        }
+        lines.push('');
+      }
+      lines.push('— 来自《万历十五年》v2.6.2 —');
+      const text = lines.join('\n');
+
+      // 优先用 navigator.clipboard（现代浏览器）
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        toast.success('已复制到剪贴板！');
+      } else {
+        // 降级方案：旧浏览器/无 https
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast.success('已复制到剪贴板（降级方案）');
+      }
+    } catch (e) {
+      toast.error('分享失败：' + (e as Error).message);
+    } finally {
+      sharing = false;
+    }
+  }
 </script>
 
 {#if hand && hand.length > 0}
@@ -112,6 +167,17 @@
       <span class="fate-toggle-context" data-context={context}>
         {context === 'emergency' ? '⚠️ 应急' : context === 'round_start' ? '🌅 回合' : '🎯 立即'}
       </span>
+    </button>
+    <!-- 🆕 v2.6.2 分享按钮 -->
+    <button
+      type="button"
+      class="fate-share"
+      onclick={handleShare}
+      disabled={sharing}
+      title="复制手牌到剪贴板"
+      aria-label="分享命运卡"
+    >
+      {sharing ? '⏳' : '📋'} 分享
     </button>
 
     {#if expanded}
@@ -206,6 +272,31 @@
   .fate-toggle-context[data-context="emergency"] {
     background: #4a4a4a;
     animation: pulse-emergency 1.5s ease-in-out infinite;
+  }
+
+  /* 🆕 v2.6.2 分享按钮 */
+  .fate-share {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    background: var(--color-paper);
+    border: 1px solid var(--color-bronze);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-light);
+    font-family: var(--font-body);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-ink);
+  }
+
+  .fate-share:hover:not(:disabled) {
+    background: var(--color-bronze);
+    border-color: var(--color-bronze-dark);
+    color: var(--color-paper);
+  }
+
+  .fate-share:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   @keyframes pulse-emergency {

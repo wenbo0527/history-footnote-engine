@@ -16,7 +16,7 @@
   import { getCharacterWiki } from '$lib/api/wiki';
   import { Chapter, Spinner, Button } from '$lib/components/design-system';
   import ModalShell from './ModalShell.svelte';
-  import type { WikiResponse, WikiCharacter, PlayerCharacter } from '$lib/api/types';
+  import type { WikiResponse, WikiCharacter, PlayerCharacter, FateNpcEffect, ActiveBuff } from '$lib/api/types';
 
   interface Props {
     open: boolean;
@@ -29,6 +29,10 @@
   let wiki: WikiResponse | null = $state(null);
   let error = $state<string | null>(null);
   let lastLoadedSessionId = $state<string | null>(null);
+  // 🆕 v2.6.2 命运卡数据
+  let npcRelations: Array<[string, number]> = $state([]);
+  let fateNpcEffects: FateNpcEffect[] = $state([]);
+  let activeBuffs: ActiveBuff[] = $state([]);
 
   $effect(() => {
     const sid = $game?.session_id ?? null;
@@ -51,7 +55,12 @@
     loading = true;
     error = null;
     try {
-      wiki = await getCharacterWiki($game.session_id);
+      // 🆕 v2.6.2: getCharacterWiki 返回扩展数据（含 npc_relations/fate_npc_effects/active_buffs）
+      const res = await getCharacterWiki($game.session_id) as any;
+      wiki = res.wiki ?? res;
+      npcRelations = res.npc_relations ?? [];
+      fateNpcEffects = res.fate_npc_effects ?? [];
+      activeBuffs = res.active_buffs ?? [];
       lastLoadedSessionId = $game.session_id;
     } catch (e) {
       error = e instanceof Error ? e.message : '加载失败';
@@ -217,6 +226,49 @@
             <p class="wiki-char-desc">这是你。一切的开始。</p>
           </div>
         </article>
+      {/if}
+
+      <!-- 🆕 v2.6.2: 命运卡影响（NPC 关系 + 当前 buff） -->
+      {#if fateNpcEffects.length > 0 || activeBuffs.length > 0}
+        <Chapter title="🎴 命运影响" level={3} />
+        <div class="wiki-fate-effects">
+          {#if fateNpcEffects.length > 0}
+            <div class="wiki-fate-group">
+              <p class="wiki-fate-label">命运卡 → 人物关系：</p>
+              <div class="wiki-fate-list">
+                {#each fateNpcEffects as eff (eff.card_id + eff.npc)}
+                  <div
+                    class="wiki-fate-effect"
+                    class:wiki-fate-positive={eff.affinity_delta > 0}
+                    class:wiki-fate-negative={eff.affinity_delta < 0}
+                  >
+                    <span class="wiki-fate-icon" aria-hidden="true">{eff.card_icon}</span>
+                    <span class="wiki-fate-name">{eff.card_name}</span>
+                    <span class="wiki-fate-arrow">→</span>
+                    <span class="wiki-fate-npc">{eff.npc}</span>
+                    <span class="wiki-fate-delta">
+                      {eff.affinity_delta > 0 ? '+' : ''}{eff.affinity_delta}
+                    </span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+          {#if activeBuffs.length > 0}
+            <div class="wiki-fate-group">
+              <p class="wiki-fate-label">当前生效 buff：</p>
+              <div class="wiki-fate-list">
+                {#each activeBuffs as buff (buff.name)}
+                  <div class="wiki-fate-buff">
+                    <span class="wiki-fate-icon" aria-hidden="true">✨</span>
+                    <span class="wiki-fate-name">{buff.name}</span>
+                    <span class="wiki-fate-rounds">剩 {buff.rounds_left} 回合</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </div>
       {/if}
 
       <!-- 登场人物 -->
@@ -601,6 +653,92 @@
     color: var(--color-ink-faint);
     font-style: italic;
     padding: var(--space-4) 0;
+  }
+
+  /* 🆕 v2.6.2 命运影响段 */
+  .wiki-fate-effects {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    background: linear-gradient(180deg, var(--color-paper-aged) 0%, var(--color-paper) 100%);
+    border: 1px dashed var(--color-bronze);
+    border-radius: var(--radius-sm);
+  }
+
+  .wiki-fate-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .wiki-fate-label {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    color: var(--color-ink-light);
+    margin: 0;
+  }
+
+  .wiki-fate-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .wiki-fate-effect,
+  .wiki-fate-buff {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: var(--color-paper);
+    border: 1px solid var(--color-bronze);
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+  }
+
+  .wiki-fate-positive {
+    border-color: #6b8b5a;
+    background: rgba(107, 139, 90, 0.08);
+  }
+
+  .wiki-fate-negative {
+    border-color: #a52828;
+    background: rgba(165, 40, 40, 0.08);
+  }
+
+  .wiki-fate-icon {
+    font-size: var(--text-sm);
+    line-height: 1;
+  }
+
+  .wiki-fate-name {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .wiki-fate-arrow {
+    color: var(--color-ink-faint);
+  }
+
+  .wiki-fate-npc {
+    color: var(--color-ink-light);
+  }
+
+  .wiki-fate-delta {
+    font-family: var(--font-numeric);
+    font-weight: 600;
+    color: #6b8b5a;
+  }
+  .wiki-fate-negative .wiki-fate-delta {
+    color: #a52828;
+  }
+
+  .wiki-fate-rounds {
+    font-family: var(--font-numeric);
+    color: var(--color-bronze-dark);
+    font-size: 10px;
   }
 
   @media (max-width: 600px) {

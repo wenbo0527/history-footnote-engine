@@ -23,9 +23,31 @@ def handle_GET_character_wiki(handler, query) -> bool:
         return True
     try:
         wiki = game.state.character_wiki or {}
+        # 🆕 v2.6.2: 附加 npc_relations（命运卡/事件已应用的 NPC 关系）
+        npc_relations = list((getattr(game.state, "npc_relations", {}) or {}).items())
+        # 🆕 v2.6.2: 命运卡对 NPC 的影响清单（用 modify_npc 的卡）
+        fate_hand = list(getattr(game.state, "fate_hand", []) or [])
+        fate_npc_effects = []
+        for card in fate_hand:
+            if not card.get("used"):
+                continue
+            if card.get("effect_type") == "modify_npc":
+                params = card.get("effect_params", {}) or {}
+                fate_npc_effects.append({
+                    "card_id": card.get("id"),
+                    "card_name": card.get("name"),
+                    "card_icon": card.get("icon"),
+                    "npc": params.get("npc", ""),
+                    "affinity_delta": params.get("affinity_delta", 0),
+                })
+        # 🆕 v2.6.2: 当前 buff
+        active_buffs = list(getattr(game.state, "active_buffs", []) or [])
         handler._json(200, {
             "session_id": sid,
             "wiki": wiki,
+            "npc_relations": npc_relations,      # 列表 [(npc, affinity), ...]
+            "fate_npc_effects": fate_npc_effects,  # 命运卡 → NPC 影响清单
+            "active_buffs": active_buffs,        # 当前 buff
         })
     except Exception as e:
         error_id = safe_error_id()
@@ -61,16 +83,25 @@ def handle_POST_character_wiki_update(handler, body) -> bool:
 
 def handle_POST_recap(handler, body) -> bool:
     sid = body.get("session_id")
-    recent_count = body.get("recent_count", 5)
-    archive_count = body.get("archive_count", 30)
+    # 🆕 v1.7.32 修复：默认返所有完整叙事（recent=NARRATIVE_RECENT_SIZE=20），
+    # 让玩家在"回顾"里看到每一回合的完整 DM 叙事，不是只看到最近 5 条 + 20 条摘要。
+    from history_footnote.game_state import GameState
+    default_recent = GameState.NARRATIVE_RECENT_SIZE
+    default_archive = GameState.NARRATIVE_ARCHIVE_SIZE
+    # 🆕 v1.7.32 修复：get(key, default) 当 value=None 时返 None 不用 default——
+    # 必须用 `if key in body` 显式区分"未传"和"传了 None"
+    recent_count = body["recent_count"] if "recent_count" in body else default_recent
+    archive_count = body["archive_count"] if "archive_count" in body else default_archive
+    logger.info(f"[recap] requested recent_count={recent_count} (default={default_recent}), archive_count={archive_count}")
     if not sid:
         handler._json(400, {"error": "missing session_id"})
         return True
-    entry = session_get(sid)
-    if entry is None:
-        handler._json(404, {"error": "session not found or not loaded"})
+    # 🆕 v1.7.32 修复：用 _get_or_load_session 替代 session_get，自动从存档加载
+    # 否则玩家跨页面 / 跨重启进入游戏，第一次直接点"回顾"会 404（必须先调过 /api/state 触发加载）
+    game = _get_or_load_session(sid)
+    if game is None:
+        handler._json(404, {"error": "session not found"})
         return True
-    game = entry[0]
     try:
         recap = game.state.get_recap(
             recent_count=int(recent_count),

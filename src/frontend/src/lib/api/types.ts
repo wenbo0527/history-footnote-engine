@@ -219,6 +219,31 @@ export interface FateEmergencyResponse {
   available_cards: FateCard[];
 }
 
+// 🆕 v2.6.2 命运卡对 NPC 的影响
+export interface FateNpcEffect {
+  card_id: string;
+  card_name: string;
+  card_icon: string;
+  npc: string;             // NPC 名字
+  affinity_delta: number;  // +30 / -20
+}
+
+// 🆕 v2.6.2 当前 buff
+export interface ActiveBuff {
+  name: string;
+  rounds_left: number;
+  params?: Record<string, any>;
+}
+
+// 🆕 v2.6.2 character_wiki 响应（v2.6.2 扩展）
+export interface WikiResponseExt {
+  session_id: string;
+  wiki: WikiResponse | null;
+  npc_relations: Array<[string, number]>;
+  fate_npc_effects: FateNpcEffect[];
+  active_buffs: ActiveBuff[];
+}
+
 // ============ Narrative 叙事 ============
 export interface Narrative {
   round: number;
