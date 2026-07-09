@@ -1021,9 +1021,10 @@ class DMAgent(MockHelpersMixin):
         - 同时注入 neighbors（"可移动到"），让 LLM 知道"可以建议玩家去哪里"
         - 注入 heard 地点（"听过没去过"），让 LLM 能引用"NPC 提起过"作为解锁钩子
         - 🆕 v2.4.1 注入 NPC 当前位置 + 关系网（让 LLM 知道"王牙人在牙行"+ "他和沈氏是客户关系"）
+        - 🆕 v2.6.1 注入已用命运卡（让 LLM 知道"天降横财已用"→ 不要再写'揭不开锅'）
 
         Returns:
-            Markdown 格式的"当前位置 + NPC"段（如果未启用则空串）
+            Markdown 格式的"当前位置 + NPC + 已用卡"段（如果未启用则空串）
         """
         # 优先用 location_service（统一管理）
         try:
@@ -1036,9 +1037,86 @@ class DMAgent(MockHelpersMixin):
             loc_section = svc.build_prompt_context(current_loc_id, visited, heard)
             # 2) NPC 段（v2.4.1 新增）
             npc_section = svc.build_npc_prompt_section(current_loc_id, max_relationships=4)
-            return "\n\n".join([s for s in [loc_section, npc_section] if s])
+            # 3) 已用命运卡段（🆕 v2.6.1 新增）
+            fate_used_section = self._build_fate_used_section()
+            return "\n\n".join([s for s in [loc_section, npc_section, fate_used_section] if s])
         except Exception as e:
-            logger.exception(f"[v2.4.1] _build_current_location_section 失败: {e}")
+            logger.exception(f"[v2.6.1] _build_current_location_section 失败: {e}")
+            return ""
+
+    def _build_fate_used_section(self) -> str:
+        """🆕 v2.6.1 注入已用命运卡 + 当前 buff
+
+        为什么必要：
+        - 玩家用了"天降横财"（+3 两）→ DM 不知道 → 下一回合写"揭不开锅" → 矛盾
+        - 玩家用了"沈氏倾心"（+30 好感）→ DM 不知道 → 写"沈氏瞪你" → 矛盾
+        - 玩家用了"再试一次"buff → DM 不知道 → 失败时不重试 → 失去意义
+
+        注入内容：
+        1. 已用卡的"叙事化摘要"（如 "💰天降横财：3 天前获得 3 两"）
+        2. 当前生效的 buff（lucky/shield/persuasion 等）
+        """
+        try:
+            lines = []
+            hand = list(getattr(self.state, "fate_hand", []) or [])
+            used_cards = [c for c in hand if c.get("used")]
+
+            if used_cards:
+                lines.append("## 🎴 命运已用（DM 必读）")
+                lines.append("**已用卡**：")
+                for c in used_cards:
+                    name = c.get("name", "")
+                    icon = c.get("icon", "")
+                    effect = c.get("effect_type", "")
+                    desc = c.get("description", "")
+                    lines.append(f"- {icon} {name}：{desc}")
+
+            # 当前 buff
+            active_buffs = list(getattr(self.state, "active_buffs", []) or [])
+            if active_buffs:
+                if not lines:
+                    lines.append("## 🎴 命运已用（DM 必读）")
+                else:
+                    lines.append("")
+                lines.append("**当前生效 buff**：")
+                for b in active_buffs:
+                    name = b.get("name", "")
+                    rounds = b.get("rounds_left", 0)
+                    params = b.get("params", {}) or {}
+                    extra = ""
+                    if name == "lucky":
+                        extra = "（所有检定 +10%）"
+                    elif name == "unlucky":
+                        extra = "（所有检定 -10%）"
+                    elif name == "shield":
+                        reduction = int((params.get("failure_reduction", 0.5)) * 100)
+                        extra = f"（本回合失败代价 -{reduction}%）"
+                    elif name == "persuasion":
+                        value = params.get("value", 15)
+                        extra = f"（本回合所有 NPC 亲和 +{value}）"
+                    elif name == "second_chance":
+                        extra = "（失败时自动重投 1 次）"
+                    lines.append(f"- ✨ {name}：剩 {rounds} 回合 {extra}")
+
+            # 命运事件标记
+            event_flags = list(getattr(self.state, "fate_event_flags", []) or [])
+            if event_flags:
+                if not lines:
+                    lines.append("## 🎴 命运已用（DM 必读）")
+                else:
+                    lines.append("")
+                lines.append("**已触发事件**：")
+                flag_zh = {
+                    "zhou_secret": "🤫 周大娘的秘密",
+                    "li_discount": "📚 李秀才减束脩",
+                    "shen_illness": "🤒 沈氏生病",
+                }
+                for f in event_flags:
+                    lines.append(f"- {flag_zh.get(f, f)}")
+
+            return "\n".join(lines)
+        except Exception as e:
+            logger.exception(f"[v2.6.1] _build_fate_used_section 失败: {e}")
             return ""
 
     def _build_recent_context_for_prompt(self) -> str:
