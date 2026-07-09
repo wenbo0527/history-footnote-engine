@@ -175,6 +175,10 @@ export interface FateCard {
   effect_type: string;
   effect_params: Record<string, any>;
   used: boolean;
+  // 🆕 v2.6 主动使用字段
+  use_type?: 'immediate' | 'round_start' | 'emergency' | 'any';
+  use_constraints?: Record<string, any>;
+  use_hint?: string;
 }
 
 export interface FateHandResponse {
@@ -186,6 +190,7 @@ export interface FateUseResponse {
   success: boolean;
   card: FateCard;
   messages: string[];
+  context?: 'immediate' | 'round_start' | 'emergency';  // 🆕 v2.6
   state: Partial<{
     cash: number;
     debt: number;
@@ -195,7 +200,23 @@ export interface FateUseResponse {
     fate_hand: FateCard[];
     fate_used: string[];
     heard_locations: string[];
+    active_buffs: Array<{ name: string; rounds_left: number; params?: any }>;
   }>;
+}
+
+// 🆕 v2.6 列出可用卡
+export interface FateAvailableResponse {
+  context: 'immediate' | 'round_start' | 'emergency';
+  available: FateCard[];
+  unavailable: (FateCard & { _reason: string })[];
+}
+
+// 🆕 v2.6 应急检查
+export interface FateEmergencyResponse {
+  is_emergency: boolean;
+  trigger: string;       // "cash_critical" | "debt_danger" | "" 等
+  reason_zh: string;     // "现金告急（<1两）"
+  available_cards: FateCard[];
 }
 
 // ============ Narrative 叙事 ============

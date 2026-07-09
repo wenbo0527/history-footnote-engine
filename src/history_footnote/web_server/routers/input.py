@@ -731,12 +731,13 @@ def handle_GET_fate_hand(handler, body) -> bool:
 
 
 def handle_POST_fate_use(handler, body) -> bool:
-    """POST /api/fate/use — 触发一张命运卡
+    """POST /api/fate/use — 触发一张命运卡（v2.6 升级：context 强制）
 
     Request:
         {
             "session_id": "...",
-            "card_id": "windfall"
+            "card_id": "windfall",
+            "context": "immediate"  // 🆕 v2.6: immediate / round_start / emergency
         }
 
     Returns:
@@ -749,6 +750,11 @@ def handle_POST_fate_use(handler, body) -> bool:
     """
     sid = body.get("session_id")
     card_id = body.get("card_id", "").strip()
+    # 🆕 v2.6: context 必传（默认 immediate）
+    context = body.get("context", "immediate").strip() or "immediate"
+    if context not in ("immediate", "round_start", "emergency"):
+        handler._json(400, {"error": f"invalid context: {context}"})
+        return True
     if not sid or not card_id:
         handler._json(400, {"error": "missing session_id or card_id"})
         return True
@@ -764,14 +770,23 @@ def handle_POST_fate_use(handler, body) -> bool:
         handler._json(400, {"error": "card not found or already used"})
         return True
 
-    # 应用效果
+    # 应用效果（v2.6 升级：返回 success + can_use_card 检查）
     from history_footnote.fate_cards import FateCard, apply_fate_card
     fc = FateCard(
         id=card["id"], name=card["name"], icon=card["icon"], color=card["color"],
         description=card["description"], effect_type=card["effect_type"],
         effect_params=card["effect_params"],
+        use_type=card.get("use_type", "immediate"),
+        use_constraints=card.get("use_constraints", {}),
+        use_hint=card.get("use_hint", ""),
     )
-    messages = apply_fate_card(fc, game.state)
+    messages, success = apply_fate_card(fc, game.state, context=context)
+    if not success:
+        handler._json(400, {
+            "error": "cannot_use",
+            "reason": messages[0] if messages else "未知原因",
+        })
+        return True
 
     # 标记已用
     for c in hand:
@@ -787,10 +802,106 @@ def handle_POST_fate_use(handler, body) -> bool:
         "success": True,
         "card": card,
         "messages": messages,
+        "context": context,  # 🆕 v2.6
         "state": {k: getattr(game.state, k, None) for k in [
             "cash", "debt", "rice", "action_points_current",
-            "reputation", "fate_hand", "fate_used", "heard_locations"
+            "reputation", "fate_hand", "fate_used", "heard_locations",
+            "active_buffs"  # 🆕 v2.6
         ]},
+    })
+    return True
+
+
+def handle_GET_fate_available(handler, body) -> bool:
+    """GET /api/fate/available?context=immediate — 列出可用的卡（v2.6）
+
+    Request:
+        {"session_id": "...", "context": "immediate|round_start|emergency"}
+
+    Returns:
+        {
+            "context": "immediate",
+            "available": [card_with_reason, ...],
+            "unavailable": [card_with_reason_unavailable, ...]
+        }
+    """
+    sid = body.get("session_id")
+    context = body.get("context", "immediate").strip() or "immediate"
+    if context not in ("immediate", "round_start", "emergency"):
+        handler._json(400, {"error": f"invalid context: {context}"})
+        return True
+    if not sid:
+        handler._json(400, {"error": "missing session_id"})
+        return True
+
+    _, game, _ = _get_location_service_for_session(sid)
+    if not game:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    from history_footnote.fate_cards import can_use_card
+
+    hand = list(getattr(game.state, "fate_hand", []) or [])
+    available = []
+    unavailable = []
+    for card in hand:
+        if card.get("used"):
+            continue
+        can, reason = can_use_card(card, game.state, context)
+        if can:
+            available.append(card)
+        else:
+            unavailable.append({**card, "_reason": reason})
+    handler._json(200, {
+        "context": context,
+        "available": available,
+        "unavailable": unavailable,
+    })
+    return True
+
+
+def handle_GET_fate_emergency_check(handler, body) -> bool:
+    """GET /api/fate/emergency_check — 检查是否需要应急弹出（v2.6）
+
+    Returns:
+        {
+            "is_emergency": true/false,
+            "trigger": "cash_critical" | "",
+            "available_cards": [emergency card with can_use],
+            "reason_zh": "现金告急（<1两）"  // 🆕 玩家可读
+        }
+    """
+    sid = body.get("session_id")
+    if not sid:
+        handler._json(400, {"error": "missing session_id"})
+        return True
+
+    _, game, _ = _get_location_service_for_session(sid)
+    if not game:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    from history_footnote.fate_cards import (
+        check_emergency_situation, get_emergency_cards,
+    )
+    is_emergency, trigger = check_emergency_situation(game.state)
+    available = get_emergency_cards(game.state) if is_emergency else []
+
+    # 🆕 v2.6 玩家可读的中文触发原因
+    reason_zh_map = {
+        "cash_critical": "现金告急（不足 1 两）",
+        "debt_danger": "债务危险（≥2）",
+        "low_health": "米缸告急（不足 1）",
+        "fate_doom": "乌云压顶（3 回合内检定 -10%）",
+        "hard_choice": "艰难时刻（R5+ 现金<3）",
+    }
+    reason_zh = reason_zh_map.get(trigger, "")
+
+    handler._json(200, {
+        "is_emergency": is_emergency,
+        "trigger": trigger,
+        "reason_zh": reason_zh,
+        "available_cards": available,
     })
     return True
 

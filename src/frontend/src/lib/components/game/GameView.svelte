@@ -21,12 +21,15 @@
    */
   import { game, isLoading, gameActions } from '$lib/stores';
   import { submitInput } from '$lib/api/input';
+  import { fateEmergencyCheck } from '$lib/api/fate';
   import { Toast, toast } from '$lib/components/design-system';
   import CharCard from './CharCard.svelte';
   import SidebarPanel from './SidebarPanel.svelte';
   import NarrativeArea from './NarrativeArea.svelte';
   import ActionPanel from './ActionPanel.svelte';
   import LoadingOverlay from './LoadingOverlay.svelte';
+  import EmergencyModal from './EmergencyModal.svelte';
+  import type { FateCard } from '$lib/api/types';
 
   async function handleSelectVoice(voice: { voice_id: string; voice_name: string; intent_text?: string }) {
     if (!$game || $isLoading) return;
@@ -41,6 +44,8 @@
       gameActions.set(updated);
       const warning = (updated as any).soft_warning;
       if (warning) toast.warning(warning.message);
+      // 🆕 v2.6 检查应急状态
+      checkEmergency();
     } catch (e) {
       const err = e as Error & { status?: number; data?: any };
       if (err.data?.error) {
@@ -89,6 +94,40 @@
       last_voice_options: newVoices
     });
   }
+
+  // 🆕 v2.6: 应急状态（自动弹窗）
+  let emergencyState = $state<{
+    show: boolean;
+    reason: string;
+    trigger: string;
+    cards: FateCard[];
+  }>({ show: false, reason: '', trigger: '', cards: [] });
+
+  /** 每次叙事更新后检查 emergency 状态 */
+  async function checkEmergency() {
+    if (!$game) return;
+    try {
+      const res = await fateEmergencyCheck($game.session_id);
+      if (res.is_emergency && res.available_cards.length > 0) {
+        emergencyState = {
+          show: true,
+          reason: res.reason_zh || '紧急时刻',
+          trigger: res.trigger || '',
+          cards: res.available_cards,
+        };
+      }
+    } catch (e) {
+      // 静默失败
+    }
+  }
+
+  function closeEmergency(usedCardId?: string) {
+    emergencyState = { show: false, reason: '', trigger: '', cards: [] };
+    if (usedCardId) {
+      // 使用了卡：触发后端重新计算（下次 checkEmergency 会反映）
+      setTimeout(() => checkEmergency(), 500);
+    }
+  }
 </script>
 
 {#if $game}
@@ -128,6 +167,19 @@
 
 <LoadingOverlay visible={$isLoading} />
 <Toast />
+
+<!-- 🆕 v2.6 应急弹出（自动检查 cash<1 / debt>=2 等） -->
+{#if $game}
+  <EmergencyModal
+    show={emergencyState.show}
+    sessionId={$game.session_id}
+    reason={emergencyState.reason}
+    trigger={emergencyState.trigger}
+    cards={emergencyState.cards}
+    onclose={closeEmergency}
+    timeout={emergencyState.cards.length > 0 ? 8 : 0}
+  />
+{/if}
 
 <style>
   /* ============================================================

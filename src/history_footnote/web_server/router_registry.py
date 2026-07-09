@@ -109,6 +109,9 @@ POST_ROUTES = {
     # 🆕 v2.5 命运卡系统
     "/api/fate/hand": _input.handle_GET_fate_hand,
     "/api/fate/use": _input.handle_POST_fate_use,
+    # 🆕 v2.6 命运卡主动使用
+    "/api/fate/available": _input.handle_GET_fate_available,
+    "/api/fate/emergency_check": _input.handle_GET_fate_emergency_check,
     "/api/render_narrative": _input.handle_POST_render_narrative,
     "/api/character_wiki_update": _character.handle_POST_character_wiki_update,
     "/api/input": _input.handle_POST_input,
