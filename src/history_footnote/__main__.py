@@ -85,8 +85,9 @@ def make_llm(
     model: str = "",
     api_key: str = "",
     base_url: str = "",
+    purpose: str = "dm",  # 🆕 v2.7 默认 dm（温度 0，可重放）
 ) -> Any:
-    """构造LLM（v1.1+：多provider支持）
+    """构造LLM（v1.1+：多provider支持；v2.7+：按用途控制 temperature）
 
     Args:
         era_config: 时代包配置（Mock模式需要）
@@ -95,8 +96,9 @@ def make_llm(
         api_key: API Key（默认从环境变量）
         base_url: 自定义endpoint（仅custom/minimax-*）
     """
-    from history_footnote.llm_providers import make_llm as _make_llm
-    return _make_llm(
+    from history_footnote.llm_providers import make_llm_for_purpose
+    return make_llm_for_purpose(
+        purpose=purpose,  # 🆕 v2.7
         provider=provider,
         model=model,
         api_key=api_key,
@@ -197,7 +199,7 @@ def cmd_run(
         gender_cn = "男" if identity.get("gender") == "male" else "女"
         print(f"  性别: {gender_cn} | 角色: {identity.get('role', '')}")
 
-    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url)
+    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url, purpose="character")  # 🆕 v2.7
 
     from history_footnote.game_loop import GameLoop
     game = GameLoop(
@@ -239,7 +241,7 @@ def cmd_continue(
 
     era_id = loaded.get("era_id", session.era_id)
     config = load_era_config(era_id)
-    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url)
+    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url, purpose="dm")  # 🆕 v2.7
 
     from history_footnote.game_loop import GameLoop
     game = GameLoop(
@@ -278,7 +280,7 @@ def cmd_load(
 
     era_id = loaded.get("era_id", session.era_id)
     config = load_era_config(era_id)
-    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url)
+    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url, purpose="dm")  # 🆕 v2.7
 
     from history_footnote.game_loop import GameLoop
     game = GameLoop(
@@ -340,7 +342,7 @@ def cmd_restart(
     info = get_provider_info(provider)
     print(f"[INFO] LLM Provider: {info.get('name', provider)}")
 
-    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url)
+    llm = make_llm(config, provider=provider, model=model, api_key=api_key, base_url=base_url, purpose="dm")  # 🆕 v2.7
 
     from history_footnote.game_loop import GameLoop
     game = GameLoop(

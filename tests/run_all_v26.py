@@ -20,10 +20,11 @@ def main():
         "tests/test_v26_e2e_mock.py",        # L2: 5
         "tests/test_v26_e2e_real_llm.py",    # L3: 3（需要 DEEPSEEK_API_KEY）
         "tests/test_l9_replay.py",           # L9: 5（重放验证）
+        "tests/test_v27_temperature.py",     # v2.7: 5（temperature 控制）
     ]
 
     print("=" * 60)
-    print("v2.5-v2.6.2 完整测试套件")
+    print("v2.5-v2.7 完整测试套件")
     print("=" * 60)
     print(f"测试文件: {len(test_files)}")
     print(f"  - L1 整合: 12")
@@ -31,7 +32,8 @@ def main():
     print(f"  - L3 E2E (真实 LLM): 3")
     print(f"  - L4 边界: 8")
     print(f"  - L9 重放: 5")
-    print(f"总计: 33 个测试")
+    print(f"  - v2.7 temperature: 5")
+    print(f"总计: 38 个测试")
     print()
 
     cwd = ROOT

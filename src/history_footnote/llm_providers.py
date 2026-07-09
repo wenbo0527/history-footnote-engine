@@ -188,3 +188,72 @@ def get_provider_info(provider: str) -> dict:
 def list_providers() -> list[str]:
     """列出所有支持的provider"""
     return ["mock", "openai", "anthropic", "minimax-anthropic", "minimax-openai", "deepseek", "custom"]
+
+
+# ============================================================
+# 🆕 v2.7 全局 LLM temperature 控制（保证可重放）
+# ============================================================
+
+# 不同用途的 temperature 配置
+# 0 = 完全确定（玩家分享 seed 可重放出同样叙事）
+# 0.3 = 略变（wiki/recap 不需要完全一致）
+
+LLM_PURPOSE_TEMPERATURE: dict[str, float] = {
+    # 完全可重放（影响游戏主流程的）
+    "dm": 0.0,            # DM 主叙事
+    "voice_options": 0.0, # 生成可选行动
+    "internal_voice": 0.0,# 内心独白
+    "name_generator": 0.0,# NPC 名字（如有）
+    # 略变（一次性 / 创意类）
+    "wiki": 0.3,          # 人物档案
+    "recap": 0.3,         # 剧情回顾
+    "character": 0.3,     # 角色创建
+    "fallback": 0.0,      # 默认
+}
+
+
+def make_llm_for_purpose(
+    purpose: str = "dm",  # 默认 dm（温度 0，可重放）
+    provider: str = "mock",
+    model: str = "",
+    api_key: str = "",
+    base_url: str = "",
+    era_config: dict | None = None,
+    extra_kwargs: dict | None = None,
+) -> Any:
+    """🆕 v2.7 按用途构造 LLM（自动设置 temperature）
+
+    Args:
+        purpose: 用途（dm / voice_options / wiki / recap / character / ...）
+        provider: provider 名
+        model: 模型名
+        api_key: API key
+        base_url: 自定义 endpoint
+        era_config: era 配置
+        extra_kwargs: 额外透传参数（会与 temperature 合并，extra_kwargs 优先）
+
+    Returns:
+        LangChain BaseChatModel 实例
+    """
+    temperature = LLM_PURPOSE_TEMPERATURE.get(purpose, 0.0)
+    # 合并 extra_kwargs
+    merged_kwargs = {"temperature": temperature}
+    if extra_kwargs:
+        merged_kwargs.update(extra_kwargs)
+    return make_llm(
+        provider=provider,
+        model=model,
+        api_key=api_key,
+        base_url=base_url,
+        extra_kwargs=merged_kwargs,
+        era_config=era_config,
+    )
+
+
+__all__ = [
+    "make_llm",
+    "make_llm_for_purpose",  # 🆕 v2.7
+    "LLM_PURPOSE_TEMPERATURE",  # 🆕 v2.7
+    "get_provider_info",
+    "list_providers",
+]

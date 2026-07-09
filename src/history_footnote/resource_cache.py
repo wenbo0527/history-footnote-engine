@@ -113,8 +113,8 @@ def get_llm(provider: str = "minimax-anthropic", era_config: dict | None = None)
         if provider in _LLM_CACHE:
             return _LLM_CACHE[provider]
 
-        from history_footnote.llm_providers import make_llm
-        llm = make_llm(provider=provider, era_config=era_config or {})
+        from history_footnote.llm_providers import make_llm_for_purpose
+        llm = make_llm_for_purpose(purpose="wiki", provider=provider, era_config=era_config or {})  # 🆕 v2.7
         _LLM_CACHE[provider] = llm
         logger.info(f"[ResourceCache] Created LLM: {provider} (cached)")
         return llm

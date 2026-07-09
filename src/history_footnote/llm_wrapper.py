@@ -250,8 +250,8 @@ class LLMWrapper:
             with self._create_lock:
                 if provider not in self._llm_cache:
                     try:
-                        from history_footnote.llm_providers import make_llm
-                        self._llm_cache[provider] = make_llm(provider, era_config=self.era_config)
+                        from history_footnote.llm_providers import make_llm_for_purpose
+                        self._llm_cache[provider] = make_llm_for_purpose(purpose="dm", provider=provider, era_config=self.era_config)  # 🆕 v2.7
                         logger.info(f"[LLMWrapper] Created LLM: {provider}")
                     except Exception as e:
                         logger.warning(f"[LLMWrapper] Failed to create {provider}: {e}")
