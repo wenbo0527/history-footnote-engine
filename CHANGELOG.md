@@ -9,6 +9,100 @@
 
 ---
 
+## [v2.7] - 2026-07-09
+
+### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
+
+> **范围**：v2.5 → v2.6 → v2.6.1 → v2.6.2 → v2.7（13 commit · 66 测试 · 0 回归）
+> **完整工作日志**：[docs/log/2026-07-09_v2.5-v2.7-work-log.md](docs/log/2026-07-09_v2.5-v2.7-work-log.md)
+
+#### ✨ 命运卡"感知闭环"
+
+```
+玩家抽卡 → 用卡 → DM 知道 → 玩家看见影响 → 同 seed 重玩
+v2.5 抽  v2.6 主动  v2.6.1 prompt  v2.6.2 档案  v2.7 100%
+```
+
+#### v2.5：全局 seed + 命运卡基础
+
+- ✨ GameState 加 5 字段：seed / fate_hand / fate_used / fate_event_flags / npc_relations / active_buffs
+- ✨ 抽 5 张命运卡（开局）
+- ✨ FATE_CARDS_POOL：30+ 张卡（4 个分类：modify_state / modify_npc / apply_buff / narrative）
+- ✨ Markdown 渲染
+- 🔧 `random_utils.py`：set_session_seed / get_rng（session 隔离）
+
+#### v2.6：命运卡主动使用 + 应急弹出
+
+- ✨ 3 种 use_type：immediate / round_start / emergency
+- ✨ 5 个 emergency 触发器：cash_critical / debt_high / rice_empty / unlucky_active / late_round
+- ✨ FateHandPanel：完整 UI（可用性拉取、上下文切换、分享）
+- ✨ emergency 弹层（自动触发 + 手动选择）
+- ✨ `apply_fate_card()`：所有 use_type 统一处理
+
+#### v2.6.1：DM 感知
+
+- ✨ `🎴 命运已用` 段注入 DM prompt（system_base.md）
+- ✨ 已用卡 + 当前 buff + 已触发事件
+- 🔧 DM agent 加载已用卡段
+- ✅ 验证：DM 输出与命运卡使用一致
+
+#### v2.6.2：玩家感知
+
+- ✨ 人物档案加 `🎴 命运影响` 段
+- ✨ 命运卡 → NPC 关系清单（哪些 NPC 关系变了）
+- ✨ 当前 buff 清单
+- ✨ 命运卡分享按钮（含 seed 一键复制）
+
+#### v2.7：完全可重放
+
+- ✨ `LLM_PURPOSE_TEMPERATURE`：DM/voice=0, wiki/recap=0.3
+- ✨ `make_llm_for_purpose()` 工厂函数
+- 🔧 4 处 make_llm 调用全部加 purpose 参数
+- ✨ **同 seed 100% 复现**（玩家分享 → 朋友 100% 体验）
+
+#### v2.7 UI：CharCard 命运卡预览
+
+- ✨ 主角卡下方加命运卡段（🎴 我的命运 N/5 未用）
+- ✨ chip 卡片（图标 + 名字）
+- ✨ 一键使用角标（▶）
+- ✨ chip 点击 → 跳到侧栏 + 高亮 3 秒
+- 🐛 修 3 个隐藏字段透传 BUG：
+  1. `format_state` 没透传 seed/fate_hand（`584dfa6`）
+  2. `mapBackendState` 没 put 字段到 game store（`fa8fdbf`）
+  3. session 创建后没 save_state 导致重启后丢失（`ab3cbf7`）
+
+#### v2.7 测试基础设施
+
+- ✨ 4 层 28 个后端测试（L1+L2+L3+L4）
+- ✨ L9 同 seed 重放测试（5 个）
+- ✨ temperature 控制测试（5 个）
+- ✨ 前端 vitest 6 个（mapper 字段透传）
+
+#### v2.7 响应式布局
+
+- ✨ sidebar 宽度 `clamp(220px, 22vw, 280px)`（视口平滑）
+- ✨ CharCard 容器查询（`@container char-card`）
+- ✨ 5 个断点：mobile/tablet/desktop/wide/超宽/极窄
+- ✨ 命运卡 chip 自适应：clamp(9px, 2.4cqw, 11px)
+- ✨ char-card 窄时隐藏名字/角标（响应式布局）
+
+#### 修改文件
+
+- 后端：+ 6 文件，🔧 6 文件
+- 前端：+ 2 文件，🔧 5 文件
+- 测试：+ 7 文件
+
+#### 数字统计
+
+| 维度 | v1.6.7 | v2.7 | 增加 |
+|---|---|---|---|
+| 测试数 | 22 | 66 | **+44** |
+| 命运卡测试 | 0 | 9 | +9 |
+| commit 数（v2.5-v2.7）| — | 13 | +13 |
+| LLM 调用点 | 4 | 4（全部加 purpose）| 0 |
+
+---
+
 ## [v1.6.7] - 2026-07-04
 
 ### 🐛 修复：SKILL 元数据泄漏到玩家界面
