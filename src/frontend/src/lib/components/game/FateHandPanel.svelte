@@ -14,6 +14,7 @@
    */
   import { game, gameActions } from '$lib/stores';
   import { fateHand, fateAvailable, fateUse } from '$lib/api/fate';
+  import { fateEvents } from '$lib/stores/fate-events';
   import { toast } from '$lib/components/design-system/Toast.svelte';
   import type { FateCard } from '$lib/api/types';
 
@@ -27,6 +28,44 @@
 
   let using = $state<string | null>(null);
   let expanded = $state(true);
+
+  // 🆕 v2.7: 跨组件滚动 + 一键使用
+  let highlightedCardId = $state<string | null>(null);
+  let highlightedUseId = $state<string | null>(null);
+  let cardRefs = $state<Record<string, HTMLElement>>({});
+
+  $effect(() => {
+    const ev = $fateEvents;
+    if (ev.lastUpdate === 0) return;
+    // 滚动到卡
+    if (ev.scrollToCardId) {
+      const el = cardRefs[ev.scrollToCardId];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        highlightedCardId = ev.scrollToCardId;
+        // 3 秒后清掉高亮
+        setTimeout(() => {
+          if (highlightedCardId === ev.scrollToCardId) {
+            highlightedCardId = null;
+          }
+        }, 3000);
+      }
+    }
+    // 一键使用
+    if (ev.useCardId) {
+      highlightedUseId = ev.useCardId;
+      handleUse(ev.useCardId).finally(() => {
+        if (highlightedUseId === ev.useCardId) {
+          highlightedUseId = null;
+        }
+      });
+    }
+  });
+
+  function setCardRef(el: HTMLElement) {
+    const id = el.dataset.cardId;
+    if (id) cardRefs[id] = el;
+  }
 
   // 实时可用性：拉 /api/fate/available
   let availability = $state<Record<string, { can: boolean; reason: string }>>({});
@@ -200,8 +239,12 @@
                   class:fate-card-disabled={!canUse && !card.used}
                   class:fate-card-emergency={card.use_type === 'emergency'}
                   class:fate-card-round={card.use_type === 'round_start'}
+                  class:fate-card-highlighted={highlightedCardId === card.id}
+                  class:fate-card-using={highlightedUseId === card.id}
                   disabled={!canUse || using === card.id}
                   onclick={() => handleUse(card.id)}
+                  use:setCardRef
+                  data-card-id={card.id}
                   style="--card-color: {card.color}"
                   title={card.used ? '已使用' : (canUse ? card.description : reason)}
                 >
@@ -302,6 +345,22 @@
   @keyframes pulse-emergency {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
+  }
+
+  /* 🆕 v2.7: 高亮（CharCard chip 点击触发） */
+  @keyframes fate-card-pulse {
+    0% { box-shadow: 0 0 0 0 var(--card-color, var(--color-bronze)); transform: scale(1); }
+    50% { box-shadow: 0 0 0 8px rgba(255, 200, 0, 0.4); transform: scale(1.05); }
+    100% { box-shadow: 0 0 0 0 var(--card-color, var(--color-bronze)); transform: scale(1); }
+  }
+
+  .fate-card-highlighted {
+    animation: fate-card-pulse 1.2s ease-out 2;
+    z-index: 10;
+  }
+
+  .fate-card-using {
+    animation: fate-card-pulse 0.6s ease-out 1;
   }
 
   .fate-group {

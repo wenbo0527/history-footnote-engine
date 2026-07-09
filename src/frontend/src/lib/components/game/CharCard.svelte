@@ -9,6 +9,7 @@
    */
   import type { Character, FamilyMember, Skill, FateCard } from '$lib/api/types';
   import { game } from '$lib/stores';
+  import { fateEvents } from '$lib/stores/fate-events';
 
   interface Props {
     character: Character;
@@ -27,6 +28,16 @@
   const usedFate = $derived(fateHand.filter(c => c.used));
   // 最多显示 3 张（剩余的折叠）
   const visibleFate = $derived(unusedFate.slice(0, 3));
+
+  // 🆕 v2.7 命运卡 chip 操作
+  function handleChipClick(cardId: string) {
+    fateEvents.scrollToCard(cardId);
+  }
+
+  function handleQuickUse(cardId: string, e: Event) {
+    e.stopPropagation();  // 不触发 chip click
+    fateEvents.useCard(cardId);
+  }
 </script>
 
 <aside class="char-card" class:char-card-collapsed={collapsible && !expanded}>
@@ -89,14 +100,25 @@
           {#if visibleFate.length > 0}
             <div class="char-card-fate-list">
               {#each visibleFate as c (c.id)}
-                <span
+                <button
+                  type="button"
                   class="char-card-fate-chip"
                   style="--card-color: {c.color}"
-                  title={c.description}
+                  title={c.description + '（点击查看，一键使用）'}
+                  onclick={() => handleChipClick(c.id)}
                 >
                   <span class="char-card-fate-icon" aria-hidden="true">{c.icon}</span>
                   <span class="char-card-fate-name">{c.name}</span>
-                </span>
+                  <!-- 🆕 一键使用角标 -->
+                  <span
+                    class="char-card-fate-quick"
+                    role="button"
+                    tabindex="-1"
+                    aria-label="一键使用"
+                    title="一键使用"
+                    onclick={(e) => handleQuickUse(c.id, e)}
+                  >▶</span>
+                </button>
               {/each}
               {#if unusedFate.length > 3}
                 <span class="char-card-fate-more">+{unusedFate.length - 3} 张</span>
@@ -238,12 +260,47 @@
     font-family: var(--font-body);
     font-size: 10px;
     color: var(--color-ink);
+    cursor: pointer;
     transition: all var(--duration-normal) var(--ease-ink);
+    position: relative;
   }
 
   .char-card-fate-chip:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(58, 42, 26, 0.15);
+  }
+
+  .char-card-fate-chip:focus-visible {
+    outline: 2px solid var(--card-color, var(--color-bronze));
+    outline-offset: 1px;
+  }
+
+  /* 🆕 v2.7 一键使用角标 */
+  .char-card-fate-quick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 2px;
+    background: var(--card-color, var(--color-bronze));
+    color: var(--color-paper);
+    border-radius: 50%;
+    font-size: 8px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-ink);
+    opacity: 0.7;
+  }
+
+  .char-card-fate-chip:hover .char-card-fate-quick {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+
+  .char-card-fate-quick:hover {
+    transform: scale(1.3) !important;
+    box-shadow: 0 0 6px var(--card-color, var(--color-bronze));
   }
 
   .char-card-fate-chip-used {
