@@ -22,9 +22,7 @@
   let expanded = $state(true);
 
   // 🆕 v2.7 命运卡：从 game store 拉（不再依赖外部 prop）
-  const fateHand: FateCard[] = $derived(
-    ($game as any)?.fate_hand ?? []
-  );
+  const fateHand: FateCard[] = $derived($game?.fate_hand ?? []);
   const unusedFate = $derived(fateHand.filter(c => !c.used));
   const usedFate = $derived(fateHand.filter(c => c.used));
   // 最多显示 3 张（剩余的折叠）

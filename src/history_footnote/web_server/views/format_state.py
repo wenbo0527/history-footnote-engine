@@ -17,6 +17,35 @@ from history_footnote.web_server.handler_base import logger
 
 
 # ============================================================
+# 🆕 v1.9.5 辅助函数
+# ============================================================
+
+def _flatten_custom_character(cc: dict | None) -> dict:
+    """把 custom_character 关键字段铺平到顶层
+
+    前端 char-card 用 state.character.name / .age / .background / .starting_situation
+    但 custom_character 嵌套在 state.custom_character 里——平铺解决一致性
+    """
+    if not cc or not isinstance(cc, dict):
+        return {}
+    return {
+        "name": cc.get("name", ""),
+        "hometown": cc.get("hometown", ""),
+        "age": cc.get("age"),
+        "occupation": cc.get("occupation", cc.get("role", "")),
+        "background": cc.get("background", ""),
+        "starting_situation": cc.get("starting_situation", ""),
+        "personality": cc.get("personality", ""),
+        "tics": cc.get("tics", ""),
+        "opening_paragraph": cc.get("opening_paragraph", ""),
+        "voices": cc.get("voices", []),
+        "skills": cc.get("skills", []),
+        "family": cc.get("family", {}),
+        "initial_state": cc.get("initial_state", {}),
+    }
+
+
+# ============================================================
 # 侧边栏数据
 # ============================================================
 
@@ -66,6 +95,11 @@ def format_state(game) -> dict:
             "round": nh.get("round"),
             "summary": nh.get("summary", ""),
             "narrative": nh.get("narrative", ""),
+            # 🆕 v1.7.32 修复：保留 type 字段，让前端 mapper 区分
+            # 真 narrative（type: opening/turn/none）和面板型 entry
+            # （type: monthly_settlement/event_log），后者是月末结算或事件日志，
+            # 不应作为「当前回合剧情」展示，会让玩家看不到真实叙事。
+            "type": nh.get("type"),
         })
     result = {
         "session_id": game.session.session_id,
@@ -85,6 +119,9 @@ def format_state(game) -> dict:
         "recent_narratives": recent_narr,
         # 🐛 v1.5.1 P0 Bug #1 修复：暴露 custom_character 给前端
         "custom_character": getattr(s, "custom_character", {}),
+        # 🆕 v1.9.5：把 custom_character 的关键字段也铺平到顶层（前端兼容用）
+        # 这样 sidebar/character-card 不需要深嵌套取 cc.background / cc.name
+        "character": _flatten_custom_character(getattr(s, "custom_character", {})),
         # 🐛 v1.5.1 P1 Issue 5 修复：暴露 last_voice_options 给前端
         "last_voice_options": list(getattr(s, "last_voice_options", []) or []),
         # 🆕 v1.7.26 侧边栏固化面板数据
@@ -105,15 +142,22 @@ def format_state(game) -> dict:
         "inventory": dict(getattr(s, "inventory", {}) or {}),
         # 🆕 v1.7.30 本次发现层（discoveries）
         "discoveries": dict(getattr(s, "discoveries", {}) or {}),
+        # 🆕 v2.5 全局随机种子（replay 机制）
+        "seed": int(getattr(s, "seed", 0) or 0),
+        # 🆕 v2.5 命运卡（玩家一打开就看到自己的卡）
+        "fate_hand": list(getattr(s, "fate_hand", []) or []),
+        "fate_used": list(getattr(s, "fate_used", []) or []),
+        "fate_event_flags": list(getattr(s, "fate_event_flags", []) or []),
+        # 🆕 v2.5 NPC 关系 + 当前 buff（命运卡影响展示）
+        "npc_relations": dict(getattr(s, "npc_relations", {}) or {}),
+        "active_buffs": list(getattr(s, "active_buffs", []) or []),
     }
-    # 兜底注入（如果空）
-    if not result["last_voice_options"]:
-        result["last_voice_options"] = [{
-            "voice_id": "voice_freetext",
-            "voice_name": "✍️ 自由输入",
-            "intent_text": "",
-            "is_freetext": True,
-        }]
+    # 🆕 v1.7.32 修复：移除 voice_freetext 兜底。
+    # 原因：前端 InputArea 已是独立 textarea（不是 voice_options 的一部分），
+    # 这个「自由输入」voice 卡是冗余的。删除后：
+    #  - /api/state 加载存档时（last_voice_options=[]）会返空数组
+    #  - 加载时由 _get_or_load_session 调 _context_aware_voices 注入真 voices
+    #  - 玩家看到"暂无选项，直接在下方输入"，体验比看到重复项更清晰
     return result
 
 

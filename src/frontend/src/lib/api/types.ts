@@ -290,6 +290,15 @@ export interface GameState {
     message: string;
     suggestion?: string;
   };
+  // 🆕 v2.5 命运卡（后端 format_state 透传，前端 CharCard 直接显示）
+  fate_hand?: FateCard[];
+  fate_used?: string[];
+  fate_event_flags?: string[];
+  // 🆕 v2.5 NPC 关系 + buff
+  npc_relations?: Record<string, number>;
+  active_buffs?: ActiveBuff[];
+  // 🆕 v2.5 全局 seed
+  seed?: number;
 }
 
 // ============ Archive 存档 ============
