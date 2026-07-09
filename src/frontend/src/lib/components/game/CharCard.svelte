@@ -150,6 +150,9 @@
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-fold);
     overflow: hidden;
+    /* 🆕 v2.7 容器查询：让 char-card 知道自己的宽度，自适应 */
+    container-type: inline-size;
+    container-name: char-card;
   }
 
   .char-card-header {
@@ -258,11 +261,24 @@
     border: 1px solid var(--card-color, var(--color-bronze));
     border-radius: 10px;
     font-family: var(--font-body);
-    font-size: 10px;
+    /* 🆕 v2.7 自适应字号：窄屏更小，宽屏稍大 */
+    font-size: clamp(9px, 2.4cqw, 11px);
     color: var(--color-ink);
     cursor: pointer;
     transition: all var(--duration-normal) var(--ease-ink);
     position: relative;
+    /* 🆕 防 chip 自身过长 */
+    max-width: 100%;
+  }
+
+  .char-card-fate-name {
+    font-family: var(--font-display);
+    color: var(--color-ink);
+    /* 🆕 文字超长省略 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 12ch;  /* 最多 12 个汉字 */
   }
 
   .char-card-fate-chip:hover {
@@ -312,11 +328,7 @@
   .char-card-fate-icon {
     font-size: var(--text-xs);
     line-height: 1;
-  }
-
-  .char-card-fate-name {
-    font-family: var(--font-display);
-    color: var(--color-ink);
+    flex: 0 0 auto;
   }
 
   .char-card-fate-more {
@@ -337,6 +349,23 @@
     font-family: var(--font-body);
     font-size: 10px;
     color: var(--color-ink-faint);
+  }
+
+  /* 🆕 v2.7 容器查询：char-card 窄时（< 260px）只显示图标不显示名字 */
+  @container char-card (max-width: 260px) {
+    .char-card-fate-name {
+      display: none;
+    }
+    .char-card-fate-chip {
+      padding: 2px 4px;
+    }
+  }
+
+  /* 🆕 v2.7 容器查询：char-card 极窄时（< 200px）连图标也隐藏角标 */
+  @container char-card (max-width: 200px) {
+    .char-card-fate-quick {
+      display: none;
+    }
   }
 
   .char-card-family-row {

@@ -190,7 +190,13 @@
    * ============================================================ */
   .game-view {
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
+    /* 🆕 v2.7 自适应布局：clamp() 让侧边栏在所有视口平滑变化
+     *  - 最小 220px（mobile 不挤压）
+     *  - 视口 < 1400 时：clamp(220, 22vw, 280)
+     *  - 视口 >= 1400 时：固定 320px
+     *  - 右栏始终 1fr
+     */
+    grid-template-columns: clamp(220px, 22vw, 280px) minmax(0, 1fr);
     gap: var(--space-3);
     padding: var(--space-3);
     height: 100%;
@@ -280,11 +286,26 @@
   }
 
   /* ============================================================
-   * Wide (≥ 1400): 边栏稍宽
+   * Wide (≥ 1400): 边栏稍宽（保持 clamp 上限一致）
    * ============================================================ */
   @media (min-width: 1400px) {
     .game-view {
       grid-template-columns: 320px minmax(0, 1fr);
+    }
+  }
+
+  /* 🆕 v2.7 超大屏（≥ 1800）：边栏定宽，左侧留白 */
+  @media (min-width: 1800px) {
+    .game-view {
+      grid-template-columns: 340px minmax(0, 1fr);
+    }
+  }
+
+  /* 🆕 v2.7 极窄屏（≤ 480）：侧边栏仅显示 CharCard（命运卡可点展开） */
+  @media (max-width: 480px) {
+    .game-view {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
     }
   }
 </style>
