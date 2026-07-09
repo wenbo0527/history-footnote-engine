@@ -30,6 +30,45 @@ def handle_POST_start(handler, body) -> bool:
             game.state.account_id = account_id
         except Exception:
             pass
+
+    # 🆕 v2.5: 全局随机种子（replay 机制）
+    # 玩家可传 seed 用同一 seed 重玩（分享 / debug / 重玩）
+    # 不传则系统生成随机 seed
+    from history_footnote.random_utils import (
+        set_session_seed, generate_random_seed, make_seed_from_string,
+    )
+    sid = getattr(game, "session_id", None)
+    requested_seed = body.get("seed")
+    seed_str = body.get("seed_str")  # 例: "wanli-love-story"
+    if requested_seed is not None and isinstance(requested_seed, int):
+        actual_seed = requested_seed & 0xFFFFFFFF
+    elif seed_str and isinstance(seed_str, str):
+        actual_seed = make_seed_from_string(seed_str)
+    else:
+        actual_seed = generate_random_seed()
+    if sid:
+        set_session_seed(sid, actual_seed)
+        if hasattr(game.state, 'seed'):
+            game.state.seed = actual_seed
+        logger.info(f"[v2.5] session {sid[:8]} seed={actual_seed}")
+
+    # 🆕 v2.5: 命运卡抽 5 张 + 立即应用开局效果
+    from history_footnote.fate_cards import draw_fate_cards, apply_fate_card
+    try:
+        fate_cards = draw_fate_cards(sid, n=5)
+        # 把卡转为 dict 存到 state
+        game.state.fate_hand = [
+            {
+                "id": c.id, "name": c.name, "icon": c.icon, "color": c.color,
+                "description": c.description, "effect_type": c.effect_type,
+                "effect_params": c.effect_params, "used": False
+            }
+            for c in fate_cards
+        ]
+        logger.info(f"[v2.5] 抽命运卡 5 张: {[c.id for c in fate_cards]}")
+    except Exception as e:
+        logger.exception(f"[v2.5] 命运卡抽取失败: {e}")
+        game.state.fate_hand = []
     # 捕获开场白到 narrative_history
     buf = io.StringIO()
     with redirect_stdout(buf):
@@ -56,7 +95,12 @@ def handle_POST_start(handler, body) -> bool:
                 )
         except Exception as e:
             logger.exception(f"[start] 开场 voice_options 注入失败: {e}")
-    handler._json(200, {"session_id": game.session.session_id, **state})
+    handler._json(200, {
+        "session_id": game.session.session_id,
+        "seed": getattr(game.state, "seed", 0),  # 🆕 v2.5: 返回 seed（玩家可重玩）
+        "fate_hand": getattr(game.state, "fate_hand", []),  # 🆕 v2.5: 命运卡手牌
+        **state,
+    })
     return True
 
 

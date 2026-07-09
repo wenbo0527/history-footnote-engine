@@ -13,8 +13,10 @@
   import type { GameState } from '$lib/api/types';
   import { Chapter } from '$lib/components/design-system';
   import { locationList } from '$lib/api/location';
-  import type { LocationListResponse } from '$lib/api/types';
+  import { fateHand } from '$lib/api/fate';
+  import type { LocationListResponse, FateCard } from '$lib/api/types';
   import LocationPanel from './LocationPanel.svelte';
+  import FateHandPanel from './FateHandPanel.svelte';
 
   interface Props {
     game: GameState;
@@ -24,9 +26,12 @@
 
   // 🆕 v2.4: location data（侧栏顶部显示）
   let locationData = $state<LocationListResponse | null>(null);
+  // 🆕 v2.5: 命运卡手牌
+  let fateHandData = $state<FateCard[]>([]);
   $effect(() => {
     if (game?.session_id) {
       locationList(game.session_id).then(d => locationData = d).catch(() => {});
+      fateHand(game.session_id).then(d => fateHandData = d.hand).catch(() => {});
     }
   });
 
@@ -39,6 +44,11 @@
   <!-- 🆕 v2.4: 当前位置 + 移动选项 -->
   {#if locationData}
     <LocationPanel data={locationData} />
+  {/if}
+
+  <!-- 🆕 v2.5: 命运卡手牌 -->
+  {#if fateHandData && fateHandData.length > 0}
+    <FateHandPanel hand={fateHandData} />
   {/if}
 
   <!-- 财务 -->

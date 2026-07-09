@@ -443,14 +443,17 @@ class LocationService:
 
     # ============ 🆕 v2.4.1 路遇事件系统 ============
 
-    def roll_encounter(self, from_id: str, to_id: str) -> dict | None:
+    def roll_encounter(self, from_id: str, to_id: str, session_id: str | None = None) -> dict | None:
         """
         投掷"路遇"事件：从 from → to 的移动可能触发的 NPC 偶遇
+
+        v2.5: 接受 session_id，使用 seeded RNG（可重放）
 
         Returns:
             None 或 {npc, event, probability}
         """
-        import random
+        from history_footnote.random_utils import get_rng
+        rng = get_rng(session_id)
         candidates = [
             e for e in self.encounter_table
             if e.get("from") == from_id and e.get("to") == to_id
@@ -459,9 +462,9 @@ class LocationService:
             return None
         # 加权随机（按 probability）
         weights = [e.get("probability", 0.1) for e in candidates]
-        chosen = random.choices(candidates, weights=weights, k=1)[0]
+        chosen = rng.choices(candidates, weights=weights, k=1)[0]
         # 再掷一次看是否真的触发（用 probability）
-        if random.random() > chosen.get("probability", 0.1):
+        if rng.random() > chosen.get("probability", 0.1):
             return None
         return chosen
 

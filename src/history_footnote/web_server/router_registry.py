@@ -106,6 +106,9 @@ POST_ROUTES = {
     "/api/location/move": _input.handle_POST_location_move,
     "/api/location/list": _input.handle_GET_location_list,
     "/api/location/detail": _input.handle_GET_location_detail,
+    # 🆕 v2.5 命运卡系统
+    "/api/fate/hand": _input.handle_GET_fate_hand,
+    "/api/fate/use": _input.handle_POST_fate_use,
     "/api/render_narrative": _input.handle_POST_render_narrative,
     "/api/character_wiki_update": _character.handle_POST_character_wiki_update,
     "/api/input": _input.handle_POST_input,

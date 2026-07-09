@@ -540,16 +540,16 @@ def handle_POST_location_move(handler, body) -> bool:
         to_loc = svc.get(target)
         narrative = f"你到了{to_loc.name}。{to_loc.description}"
 
-        # 🆕 v2.4.1 路遇事件（30% 概率触发）
+        # 🆕 v2.4.1 路遇事件（30% 概率触发，v2.5 起支持 seed 重放）
         encounter = None
         try:
-            encounter = svc.roll_encounter(from_id, target)
+            encounter = svc.roll_encounter(from_id, target, session_id=sid)
             if encounter:
                 encounter_text = svc.build_encounter_narrative(encounter)
                 narrative = encounter_text + " " + narrative
-                logger.info(f"[v2.4.1] 路遇触发: {encounter.get('npc')} ({from_id}→{target})")
+                logger.info(f"[v2.5] 路遇触发: {encounter.get('npc')} ({from_id}→{target})")
         except Exception as e:
-            logger.warning(f"[v2.4.1] roll_encounter 失败: {e}")
+            logger.warning(f"[v2.5] roll_encounter 失败: {e}")
 
         # 🆕 v2.4.1 该地 NPC
         npcs_at_dest = svc.get_npcs_at(target)
@@ -698,4 +698,100 @@ def handle_GET_location_detail(handler, body) -> bool:
             "move_options": move_opts,
         })
     return True
+
+
+# ============================================================
+# /api/fate/* — v2.5 命运卡系统
+# ============================================================
+
+def handle_GET_fate_hand(handler, body) -> bool:
+    """GET /api/fate/hand — 获取当前手牌（命运卡）
+
+    Returns:
+        {
+            "hand": [{"id": "windfall", "name": "天降横财", "icon": "💰", "color": "...", "description": "...", "used": false}, ...],
+            "used": ["..."]
+        }
+    """
+    sid = body.get("session_id")
+    if not sid:
+        handler._json(400, {"error": "missing session_id"})
+        return True
+
+    _, game, _ = _get_location_service_for_session(sid)
+    if not game:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    handler._json(200, {
+        "hand": list(getattr(game.state, "fate_hand", []) or []),
+        "used": list(getattr(game.state, "fate_used", []) or []),
+    })
+    return True
+
+
+def handle_POST_fate_use(handler, body) -> bool:
+    """POST /api/fate/use — 触发一张命运卡
+
+    Request:
+        {
+            "session_id": "...",
+            "card_id": "windfall"
+        }
+
+    Returns:
+        {
+            "success": true,
+            "card": {...},
+            "messages": ["银两 +3.00（现 8.50）"],
+            "state": {...}
+        }
+    """
+    sid = body.get("session_id")
+    card_id = body.get("card_id", "").strip()
+    if not sid or not card_id:
+        handler._json(400, {"error": "missing session_id or card_id"})
+        return True
+
+    _, game, _ = _get_location_service_for_session(sid)
+    if not game:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    hand = list(getattr(game.state, "fate_hand", []) or [])
+    card = next((c for c in hand if c.get("id") == card_id and not c.get("used")), None)
+    if not card:
+        handler._json(400, {"error": "card not found or already used"})
+        return True
+
+    # 应用效果
+    from history_footnote.fate_cards import FateCard, apply_fate_card
+    fc = FateCard(
+        id=card["id"], name=card["name"], icon=card["icon"], color=card["color"],
+        description=card["description"], effect_type=card["effect_type"],
+        effect_params=card["effect_params"],
+    )
+    messages = apply_fate_card(fc, game.state)
+
+    # 标记已用
+    for c in hand:
+        if c.get("id") == card_id:
+            c["used"] = True
+    game.state.fate_hand = hand
+    used = list(getattr(game.state, "fate_used", []) or [])
+    if card_id not in used:
+        used.append(card_id)
+    game.state.fate_used = used
+
+    handler._json(200, {
+        "success": True,
+        "card": card,
+        "messages": messages,
+        "state": {k: getattr(game.state, k, None) for k in [
+            "cash", "debt", "rice", "action_points_current",
+            "reputation", "fate_hand", "fate_used", "heard_locations"
+        ]},
+    })
+    return True
+
 

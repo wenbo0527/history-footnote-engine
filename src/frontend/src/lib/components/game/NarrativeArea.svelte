@@ -1,16 +1,20 @@
 <script lang="ts">
   /**
-   * NarrativeArea - 叙事文学化
+   * NarrativeArea - 叙事文学化（v2.5 markdown 渲染）
    *
    * 国风特色：
    *   - 章节标题（Chapter 装饰 ❀）
    *   - 首字下沉（朱砂色）
    *   - 行高 1.9（中文呼吸感）
-   *   - max-width 32em（中文 32 字/行）
+   *   - max-width 36em（中文 32-36 字/行）
    *
-   * 数据：narrative.content 是 markdown 或纯文本
-   * 这里用简单的段落分割（双换行） + 简单首字下沉
+   * 🆕 v2.5: markdown 渲染
+   *   - 解析：表格 / 加粗 / 分隔线 / 标题 / 引用 / 列表
+   *   - 表格：让王牙人给的三条路真的能读
+   *   - 段间双换行：分割段落
+   *   - 第一段用 FirstLetter
    */
+  import { marked } from 'marked';
   import { Chapter, FirstLetter } from '$lib/components/design-system';
   import type { Narrative, GameState } from '$lib/api/types';
   import ShareCardButton from './ShareCardButton.svelte';
@@ -25,15 +29,51 @@
 
   let containerEl: HTMLElement | undefined = $state();
 
-  // 派生：解析 narrative.content 为段落
-  // 简单处理：按双换行分割，去除空段
-  const paragraphs = $derived.by(() => {
-    if (!narrative?.content) return [] as string[];
+  // 🆕 v2.5 markdown 解析
+  // 配置 marked：GFM 表格 + 换行 → <br> + 安全
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    pedantic: false,
+  });
+
+  /**
+   * v2.5 解析 narrative.content 为结构化段落
+   *
+   * 策略：
+   *   1. 按双换行分割
+   *   2. 每段用 marked 解析（表格/加粗/分隔线都正确渲染）
+   *   3. 第一段特殊处理：纯文本用 FirstLetter；有 markdown 标记直接用 marked
+   */
+  const parsedParagraphs = $derived.by(() => {
+    if (!narrative?.content) return [] as { html: string; isFirst: boolean; isMarkdown: boolean }[];
     return narrative.content
       .split(/\n{2,}/)
       .map(p => p.trim())
-      .filter(p => p.length > 0);
+      .filter(p => p.length > 0)
+      .map((p, i) => {
+        const isFirst = i === 0;
+        // 检测是否含 markdown 标记
+        const isMarkdown = /[|*_#`>|~-]/.test(p) || p.includes('---') || p.includes('|');
+        if (isFirst && !isMarkdown) {
+          // 首段纯文本：留给 FirstLetter 组件处理（不渲染 markdown）
+          return { html: p, isFirst: true, isMarkdown: false };
+        }
+        // 渲染 markdown
+        const html = marked.parse(p, { async: false }) as string;
+        return { html, isFirst, isMarkdown: true };
+      });
   });
+
+  /** v2.5 旧版 paragraphs 仅用于 FirstLetter（首段纯文本） */
+  const firstParagraphText = $derived(
+    parsedParagraphs.length > 0 && parsedParagraphs[0].isFirst
+      ? parsedParagraphs[0].html
+      : ''
+  );
+  const restParagraphs = $derived(
+    parsedParagraphs.slice(parsedParagraphs[0]?.isFirst ? 1 : 0)
+  );
 
   /**
    * v2.1 重大重构：内心独白从叙事中移除
@@ -50,7 +90,7 @@
 
   // 自动滚动到底部
   $effect(() => {
-    if (autoScroll && containerEl && paragraphs.length > 0) {
+    if (autoScroll && containerEl && parsedParagraphs.length > 0) {
       // 等 DOM 更新后滚
       requestAnimationFrame(() => {
         if (containerEl) {
@@ -63,22 +103,40 @@
 
 <article class="narrative-area" bind:this={containerEl as HTMLElement}>
   {#if narrative}
-    {#if paragraphs.length > 0}
-      {#each paragraphs as p, i (i)}
-        {#if i === 0}
-          <div class="narrative-header">
-            <Chapter title="第 {narrative.round} 回合" level={2} />
-            {#if game}
-              <ShareCardButton {game} narrative={narrative.content} />
-            {/if}
-          </div>
-          <FirstLetter>
-            {p}
-          </FirstLetter>
-        {:else}
-          <p class="narrative-block">{p}</p>
-        {/if}
+    {#if parsedParagraphs.length > 0}
+      <!-- 🆕 v2.5: 标题 + 金句按钮（只首段上方） -->
+      {#if parsedParagraphs[0]?.isFirst}
+        <div class="narrative-header">
+          <Chapter title="第 {narrative.round} 回合" level={2} />
+          {#if game}
+            <ShareCardButton {game} narrative={narrative.content} />
+          {/if}
+        </div>
+        <!-- 首段纯文本：FirstLetter（带首字下沉） -->
+        <FirstLetter>
+          {firstParagraphText}
+        </FirstLetter>
+      {/if}
+
+      <!-- 剩余段落：每段渲染 markdown -->
+      {#each restParagraphs as p, i (i)}
+        <div class="narrative-block narrative-markdown">
+          {@html p.html}
+        </div>
       {/each}
+
+      <!-- 兜底：如果第一段本身是 markdown（不是纯文本），补一个 header -->
+      {#if !parsedParagraphs[0]?.isFirst}
+        <div class="narrative-header">
+          <Chapter title="第 {narrative.round} 回合" level={2} />
+          {#if game}
+            <ShareCardButton {game} narrative={narrative.content} />
+          {/if}
+        </div>
+        <div class="narrative-block narrative-markdown">
+          {@html parsedParagraphs[0].html}
+        </div>
+      {/if}
     {:else}
       <p class="narrative-empty">暂无叙事内容</p>
     {/if}
@@ -149,6 +207,87 @@
 
   .narrative-block:last-child {
     margin-bottom: 0;
+  }
+
+  /* 🆕 v2.5 markdown 渲染样式 */
+  .narrative-markdown {
+    line-height: var(--leading-relaxed);
+  }
+
+  .narrative-markdown :global(p) {
+    margin: 0 0 var(--space-3);
+    text-indent: 2em;
+  }
+
+  .narrative-markdown :global(strong) {
+    color: var(--color-cinnabar);
+    font-weight: 700;
+  }
+
+  .narrative-markdown :global(em) {
+    color: var(--color-bronze-dark);
+    font-style: italic;
+  }
+
+  .narrative-markdown :global(hr) {
+    border: none;
+    text-align: center;
+    margin: var(--space-4) 0;
+    color: var(--color-bronze);
+  }
+  .narrative-markdown :global(hr)::before {
+    content: '—— ❀ ——';
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .narrative-markdown :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--space-3) 0;
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+  }
+
+  .narrative-markdown :global(th),
+  .narrative-markdown :global(td) {
+    border: 1px solid var(--color-bronze);
+    padding: 6px 10px;
+    text-align: left;
+  }
+
+  .narrative-markdown :global(th) {
+    background: var(--color-paper-aged);
+    color: var(--color-bronze-dark);
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
+  .narrative-markdown :global(ul),
+  .narrative-markdown :global(ol) {
+    margin: var(--space-2) 0;
+    padding-left: var(--space-5);
+  }
+
+  .narrative-markdown :global(li) {
+    margin: 4px 0;
+    text-indent: 0;
+  }
+
+  .narrative-markdown :global(blockquote) {
+    margin: var(--space-3) 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-paper-aged);
+    border-left: 3px solid var(--color-bronze);
+    color: var(--color-ink-light);
+    font-style: italic;
+  }
+
+  .narrative-markdown :global(code) {
+    font-family: var(--font-numeric);
+    background: var(--color-paper-aged);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.9em;
   }
 
   .narrative-empty {

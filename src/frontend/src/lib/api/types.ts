@@ -165,6 +165,39 @@ export interface LocationMoveResponse {
   npcs_at?: string[];                // 该地所有 NPC
 }
 
+// ============ v2.5 Fate Cards 命运卡 ============
+export interface FateCard {
+  id: string;
+  name: string;
+  icon: string;          // emoji
+  color: string;         // 主题色
+  description: string;
+  effect_type: string;
+  effect_params: Record<string, any>;
+  used: boolean;
+}
+
+export interface FateHandResponse {
+  hand: FateCard[];
+  used: string[];
+}
+
+export interface FateUseResponse {
+  success: boolean;
+  card: FateCard;
+  messages: string[];
+  state: Partial<{
+    cash: number;
+    debt: number;
+    rice: number;
+    action_points_current: number;
+    reputation: number;
+    fate_hand: FateCard[];
+    fate_used: string[];
+    heard_locations: string[];
+  }>;
+}
+
 // ============ Narrative 叙事 ============
 export interface Narrative {
   round: number;

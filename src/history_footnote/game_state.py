@@ -46,6 +46,31 @@ class GameState:
     # 听过但没去过的地点（❓ 状态，用于"未知道点"探索）
     heard_locations: list = field(default_factory=list)
 
+    # === 🆕 v2.5 全局随机种子（replay 机制）===
+    # 用途：
+    # 1. 所有 Python random.* 调用用此 seed → 可重放
+    # 2. QA/debug 可以用同一 seed 重现问题
+    # 3. 玩家可以"同 seed 重玩"（分享有趣开局给朋友）
+    # 4. 命运卡抽取也用此 seed（v2.5.x 命运卡系统）
+    # 默认 0 = 每次随机；> 0 = 固定 seed
+    seed: int = 0
+    # 玩家自选 seed（如果 None 用系统生成）
+    requested_seed: int = 0
+
+    # === 🆕 v2.5 命运卡系统 ===
+    # 手牌：开局抽 5 张
+    fate_hand: list = field(default_factory=list)
+    # 已用过的卡（避免重复触发）
+    fate_used: list = field(default_factory=list)
+    # 命运卡触发的特殊事件标记（如 "zhou_secret"）
+    fate_event_flags: list = field(default_factory=list)
+    # NPC 关系（key=npc_name, value=affinity）
+    npc_relations: dict = field(default_factory=dict)
+    # 路遇概率倍率（命运卡可调）
+    encounter_multiplier: float = 1.0
+    # 玩家当前生效的 buff 列表
+    active_buffs: list = field(default_factory=list)
+
     # === 时间进度 ===
     round_number: int = 1
     current_date: str = ""   # 月级时间（如"1587年1月"）
