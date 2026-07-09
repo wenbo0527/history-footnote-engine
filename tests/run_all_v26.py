@@ -19,6 +19,7 @@ def main():
         "tests/test_v26_edge_cases.py",      # L4: 8
         "tests/test_v26_e2e_mock.py",        # L2: 5
         "tests/test_v26_e2e_real_llm.py",    # L3: 3（需要 DEEPSEEK_API_KEY）
+        "tests/test_l9_replay.py",           # L9: 5（重放验证）
     ]
 
     print("=" * 60)
@@ -29,7 +30,8 @@ def main():
     print(f"  - L2 E2E (mock): 5")
     print(f"  - L3 E2E (真实 LLM): 3")
     print(f"  - L4 边界: 8")
-    print(f"总计: 28 个测试")
+    print(f"  - L9 重放: 5")
+    print(f"总计: 33 个测试")
     print()
 
     cwd = ROOT
