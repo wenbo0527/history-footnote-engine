@@ -12,7 +12,10 @@ v1.7.30 拆分原则：
 """
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any, TypedDict
+
+_LOG = logging.getLogger("history_footnote.dm_agent.tools")
 # 🆕 v1.6.7 架构重构：所有 SKILL 元数据清洗逻辑沉淀到 narrative_sanitizer.py
 # dm_agent 不再持有 SKILL_METADATA_PATTERNS / _strip_skill_metadata，改为复用
 from history_footnote.narrative_sanitizer import (
@@ -421,4 +424,61 @@ def make_tools(
         memory.save_event(event)
         return {"saved": True, "summary": summary}
 
-    return [get_state, recall_events, check_rules, query_knowledge, query_narrative_snippets, query_story_segments, get_random_segment, roll_dice, offer_identity_switch, save_event]
+    # 🆕 v2.8.0 段六 W18：fill_chapter_blueprint（章节蓝图 LLM 生成）
+    @tool
+    def fill_chapter_blueprint(chapter_id: int = 1) -> dict:
+        """通过 LLM 生成章节蓝图（v2.8.0 章节制 L2 层 Tool）
+
+        Args:
+            chapter_id: 章节序号（1-based）
+
+        Returns:
+            dict: ChapterBlueprint to_dict() 序列化结果
+            {
+                "chapter_id": int,
+                "chapter_title": str,
+                "chapter_subtitle": str,
+                "nodes": [{"index": int, "role": str, "scene": str, ...}],
+                "transition_hint": str,
+                "meta": {"act": str, "role": str, ...},
+            }
+
+        失败时返回空 dict（让调用方走硬编码兑底）
+        """
+        try:
+            from history_footnote.chapter.dm_tool import fill_chapter_blueprint_via_llm
+            from history_footnote.sub_facades import ChapterFacade
+            from history_footnote.llm_providers import make_llm_for_purpose
+
+            # 1. 构造 ChapterFacade
+            facade = ChapterFacade(
+                state=state,
+                era_config=era_config or {},
+                root_dir=None,  # 让 _blueprint_dir 走 default
+                drama_manager=None,
+            )
+
+            # 2. 构造章节制 LLM（purpose="chapter_init"，温度 0）
+            chapter_llm = make_llm_for_purpose(
+                purpose="chapter_init",
+                provider="mock",  # 段六 W18 默认 mock（避免测试打真 LLM）
+                era_config=era_config or {},
+            )
+
+            # 3. 调 LLM 生成
+            blueprint = fill_chapter_blueprint_via_llm(
+                state=state,
+                chapter_id=chapter_id,
+                era_config=era_config or {},
+                llm_callable=chapter_llm,
+                chapter_facade=facade,
+            )
+            if blueprint is None:
+                return {}
+
+            return blueprint.to_dict()
+        except Exception as e:
+            _LOG.error("fill_chapter_blueprint 失败: %s", e)
+            return {}
+
+    return [get_state, recall_events, check_rules, query_knowledge, query_narrative_snippets, query_story_segments, get_random_segment, roll_dice, offer_identity_switch, save_event, fill_chapter_blueprint]

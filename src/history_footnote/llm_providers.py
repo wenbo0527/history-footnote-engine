@@ -204,6 +204,9 @@ LLM_PURPOSE_TEMPERATURE: dict[str, float] = {
     "voice_options": 0.0, # 生成可选行动
     "internal_voice": 0.0,# 内心独白
     "name_generator": 0.0,# NPC 名字（如有）
+    # 🆕 v2.8.0 段六：章节制 LLM（温度 0，可重放）
+    "chapter_init": 0.0,   # 章节蓝图生成
+    "chapter_settle": 0.0, # 章节摘要生成
     # 略变（一次性 / 创意类）
     "wiki": 0.3,          # 人物档案
     "recap": 0.3,         # 剧情回顾

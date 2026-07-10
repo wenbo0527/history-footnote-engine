@@ -189,6 +189,50 @@ Round 16: chapter_history 追加 1 条，current_chapter 重置为 0
 
 ---
 
+## [v2.8.0-段六] - 2026-07-11
+
+### 🎉 章节制叙事体系 · 段六交付（DM Agent Tool 接入，1 周完成）
+
+> **范围**：v2.8.0 段六 fill_chapter_blueprint Tool 接入 dm_agent
+> **结果**：7 个新测试，0 回归，11 个 Tool 端到端 OK
+> **完整工作日志**：[docs/log/2026-07-11_v2.8.0-段六-work-log.md](docs/log/2026.0-段六-work-log.md)
+
+#### ✨ 段六核心模块
+
+- ✨ `chapter/dm_tool.py`：build_chapter_tool_prompt + fill_chapter_blueprint_via_llm
+- ✨ `dm_agent/tools.py`：fill_chapter_blueprint Tool（第 11 个 Tool）
+- ✨ `llm_providers.py`：chapter_init / chapter_settle purpose（温度 0）
+
+#### 关键设计决策
+
+1. **温度 0**（chapter_init / chapter_settle）— 兼容 v2.7 重放承诺
+2. **JSON 提取容错** — extract_json_from_text + json.loads 双层解析
+3. **Tool 失败回退硬编码** — Tool 返回空 dict 让调用方走 fallback
+4. **provider="mock"** — 段六默认 mock provider（避免测试打真 LLM）
+5. **use HumanMessage.invoke** — 复用 LangChain 协议
+
+#### 端到端验证（smoke）
+
+- ✅ 11 个 Tool 列表（含 fill_chapter_blueprint）
+- ✅ invoke 返回 Blueprint dict（含 chapter_id/title/nodes/meta）
+- ✅ meta.act/role/emotion_tone 由章节制规则引擎正确产出
+- ✅ Tool 容错：mock provider 抛错时返回空 dict
+
+#### 段六不交付（明确边界）
+
+- ❌ 真实 LLM 凭据测试（需用户提供 OPENAI_API_KEY 等）
+- ❌ 章节摘要 LLM Tool（fill_chapter_summary，段六 W19+）
+- ❌ Tool 注入到 DM Agent LangGraph（段七+ 才接）
+- ❌ UI 章节进度条（独立迭代）
+
+#### 测试覆盖
+
+- 🆕 W18：7 个测试（dm_tool + Tool 集成 + temperature）
+- **总计 7 个新测试，全部通过**
+- **基线 214 测试 + 段六 7 = 221 测试全过**
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
