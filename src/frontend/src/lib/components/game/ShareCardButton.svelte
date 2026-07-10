@@ -54,7 +54,7 @@
         role: `${game.identity === 'weaving_male' ? '织工' : game.identity === 'weaving_female' ? '织女' : game.identity === 'merchant_male' ? '牙商' : '佃户'}·${game.character.name}`,
         quote: goldenLine,
         round: game.round_current,
-        stats: `💰${game.cash.toFixed(1)} · 🧵${game.looms}织机 · ⭐${game.reputation}声望`
+        stats: `现金 ${game.cash.toFixed(1)} · ${game.looms} 织机 · 声望 ${game.reputation}`
       });
 
       // 触发下载
@@ -190,7 +190,9 @@
   title="生成可分享的金句卡片"
   aria-label="生成分享卡片"
 >
-  <span class="share-card-icon" aria-hidden="true">📜</span>
+  <span class="share-card-icon">
+    <img src="/icons/nav/share.webp" alt="" />
+  </span>
   <span class="share-card-text">{busy ? '绘制中…' : '金句'}</span>
 </button>
 

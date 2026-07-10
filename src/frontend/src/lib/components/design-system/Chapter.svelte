@@ -2,24 +2,27 @@
   /**
    * Chapter 章节标题
    *
-   * 国风特色：❀ 卷草纹装饰 + 居中 + 大量留白
-   * 用于 narrative 章节分隔
+   * 🆕 v2.7+ 新增回字纹 SVG 装饰（meander）：
+   * - meander 用真正的 SVG 路径，比 emoji 字符更精致
+   * - 其他 ornament 仍保留字符方案（向后兼容）
    *
    * ornament:
-   *   - flower   ❀（默认）
+   *   - meander  回字纹 SVG（🆕 v2.7+ 推荐）
+   *   - flower   ❀
    *   - scroll   ╠═╣
    *   - dot      • • •
    *   - none     无装饰
    */
   interface Props {
     title: string;
-    ornament?: 'flower' | 'scroll' | 'dot' | 'none';
+    ornament?: 'meander' | 'flower' | 'scroll' | 'dot' | 'none';
     level?: 1 | 2 | 3 | 4;
   }
 
-  let { title, ornament = 'flower', level = 2 }: Props = $props();
+  let { title, ornament = 'meander', level = 2 }: Props = $props();
 
   const ornamentMap = {
+    meander: null as null,  // 走 SVG 分支
     flower: '❀',
     scroll: '╠═',
     dot: '• • •',
@@ -34,16 +37,31 @@
   class:chapter-h3={level === 3}
   class:chapter-h4={level === 4}
 >
-  {#if ornament !== 'none'}
+  {#if ornament !== 'none' && ornament !== 'meander'}
     <span class="chapter-deco chapter-deco-left" aria-hidden="true">
       {ornamentMap[ornament]}
     </span>
   {/if}
+  {#if ornament === 'meander'}
+    <!-- 🆕 v2.7+ 回字纹 SVG -->
+    <svg class="chapter-meander left" viewBox="0 0 40 12" aria-hidden="true">
+      <path d="M0 6 L8 6 L8 0 L12 0 L12 12 L16 12 L16 0 L20 0 L20 6 L40 6
+               M0 6 L8 6 L8 12 L12 12 L12 0 L16 0 L16 12 L20 12 L20 6 L40 6"
+            fill="none" stroke="currentColor" stroke-width="1"/>
+    </svg>
+  {/if}
   <h2 class="chapter-title">{title}</h2>
-  {#if ornament !== 'none'}
+  {#if ornament !== 'none' && ornament !== 'meander'}
     <span class="chapter-deco chapter-deco-right" aria-hidden="true">
       {ornamentMap[ornament]}
     </span>
+  {/if}
+  {#if ornament === 'meander'}
+    <svg class="chapter-meander right" viewBox="0 0 40 12" aria-hidden="true">
+      <path d="M40 6 L32 6 L32 0 L28 0 L28 12 L24 12 L24 0 L20 0 L20 6 L0 6
+               M40 6 L32 6 L32 12 L28 12 L28 0 L24 0 L24 12 L20 12 L20 6 L0 6"
+            fill="none" stroke="currentColor" stroke-width="1"/>
+    </svg>
   {/if}
 </header>
 
@@ -65,7 +83,18 @@
     letter-spacing: var(--tracking-wide);
     opacity: 0.7;
     user-select: none;
+    flex: 0 0 auto;
   }
+
+  /* 🆕 v2.7+ 回字纹 SVG 装饰 */
+  .chapter-meander {
+    width: 40px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--color-bronze);
+    opacity: 0.5;
+  }
+  .chapter-meander.right { transform: scaleX(-1); }
 
   .chapter-title {
     font-family: var(--font-display);
@@ -91,10 +120,5 @@
   .chapter-h4 .chapter-title {
     font-size: var(--text-md);
     letter-spacing: var(--tracking-cjk);
-  }
-
-  /* 装饰：流体感 */
-  .chapter-deco {
-    flex: 0 0 auto;
   }
 </style>

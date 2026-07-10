@@ -23,6 +23,8 @@
   --color-ink-mid: #5a4a32;
   --color-ink-light: #8b7355;
   --color-ink-faint: #b8a890;
+  /* 🆕 v2.7+ InkBurst 用的 RGB 三元组（避免 Canvas 内 split 报错）*/
+  --color-ink-rgb: 44, 36, 22;
 
   /* 主色（强调） */
   --color-bronze: #8b6f47;
@@ -51,7 +53,9 @@
   --font-body: "Noto Serif SC", "宋体", serif;
   --font-numeric: "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
-  --font-en: "Cormorant Garamond", "EB Garamond", Georgia, serif;
+  /* 🆕 Taste Skill 合规：避免 Cormorant Garamond（与 Instrument Serif 类似的 AI 默认）
+     改用 PP Editorial New（"heritage editorial"专属），加 native fallback */
+  --font-en: "PP Editorial New", "Saol Display", "Canela", "Charter", "Iowan Old Style", Georgia, "Times New Roman", serif;
 
   /* ===== 字号（Major Third 1.25） ===== */
   --text-xs: 0.75rem;
@@ -137,6 +141,12 @@
   --ease-ink: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-brush: cubic-bezier(0.7, 0, 0.3, 1);
   --ease-paper: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 🆕 Taste Skill 动效升级：水墨国风专属动效
+     比 opacity/transform 更"有质感"——墨水晕开 + 卷轴展开 */
+  --anim-ink-spread: 800ms var(--ease-ink) both;       /* 墨水从中心晕开 */
+  --anim-scroll-unroll: 1200ms var(--ease-brush) both;  /* 卷轴水平展开 */
+  --anim-stamp-press: 400ms var(--ease-ink) both;      /* 印章敲下 */
 
   /* ===== Z-index ===== */
   --z-base: 0;

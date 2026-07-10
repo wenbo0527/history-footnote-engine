@@ -80,7 +80,7 @@
     <!-- 主体内容 -->
     <div class="overlay-card">
       <!-- 卷草纹标题 -->
-      <div class="overlay-title">
+      <div class="overlay-title ink-spread">
         <span class="title-ornament">❀</span>
         <h2 class="title-text">命数推演中</h2>
         <span class="title-ornament">❀</span>

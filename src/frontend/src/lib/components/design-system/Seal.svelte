@@ -2,10 +2,14 @@
   /**
    * Seal 朱砂印章
    *
+   * 🆕 v2.7+ 国风升级：
+   * - 残缺纹理：SVG feTurbulence + feDisplacementMap 制造破边
+   * - 盖落动画：active 时 scale(0.96) + 旋转，松开回弹
+   * - 旋转默认 -3deg：模拟手工盖落的歪斜
+   * - 印泥脉冲（pulse）：呼吸式外发光
+   *
    * 国风特有：朱砂色 + 方正字 + 印泥效果
    * 用于关键操作按钮（提交、确认、决定）
-   *
-   * 印章的"按压感"：hover 时微微下压，active 时印泥扩散
    */
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';
@@ -15,6 +19,7 @@
     size?: 'sm' | 'md' | 'lg';
     ink?: 'fresh' | 'aged';  // fresh 朱砂鲜亮，aged 朱砂褪色
     pulse?: boolean;     // 印泥脉冲动画
+    rotate?: number;     // 旋转角度（默认 -3deg 模拟手工）
     children?: Snippet;  // 可选图标
   }
 
@@ -23,10 +28,14 @@
     size = 'md',
     ink = 'fresh',
     pulse = false,
+    rotate = -3,
     children,
     type = 'button',
     ...rest
   }: Props = $props();
+
+  // 唯一 filter id（避免 SVG 滤镜冲突）
+  const FILTER_ID = `seal-rough-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
 <button
@@ -38,12 +47,25 @@
   class:seal-fresh={ink === 'fresh'}
   class:seal-aged={ink === 'aged'}
   class:seal-pulse={pulse}
+  style="--seal-rotate: {rotate}deg"
   {...rest}
 >
   <span class="seal-text">{text}</span>
   {#if children}
     <span class="seal-icon">{@render children()}</span>
   {/if}
+  <!-- 🆕 v2.7+ 残缺纹理层（SVG） -->
+  <svg class="seal-rough" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <filter id={FILTER_ID}>
+        <feTurbulence baseFrequency="0.04" numOctaves="2" seed="3"/>
+        <feDisplacementMap in="SourceGraphic" scale="3"/>
+      </filter>
+    </defs>
+    <rect x="0" y="0" width="100" height="100"
+          fill="none" stroke="currentColor" stroke-width="0.6"
+          filter="url(#{FILTER_ID})" opacity="0.4"/>
+  </svg>
   <span class="seal-edge" aria-hidden="true"></span>
 </button>
 
@@ -65,9 +87,11 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     overflow: hidden;
+    /* 🆕 v2.7+ 旋转 + 缩放过渡（盖落感） */
+    transform: rotate(var(--seal-rotate, -3deg));
     transition:
       background-color var(--duration-normal) var(--ease-ink),
-      transform var(--duration-quick) var(--ease-ink),
+      transform 200ms cubic-bezier(0.7, 0, 0.3, 1),
       box-shadow var(--duration-normal) var(--ease-ink);
     box-shadow:
       inset 0 0 0 1px rgba(245, 239, 225, 0.15),
@@ -85,7 +109,18 @@
     pointer-events: none;
   }
 
-  /* 边角磨损 */
+  /* 🆕 v2.7+ 残缺纹理层：覆盖整个按钮，制造破边 */
+  .seal-rough {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--color-cinnabar-dark);
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+
+  /* 边角磨损（保留原效果） */
   .seal-edge {
     position: absolute;
     inset: 0;
@@ -105,23 +140,24 @@
     color: rgba(245, 239, 225, 0.85);
   }
 
-  /* Hover: 微微下压 */
+  /* 🆕 v2.7+ Hover: 微微缩放 + 旋转角度不变（印章抬起） */
   .seal:hover:not(:disabled) {
-    transform: translateY(1px);
+    transform: rotate(var(--seal-rotate, -3deg)) scale(1.03);
     box-shadow:
       inset 0 0 0 1px rgba(245, 239, 225, 0.2),
-      0 1px 1px rgba(122, 31, 31, 0.4);
+      0 2px 4px rgba(122, 31, 31, 0.4);
   }
 
-  /* Active: 印泥扩散 */
+  /* 🆕 v2.7+ Active: 盖落（缩 + 轻旋），配合 100ms 短促过渡 */
   .seal:active:not(:disabled) {
-    transform: translateY(2px);
+    transform: rotate(calc(var(--seal-rotate, -3deg) + 1deg)) scale(0.96);
+    transition-duration: 100ms;
     box-shadow:
       inset 0 0 0 1px rgba(245, 239, 225, 0.3),
       inset 0 0 12px rgba(122, 31, 31, 0.6);
   }
 
-  /* Pulse: 印泥脉冲 */
+  /* Pulse: 印泥脉冲（用 aesthetic.css 的 sealPulse） */
   .seal-pulse::after {
     content: '';
     position: absolute;

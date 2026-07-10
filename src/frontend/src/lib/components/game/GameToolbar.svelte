@@ -20,11 +20,11 @@
   let { onwiki, onrecap, onglossary, onfeedback, onsettings }: Props = $props();
 
   const tools = $derived([
-    { id: 'wiki',      label: '档案', icon: '📜', onclick: onwiki },
-    { id: 'recap',     label: '回顾', icon: '🔄', onclick: onrecap },
-    { id: 'glossary',  label: '词条', icon: '📖', onclick: onglossary },
-    { id: 'feedback',  label: '反馈', icon: '💬', onclick: onfeedback },
-    { id: 'settings',  label: '设置', icon: '⚙️', onclick: onsettings }
+    { id: 'wiki',      label: '档案', icon: '/icons/nav/wiki.webp',     onclick: onwiki },
+    { id: 'recap',     label: '回顾', icon: '/icons/nav/recap.webp',    onclick: onrecap },
+    { id: 'glossary',  label: '词条', icon: '/icons/nav/recap.webp',    onclick: onglossary },
+    { id: 'feedback',  label: '反馈', icon: '/icons/nav/share.webp',    onclick: onfeedback },
+    { id: 'settings',  label: '设置', icon: '/icons/nav/settings.webp', onclick: onsettings }
   ]);
 </script>
 
@@ -37,7 +37,7 @@
       aria-label={t.label}
       title={t.label}
     >
-      <span class="game-tool-icon" aria-hidden="true">{t.icon}</span>
+      <img src={t.icon} alt="" class="game-tool-icon" />
       <span class="game-tool-label">{t.label}</span>
     </button>
   {/each}
@@ -73,7 +73,9 @@
   }
 
   .game-tool-icon {
-    font-size: var(--text-base);
+    width: 1.2em;
+    height: 1.2em;
+    object-fit: contain;
   }
 
   /* 移动端：只显示图标 */

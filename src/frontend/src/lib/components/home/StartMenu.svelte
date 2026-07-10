@@ -16,7 +16,7 @@
   import { Chapter, Divider, Button, Seal, Spinner, toast } from '$lib/components/design-system';
   import { session, sessionActions } from '$lib/stores';
   import { listArchives } from '$lib/api/archives';
-  import { getCurrentUsername, getCurrentAccountId, logout, getAccountInfo, isLoggedIn, isGuest } from '$lib/api/account';
+  import { getCurrentUsername, getCurrentAccountId, logout, getAccountInfo, isLoggedIn, isGuest, ensureGuestAccountId } from '$lib/api/account';
   import type { Archive } from '$lib/api/types';
 
   let archives = $state<Archive[]>([]);
@@ -25,6 +25,10 @@
   let currentAccountId = $state<string | null>(null);
 
   onMount(async () => {
+    // 🆕 v2.7+: 游客也要拿真 guest_id（首页已兜底一次，这里再保险）
+    if (!currentAccountId && isGuest()) {
+      try { await ensureGuestAccountId(); } catch { /* 静默 */ }
+    }
     accountUsername = getCurrentUsername();
     currentAccountId = getCurrentAccountId();
 
@@ -46,8 +50,9 @@
   async function loadArchives() {
     loadingArchives = true;
     try {
-      // 用 account_id 加载（没登录用 'default'）
-      const accountId = currentAccountId ?? 'default';
+      // 🆕 v2.7+: 已登录/游客都用真 account_id 拉取，不再回退到 'default'
+      // （首页已保证游客有 guest_id；若仍为空表示后端不可用 → 返回空列表）
+      const accountId = currentAccountId ?? '';
       archives = await listArchives(accountId);
     } catch (e) {
       archives = [];
@@ -65,6 +70,12 @@
     accountUsername = null;
     toast.success('已登出');
   }
+
+  // 🆕 v2.7+: 游客模式点"登录/注册"时不丢本地存档
+  function handleGoLogin() {
+    // 保留 SESSION_KEY（游客 ID）和 GUEST_KEY，等注册成功后由后端迁移
+    goto('/login');
+  }
 </script>
 
 <article class="start-menu">
@@ -80,7 +91,7 @@
     <aside class="start-menu-left">
       <!-- 开始新游戏 -->
       <div class="start-menu-card start-menu-card-primary hf-fade-up">
-        <div class="start-menu-card-icon">🎭</div>
+        <img src="/icons/nav/home.webp" alt="" class="start-menu-card-icon" />
         <h2 class="start-menu-card-title">开始新游戏</h2>
         <p class="start-menu-card-desc">选择一个朝代，创建你的角色，开启一段历史注脚</p>
         <div class="start-menu-card-action">
@@ -90,7 +101,7 @@
 
       <!-- 我的账户 -->
       <div class="start-menu-card hf-fade-up">
-        <div class="start-menu-card-icon">👤</div>
+        <img src="/icons/nav/choice.webp" alt="" class="start-menu-card-icon" />
         <h2 class="start-menu-card-title">我的账户</h2>
         <p class="start-menu-card-desc">
           {#if accountUsername}
@@ -109,7 +120,7 @@
               登 出
             </Button>
           {:else}
-            <Button variant="primary" size="sm" onclick={() => goto('/login')} fullWidth>
+            <Button variant="primary" size="sm" onclick={handleGoLogin} fullWidth>
               登录 / 注册
             </Button>
           {/if}
@@ -148,7 +159,7 @@
         </div>
       {:else if archives.length === 0}
         <div class="start-menu-archive-empty">
-          <div class="start-menu-archive-empty-icon">📜</div>
+          <img src="/icons/nav/archive.webp" alt="" class="start-menu-archive-empty-icon" />
           <p class="start-menu-archive-empty-title">暂无存档</p>
           <p class="start-menu-archive-empty-desc">
             {#if accountUsername}

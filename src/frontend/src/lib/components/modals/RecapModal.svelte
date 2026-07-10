@@ -86,10 +86,10 @@
     <div class="recap-content">
       <Chapter title="回顾摘要" level={3} />
       <div class="recap-meta">
-        <span>📅 当前: {recap.current_date ?? '未明'}</span>
-        <span>📖 共 {recap.total_narratives} 条叙事</span>
+        <span>当前: {recap.current_date ?? '未明'}</span>
+        <span>共 {recap.total_narratives} 条叙事</span>
         {#if recap.round_number}
-          <span>🔄 第 {recap.round_number} 回合</span>
+          <span>第 {recap.round_number} 回合</span>
         {/if}
       </div>
 

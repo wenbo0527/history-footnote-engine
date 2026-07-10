@@ -34,7 +34,9 @@
         class:identity-card-selected={selected}
         onclick={() => select(item.id as Identity)}
       >
-        <span class="identity-icon" aria-hidden="true">{item.icon}</span>
+        <span class="identity-icon" aria-hidden="true">
+          <img src={item.icon} alt="" class="identity-icon-img" />
+        </span>
         <span class="identity-name">{item.name}</span>
         <span class="identity-gender">{genderLabel}</span>
         <span class="identity-desc">{item.desc}</span>
@@ -109,8 +111,14 @@
   }
 
   .identity-icon {
-    font-size: var(--text-3xl);
+    display: inline-flex;
     line-height: 1;
+  }
+
+  .identity-icon-img {
+    width: 2.5em;
+    height: 2.5em;
+    object-fit: contain;
   }
 
   .identity-name {
@@ -156,6 +164,10 @@
     }
     .identity-icon {
       font-size: var(--text-2xl);
+    }
+    .identity-icon-img {
+      width: 2em;
+      height: 2em;
     }
   }
 </style>

@@ -19,7 +19,7 @@
    */
   import { goto } from '$app/navigation';
   import {
-    login, register, isLoggedIn, setGuest, getInviteCode, setInviteCode
+    login, register, isLoggedIn, setGuest, getInviteCode, setInviteCode, ensureGuestAccountId
   } from '$lib/api/account';
   import { Chapter, Divider, Button, Seal, Spinner, toast } from '$lib/components/design-system';
   import { onMount } from 'svelte';
@@ -107,9 +107,19 @@
     failCount = 0;
   }
 
-  function handleGuest() {
-    setGuest();
-    toast.success('以访客身份进入');
+  async function handleGuest() {
+    try {
+      // 🆕 v2.7+: 先拿到真实 guest_id（后端 /api/menu 会幂等创建）
+      // 这样后续 /api/archives 才能按 account_id 正确隔离存档
+      await ensureGuestAccountId();
+      setGuest();
+      toast.success('以访客身份进入');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '游客初始化失败';
+      toast.error(msg);
+      error = msg;
+      return;
+    }
     const next = $page.url.searchParams.get('next') ?? '/';
     goto(next);
   }

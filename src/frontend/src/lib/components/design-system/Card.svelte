@@ -49,8 +49,11 @@
 
 <style>
   .card {
-    border-radius: var(--radius-lg);
+    /* 🆕 v2.7+ 海棠角：不对称圆角（水平 12 / 垂直 8） */
+    border-radius: var(--radius-haitang, 12px / 8px);
     transition: all var(--duration-normal) var(--ease-ink);
+    position: relative;
+    overflow: hidden;
   }
 
   /* Variants */
@@ -73,4 +76,15 @@
   .shadow-paper { box-shadow: var(--shadow-paper); }
   .shadow-fold  { box-shadow: var(--shadow-fold); }
   .shadow-ink   { box-shadow: var(--shadow-ink); }
+
+  /* 🆕 v2.7+ 纸张微凹感（仅 paper/aged 变体） */
+  .card-paper::before,
+  .card-aged::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 30px rgba(200, 190, 170, 0.3);
+    border-radius: inherit;
+  }
 </style>

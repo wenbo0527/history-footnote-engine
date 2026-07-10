@@ -26,7 +26,7 @@
 <header class="app-header" data-variant={variant}>
   <div class="app-header-brand">
     <a href="/" class="app-header-logo">
-      <span class="app-header-emoji" aria-hidden="true">🏮</span>
+      <img src="/icons/nav/home.webp" alt="" class="app-header-emoji" />
       <span class="app-header-name">历史注脚</span>
     </a>
   </div>
@@ -50,9 +50,18 @@
 
     {#if stats}
       <div class="app-header-stats">
-        <span class="app-header-stat" title="现金">💰 {stats.cash.toFixed(2)}</span>
-        <span class="app-header-stat" title="织机">🧵 {stats.looms}</span>
-        <span class="app-header-stat" title="声望">⭐ {stats.reputation}</span>
+        <span class="app-header-stat" title="现金">
+          <img src="/icons/stats/cash.webp" alt="" class="app-header-stat-icon" />
+          {stats.cash.toFixed(2)}
+        </span>
+        <span class="app-header-stat" title="织机">
+          <img src="/icons/stats/loom.webp" alt="" class="app-header-stat-icon" />
+          {stats.looms}
+        </span>
+        <span class="app-header-stat" title="声望">
+          <img src="/icons/stats/reputation.webp" alt="" class="app-header-stat-icon" />
+          {stats.reputation}
+        </span>
       </div>
     {/if}
   {/if}
@@ -81,6 +90,14 @@
     flex: 0 0 auto;
   }
 
+  .app-header-stat-icon {
+    width: 1.2em;
+    height: 1.2em;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 0.2em;
+  }
+
   .app-header-logo {
     display: inline-flex;
     align-items: center;
@@ -93,7 +110,9 @@
   .app-header-logo:hover { color: var(--color-bronze-light); }
 
   .app-header-emoji {
-    font-size: var(--text-lg);
+    width: 1.4em;
+    height: 1.4em;
+    object-fit: contain;
   }
 
   .app-header-name {

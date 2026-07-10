@@ -30,7 +30,7 @@
 
 <header class="game-header">
   <div class="game-header-info">
-    <span class="game-header-emoji" aria-hidden="true">🎭</span>
+    <img src="/icons/nav/home.webp" alt="" class="game-header-emoji" />
     <div class="game-header-text">
       <h1 class="game-header-title">{yearLabel} → {yearMaxLabel}</h1>
       <p class="game-header-subtitle">
@@ -54,26 +54,27 @@
     >
       {#each Array.from({ length: game.action_points_max }) as _, i (i)}
         {@const filled = i < game.action_points_current}
-        <span
+        <img
+          src="/icons/stats/action.webp"
+          alt=""
           class="game-header-ap"
           class:game-header-ap-filled={filled}
-          aria-hidden="true"
-        >❤</span>
+        />
       {/each}
       <span class="game-header-ap-label">
         {game.action_points_current}/{game.action_points_max}
       </span>
     </div>
     <div class="game-header-stat" title="银两">
-      <span class="game-header-stat-icon">💰</span>
+      <img src="/icons/stats/cash.webp" alt="" class="game-header-stat-icon" />
       <span class="game-header-stat-val">{game.cash.toFixed(2)}</span>
     </div>
     <div class="game-header-stat" title="织机">
-      <span class="game-header-stat-icon">🧵</span>
+      <img src="/icons/stats/loom.webp" alt="" class="game-header-stat-icon" />
       <span class="game-header-stat-val">{game.looms}</span>
     </div>
     <div class="game-header-stat" title="声望">
-      <span class="game-header-stat-icon">⭐</span>
+      <img src="/icons/stats/reputation.webp" alt="" class="game-header-stat-icon" />
       <span class="game-header-stat-val">{game.reputation}</span>
     </div>
   </div>
@@ -107,8 +108,10 @@
   }
 
   .game-header-emoji {
-    font-size: var(--text-2xl);
-    line-height: 1;
+    width: 1.8em;
+    height: 1.8em;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .game-header-title {
@@ -176,16 +179,17 @@
   }
 
   .game-header-ap {
-    font-size: var(--text-sm);
-    line-height: 1;
-    color: rgba(245, 239, 225, 0.25);
-    transition: color var(--duration-normal) var(--ease-ink),
+    width: 1em;
+    height: 1em;
+    object-fit: contain;
+    opacity: 0.25;
+    transition: opacity var(--duration-normal) var(--ease-ink),
                 transform var(--duration-normal) var(--ease-ink);
   }
 
   .game-header-ap-filled {
-    color: var(--color-cinnabar);
-    text-shadow: 0 0 4px rgba(165, 42, 42, 0.4);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(165, 42, 42, 0.4));
   }
 
   .game-header-ap-label {
@@ -209,7 +213,11 @@
   }
 
   .game-header-stat-icon {
-    font-size: var(--text-base);
+    width: 1.2em;
+    height: 1.2em;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 0.2em;
   }
 
   /* 工具栏在 header 底部一行 */

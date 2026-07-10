@@ -41,28 +41,28 @@ export const IDENTITY_PRESETS: Record<Identity, {
   weaving_male: {
     name: '织工',
     gender: 'male',
-    icon: '🧵',
+    icon: '/icons/stats/loom.webp',
     desc: '苏州盛泽，挽丝织绸',
     profile: { age: 30, occupation: '织工', hometown: '盛泽镇' }
   },
   weaving_female: {
     name: '织女',
     gender: 'female',
-    icon: '🧵',
+    icon: '/icons/stats/loom.webp',
     desc: '盛泽镇东栅巷',
     profile: { age: 28, occupation: '织工', hometown: '盛泽镇' }
   },
   merchant_male: {
     name: '牙商',
     gender: 'male',
-    icon: '💰',
+    icon: '/icons/stats/cash.webp',
     desc: '往来于市肆之间',
     profile: { age: 35, occupation: '牙商', hometown: '盛泽镇' }
   },
   farmer_male: {
     name: '佃户',
     gender: 'male',
-    icon: '🌾',
+    icon: '/icons/stats/loom.webp',
     desc: '日出而作，日落而息',
     profile: { age: 40, occupation: '佃户', hometown: '盛泽镇' }
   }

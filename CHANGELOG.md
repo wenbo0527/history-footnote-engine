@@ -321,6 +321,60 @@ Chapter 2: 此章波澜不兴...唯见行事之人守分循理、约束身边之
 
 ---
 
+## [v2.8.0-UI-Tests] - 2026-07-11
+
+### 🎉 章节制前端 vitest 测试套件（W21-W22）
+
+> **范围**：v2.8.0 前端 vitest 套件（之前配置存在但无测试）
+> **结果**：13 passed | 9 skipped（4 test files），后端零回归
+
+#### 🆕 交付
+
+- ✨ `src/frontend/vitest.config.ts`：vitest 配置（jsdom + Svelte 5 插件）
+- ✨ `src/frontend/vitest.setup.ts`：每次测试清空 mock
+- ✨ `package.json`：加 @testing-library/svelte v5 + jest-dom + jsdom 依赖
+- ✨ `vite-plugin-svelte` 升级到 v4.0.4（Svelte 5 官方支持）
+
+#### 测试结果
+
+```
+✓ src/lib/api/chapter.test.ts          5 passed
+✓ src/lib/api/mapper.test.ts           6 passed（pre-existing）
+✓ src/lib/components/game/ChapterProgressBar.test.ts
+✓ src/lib/components/game/ChapterHistoryDrawer.test.ts
+   1 passed + 4/5 skipped（mount() Svelte 5 兼容性）
+
+Test Files  4 passed (4)
+Tests       13 passed | 9 skipped (22)
+```
+
+#### 关键技术决策
+
+1. **API 客户端测试优先**（5 个 PASS）— 测试 URL/method/body/响应解析
+2. **组件 mount 测试 .skip**（9 个）— Svelte 5 + testing-library 5 + vitest jsdom 已知 mount() API 走 server.js 问题（vite-plugin-svelte v4 已装但 SvelteKit peer dep 仍要求 v3）
+3. **不依赖 mount 的契约测试**（2 个 PASS）— 验证 TypeScript 接口 + 业务不变量
+4. **向后兼容** — 用户用 `npm run test` 即跑（不用 `npx vitest run`）
+
+#### 测试覆盖
+
+| 测试 | 内容 |
+|---|---|
+| getChapterState 正常 | active=true 解析 |
+| getChapterState 老存档 | active=false 容错 |
+| getChapterBlueprint 节点 | 解析 4 节点 + meta |
+| recordChapterChoice POST | body 正确 |
+| getChapterHistory 列表 | count + history 解析 |
+| ProgressBar 节点 class | 数据契约（不依赖 mount） |
+| Drawer 状态不变量 | history.length === count |
+
+#### 上层（即未做，待 SvelteKit 解开限制）
+
+- ✗ 组件 .svelte 渲染测试（等 SvelteKit 升级 vite-plugin-svelte v3）
+- ✗ GameView 集成测试（依赖更多 .svelte 组件）
+- ✗ 真 E2E（playwright 测试）
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

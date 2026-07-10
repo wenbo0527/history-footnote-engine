@@ -42,7 +42,14 @@
 
 <aside class="char-card" class:char-card-collapsed={collapsible && !expanded}>
   <header class="char-card-header">
-    <div class="char-card-avatar" aria-hidden="true">👤</div>
+    <div class="char-card-avatar" aria-hidden="true">
+      <img
+        src={`/character/${character.identity ?? $game?.identity ?? 'weaving_male'}.webp`}
+        alt=""
+        class="char-card-avatar-img"
+        onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
+      />
+    </div>
     <h3 class="char-card-name">{character.name}</h3>
     <p class="char-card-meta">{character.occupation} · {character.age}岁</p>
     <p class="char-card-location">{character.hometown}</p>
@@ -164,9 +171,16 @@
   }
 
   .char-card-avatar {
-    font-size: var(--text-4xl);
     line-height: 1;
     margin-bottom: var(--space-2);
+    display: flex;
+    justify-content: center;
+  }
+
+  .char-card-avatar-img {
+    width: 6em;
+    height: 7.5em;
+    object-fit: contain;
   }
 
   .char-card-name {

@@ -42,6 +42,21 @@ h1, h2, h3, h4, h5, h6 {
 
 h1 { font-size: var(--text-3xl); }
 h2 { font-size: var(--text-2xl); }
+
+/* ============================================================
+ * 可访问性：减少动画（残障玩家 / 系统设置）
+ * Taste Skill 合规：prefers-reduced-motion 必须支持
+ * ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 h3 { font-size: var(--text-xl); }
 h4 { font-size: var(--text-lg); }
 h5 { font-size: var(--text-md); }

@@ -1,0 +1,178 @@
+/* ============================================================
+ * 🆕 v2.7+ 新中式国风装饰层
+ * ============================================================
+ * 来源：v2.7+ 新中式国风 UI 重设计（CSS + SVG + Canvas 协作）
+ * 作用：宣纸纹理 / 海棠角 / 卷轴转场 / 朱砂脉冲
+ * 依赖：tokens.css（必须先加载）
+ * ============================================================ */
+
+:root {
+  /* ===========================================================
+   * 1. 宣纸纹理（多层背景叠加）
+   * ===========================================================
+   * 第 1 层：极淡径向渐变（纸张透光不均）
+   * 第 2 层：SVG 噪声（宣纸纤维）
+   * 第 3 层：基础米黄渐变
+   * =========================================================== */
+  --paper-texture:
+    radial-gradient(
+      ellipse at 30% 20%,
+      rgba(255, 248, 230, 0.4) 0%,
+      transparent 60%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='5'/><feColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.35  0 0 0 0 0.20  0 0 0 0.18 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>"),
+    linear-gradient(135deg, #f5efe1 0%, #ede4cc 100%);
+
+  --paper-texture-blend: soft-light, normal, normal;
+  --paper-texture-size: 220px 220px, 220px 220px, 100% 100%;
+
+  /* 海棠角（不对称圆角：水平 12px / 垂直 8px） */
+  --radius-haitang: 12px / 8px;
+  --radius-haitang-lg: 18px / 12px;
+  --radius-haitang-sm: 8px / 5px;
+
+  /* 卷轴展开时长 */
+  --duration-scroll-unfurl: 800ms;
+}
+
+/* ===========================================================
+ * 2. body 宣纸背景（global）
+ * =========================================================== */
+body {
+  background: var(--paper-texture);
+  background-blend-mode: var(--paper-texture-blend);
+  background-attachment: fixed;
+  background-size: var(--paper-texture-size);
+}
+
+/* 暗色模式：纹理更弱，底色更暗 */
+@media (prefers-color-scheme: dark) {
+  body {
+    background:
+      radial-gradient(
+        ellipse at 30% 20%,
+        rgba(60, 50, 40, 0.4) 0%,
+        transparent 60%
+      ),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='5'/><feColorMatrix values='0 0 0 0 0.30  0 0 0 0 0.25  0 0 0 0 0.15  0 0 0 0.25 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>"),
+      linear-gradient(135deg, #1a1612 0%, #221d18 100%);
+    background-blend-mode: soft-light, normal, normal;
+    background-attachment: fixed;
+    background-size: 220px 220px, 220px 220px, 100% 100%;
+  }
+}
+
+/* ===========================================================
+ * 3. 纸纹工具类（局部使用）
+ * =========================================================== */
+.paper-bg {
+  background: var(--paper-texture);
+  background-blend-mode: var(--paper-texture-blend);
+  background-size: var(--paper-texture-size);
+}
+
+/* 卡片专用：宣纸 + 内阴影（微凹） */
+.paper-card {
+  background: var(--color-paper);
+  background-image: var(--paper-texture);
+  background-blend-mode: var(--paper-texture-blend);
+  background-size: var(--paper-texture-size);
+  box-shadow:
+    inset 0 0 30px rgba(200, 190, 170, 0.3),
+    var(--shadow-fold);
+  border: 1px solid var(--color-bronze);
+  border-radius: var(--radius-haitang);
+}
+
+/* ===========================================================
+ * 4. 海棠角（工具类）
+ * =========================================================== */
+.haitang { border-radius: var(--radius-haitang); }
+.haitang-lg { border-radius: var(--radius-haitang-lg); }
+.haitang-sm { border-radius: var(--radius-haitang-sm); }
+
+/* ===========================================================
+ * 5. 卷轴展开转场
+ * =========================================================== */
+@keyframes scrollUnfurl {
+  0% {
+    clip-path: inset(0 50% 0 50%);
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.page-transition {
+  animation: scrollUnfurl var(--duration-scroll-unfurl) cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: clip-path, opacity, transform;
+}
+
+/* ===========================================================
+ * 6. 朱砂脉冲（轻量动效）
+ * =========================================================== */
+@keyframes sealPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(160, 40, 40, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(160, 40, 40, 0);
+  }
+}
+
+.seal-pulse { animation: sealPulse 2.4s ease-out infinite; }
+
+/* ===========================================================
+ * 🆕 Taste Skill 升级：墨水晕开（filter blur 渐入）
+ * 比单纯 opacity 更有"墨水渗透宣纸"的质感
+ * =========================================================== */
+@keyframes inkSpread {
+  0% {
+    filter: blur(6px) opacity(0);
+    transform: scale(1.04);
+  }
+  100% {
+    filter: blur(0) opacity(1);
+    transform: scale(1);
+  }
+}
+.ink-spread { animation: inkSpread var(--duration-slow, 800ms) var(--ease-ink, ease) both; }
+
+/* ===========================================================
+ * 🆕 Taste Skill 升级：印章敲下（垂直反弹）
+ * 关键操作（保存/确认/提交）用
+ * =========================================================== */
+@keyframes stampPress {
+  0%   { transform: scale(1.4); opacity: 0; filter: blur(2px); }
+  60%  { transform: scale(0.92); opacity: 1; filter: blur(0); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.stamp-press { animation: stampPress 400ms var(--ease-ink) both; }
+
+/* ===========================================================
+ * 7. 可访问性：prefers-reduced-motion 降级
+ * =========================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+    clip-path: none;
+    transform: none;
+    opacity: 1;
+  }
+  .seal-pulse {
+    animation: none;
+  }
+  .ink-spread,
+  .stamp-press {
+    animation: none;
+    filter: none;
+    transform: none;
+  }
+}

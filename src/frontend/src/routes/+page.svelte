@@ -11,14 +11,16 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { StartMenu } from '$lib/components/home';
-  import { isLoggedIn, isGuest, setGuest } from '$lib/api/account';
+  import { isLoggedIn, isGuest, setGuest, ensureGuestAccountId } from '$lib/api/account';
   import { Spinner } from '$lib/components/design-system';
 
   let checking = $state(true);
 
-  onMount(() => {
+  onMount(async () => {
     // URL 参数 ?skip_login=1 → 直接进首页（调试用）
     if ($page.url.searchParams.get('skip_login') === '1') {
+      // 🆕 v2.7+ 即使跳过登录也要给一个 guest_id，否则 StartMenu 拉不到存档
+      try { await ensureGuestAccountId(); } catch { /* 静默 */ }
       checking = false;
       return;
     }
@@ -30,6 +32,8 @@
 
     // 访客模式：localStorage 标记（用户在 /login 点"以访客身份进入"）
     if (isGuest()) {
+      // 🆕 v2.7+ 兜底：保证 guest_id 存在（之前可能因网络失败没拿到）
+      try { await ensureGuestAccountId(); } catch { /* 静默 */ }
       checking = false;
       return;
     }
