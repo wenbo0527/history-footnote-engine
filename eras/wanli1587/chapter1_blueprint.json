@@ -68,5 +68,32 @@
       "knowledge_ids": ["kn_spring_silk_harvest", "kn_shengze_community"],
       "completion_condition": "round_16_reached"
     }
-  ]
+  ],
+  "differentiation": {
+    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "守乡人": {
+      "node_3_scene": "赵里长亲自上门催税。他身后跟着两个衙役。沈氏抱着阿宝躲在里屋，颤抖着说：'相公，要不就把织机给他们吧……'你看着织机，想起父亲留下的家训，攥紧了拳头。",
+      "node_3_options": [
+        {"text": "把织机抵出去，保住家人", "path_hint": "main_tax_resistance"},
+        {"text": "硬抗，织机是祖宗的", "path_hint": "main_tax_resistance"},
+        {"text": "带着沈氏和儿子去外乡", "path_hint": "side_silk_trade"}
+      ]
+    },
+    "外望人": {
+      "node_1_scene": "万历十五年三月，盛泽镇春市开张。你站在春市最高处，看着这片你熟悉又陌生的土地，心里想着更大的世界。丝路迢迢，听说河西走廊的商路正旺。",
+      "node_1_options": [
+        {"text": "向走丝路的客商打听行情", "path_hint": "side_silk_trade"},
+        {"text": "去牙行问问有没有外销的路子", "path_hint": "side_silk_trade"},
+        {"text": "先稳住家里，再图大事", "path_hint": "main_tax_resistance"},
+        {"text": "陪沈氏在自家织房", "path_hint": "main_tax_resistance"}
+      ],
+      "node_2_scene": "春税预单下来了。你听说这次税额不均——盛泽加了三成，而苏州城里的丝商却纹银未动。你若有所思：是不是该上告苏州府？",
+      "node_2_options": [
+        {"text": "去苏州府衙门请愿", "path_hint": "side_silk_trade"},
+        {"text": "联合织户集体抗税", "path_hint": "main_tax_resistance"},
+        {"text": "找牙行借债先垫上", "path_hint": "main_tax_resistance"},
+        {"text": "私下找赵里长谈分成", "path_hint": "side_silk_trade"}
+      ]
+    }
+  }
 }

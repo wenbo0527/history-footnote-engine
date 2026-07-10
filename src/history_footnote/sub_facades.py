@@ -475,19 +475,22 @@ class ChapterFacade:
         self,
         llm_output: dict,
         chapter_id: int = None,
+        player_build: str = None,
     ) -> "ChapterBlueprint":
-        """LLM JSON → ChapterBlueprint（带校验+兑底）
+        """LLM JSON → ChapterBlueprint（带校验+兑底+Build 分化）
 
         段二 W6 完整流程：
         1. 解析元属性（从 chapter_id 或 llm_output）
         2. schema_converter 转换（含节点裁剪）
         3. validator 校验
         4. 校验失败 → fallback 兑底（内容保留+结构换默认）
-        5. 返回最终 Blueprint
+        5. 🆕 v2.8.0 段四 W14：Build 分化（按 player_build 覆盖 node.scene/options）
+        6. 返回最终 Blueprint
 
         Args:
             llm_output: LLM 生成的 dict
             chapter_id: 章节序号（从 llm_output.meta.chapter_id 也可读）
+            player_build: 玩家 Build（默认从 state.player_build 读）
 
         Returns:
             ChapterBlueprint 实例
@@ -502,13 +505,17 @@ class ChapterFacade:
             chapter_id = llm_output.get("meta", {}).get("chapter_id", 1) if isinstance(llm_output, dict) else 1
         chapter_meta = self.resolve_chapter_meta(chapter_id)
 
+        # 段四 W14：默认从 state 读 player_build
+        if player_build is None:
+            player_build = getattr(self.state, "player_build", "") or ""
+
         # 2. schema 转换
         converter = SchemaConverter(self.era_config or {})
         try:
             blueprint = converter.convert(llm_output, chapter_meta)
         except ValueError as e:
             _LOG.error("SchemaConverter 失败: %s，直接兑底", e)
-            return ChapterFallback.fallback(llm_output, chapter_meta, [str(e)])
+            blueprint = ChapterFallback.fallback(llm_output, chapter_meta, [str(e)])
 
         # 3. 校验
         validator = ChapterValidator(self.era_config or {})
@@ -516,7 +523,12 @@ class ChapterFacade:
 
         # 4. 兑底（如果校验失败）
         if errors:
-            return ChapterFallback.fallback(llm_output, chapter_meta, errors)
+            blueprint = ChapterFallback.fallback(llm_output, chapter_meta, errors)
+
+        # 5. 段四 W14：Build 分化
+        if player_build:
+            converter.apply_build_differentiation(blueprint, llm_output, player_build)
+
         return blueprint
 
     # ============= 🆕 v2.8.0 段二 W7 Prompt 上下文 =============

@@ -168,20 +168,99 @@ class SchemaConverter:
         defaults = DEFAULT_NODE_TEMPLATE[:needed]
         return list(existing) + defaults
 
+    # ============= 🆕 v2.8.0 段四 W14 Build 分化 =============
+
+    def apply_build_differentiation(
+        self,
+        blueprint: "ChapterBlueprint",
+        llm_output: dict,
+        player_build: str,
+    ) -> None:
+        """应用 Build 分化（原地修改 blueprint）
+
+        规则：
+        - llm_output["differentiation"][player_build] 存在 → 按 build 覆盖
+        - 否则 → 不修改（用默认）
+        - differentiation 字段格式：
+          {
+            "守乡人": {
+              "node_1_scene": "...",
+              "node_1_options": [...],
+              "node_2_scene": "...",
+              ...
+            }
+          }
+
+        Args:
+            blueprint: ChapterBlueprint（原地修改）
+            llm_output: LLM 原始输出
+            player_build: 玩家 Build
+        """
+        if not isinstance(llm_output, dict):
+            return
+        diff = llm_output.get("differentiation", {})
+        if not isinstance(diff, dict):
+            return
+        build_diff = diff.get(player_build, {})
+        if not isinstance(build_diff, dict) or not build_diff:
+            _LOG.debug("无 Build '%s' 分化数据，保持默认", player_build)
+            return
+
+        _LOG.info("应用 Build '%s' 分化: %d 个节点字段", player_build, sum(1 for k in build_diff if k.startswith("node_")))
+
+        for i, node in enumerate(blueprint.nodes):
+            node_key = f"node_{i+1}"
+            # 覆盖 scene
+            scene_key = f"{node_key}_scene"
+            if scene_key in build_diff:
+                node.scene = build_diff[scene_key]
+            # 覆盖 option_directions
+            options_key = f"{node_key}_options"
+            if options_key in build_diff and isinstance(build_diff[options_key], list):
+                node.option_directions = build_diff[options_key]
+
 
 def convert_llm_to_blueprint(
     llm_output: dict,
     chapter_meta: ChapterMeta,
     era_config: Optional[dict] = None,
+    player_build: Optional[str] = None,
 ) -> ChapterBlueprint:
-    """便捷函数：单次转换
+    """便捷函数：单次转换（支持 Build 分化）
+
+    段四 W14 升级：转换后自动 apply_build_differentiation
+    - llm_output 含 differentiation[player_build] 字段
+    - 按 build 覆盖 node.scene 和 node.option_directions
 
     Args:
         llm_output: LLM 生成的 dict
         chapter_meta: 元属性（必填）
         era_config: era.json 配置（可选）
+        player_build: 玩家 Build（守乡人/外望人）
 
     Returns:
         ChapterBlueprint 实例
     """
-    return SchemaConverter(era_config).convert(llm_output, chapter_meta)
+    converter = SchemaConverter(era_config)
+    blueprint = converter.convert(llm_output, chapter_meta)
+    if player_build:
+        converter.apply_build_differentiation(blueprint, llm_output, player_build)
+    return blueprint
+
+
+# ============= 🆕 v2.8.0 段四 W14 Build 分化 =============
+
+def apply_build_differentiation(
+    blueprint: ChapterBlueprint,
+    llm_output: dict,
+    player_build: str,
+) -> None:
+    """便捷函数：应用 Build 分化
+
+    Args:
+        blueprint: 已转换的 Blueprint（原地修改）
+        llm_output: LLM 原始输出（含 differentiation 字段）
+        player_build: 玩家 Build
+    """
+    converter = SchemaConverter()
+    converter.apply_build_differentiation(blueprint, llm_output, player_build)

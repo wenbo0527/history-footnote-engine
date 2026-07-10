@@ -217,6 +217,12 @@ class GameState:
     from history_footnote.chapter.paths import PathState
     path_state: PathState = field(default_factory=PathState)
 
+    # === 🆕 v2.8.0 段四 W14 玩家 Build（重玩价值核心） ===
+    # 段四：同 seed 不同 Build → 体验不同
+    # 合法值："" (未选) / "守乡人" / "外望人" / 其他扩展
+    # 旧存档无此字段 → 空字符串向后兼容
+    player_build: str = ""
+
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
     rounds_since_last_insight: int = 0
