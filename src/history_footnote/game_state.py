@@ -223,6 +223,15 @@ class GameState:
     # 旧存档无此字段 → 空字符串向后兼容
     player_build: str = ""
 
+    # === 🆕 v2.8.0 段五 W15 板块运行时状态（嵌套 dataclass） ===
+    # 4 状态：stable / tense / shifting / collapsed
+    # 段五 W15：基础数据结构（Plate + PlateState + PlateRegistry）
+    # 段五 W16：tension_fields + transmission 引擎
+    # 段五 W17：PathSwitcher 触发器 3 完整实现
+    # 旧存档无此字段 → field(default_factory) 自动建空对象，零回归
+    from history_footnote.chapter.plates import PlateState
+    plate_state: PlateState = field(default_factory=PlateState)
+
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
     rounds_since_last_insight: int = 0

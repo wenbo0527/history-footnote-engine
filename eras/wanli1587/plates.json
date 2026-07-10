@@ -1,0 +1,83 @@
+{
+  "_description": "v2.8.0 段五 W15 板块格局配置（独立 JSON，不污染 era.json）",
+  "plate_definitions": [
+    {
+      "id": "central_plains",
+      "name": "中原",
+      "type": "core",
+      "neighbors": ["jiangnan", "hexi_corridor", "northwest"],
+      "base_tension": 0.3,
+      "description": "帝国核心，黄河中下游，赋税与兵役重地"
+    },
+    {
+      "id": "jiangnan",
+      "name": "江南",
+      "type": "core",
+      "neighbors": ["central_plains", "hexi_corridor"],
+      "base_tension": 0.4,
+      "description": "丝绸与赋税之地，税赋压力逐年加重"
+    },
+    {
+      "id": "hexi_corridor",
+      "name": "河西走廊",
+      "type": "corridor",
+      "neighbors": ["central_plains", "jiangnan", "northwest"],
+      "base_tension": 0.2,
+      "description": "连接中原与西域的商路要道"
+    },
+    {
+      "id": "northwest",
+      "name": "西北边塞",
+      "type": "peripheral",
+      "neighbors": ["central_plains", "hexi_corridor"],
+      "base_tension": 0.5,
+      "description": "蒙古部族袭扰，兵事频仍"
+    }
+  ],
+  "corridors": [
+    {
+      "id": "grand_canal",
+      "from_plate": "central_plains",
+      "to_plate": "jiangnan",
+      "type": "trade"
+    },
+    {
+      "id": "silk_road",
+      "from_plate": "jiangnan",
+      "to_plate": "hexi_corridor",
+      "type": "trade"
+    },
+    {
+      "id": "northwest_pass",
+      "from_plate": "central_plains",
+      "to_plate": "northwest",
+      "type": "military"
+    }
+  ],
+  "equilibrium_state": {
+    "central_plains": 0.3,
+    "jiangnan": 0.4,
+    "hexi_corridor": 0.2,
+    "northwest": 0.5
+  },
+  "transmission_rules": [
+    {
+      "from": "central_plains",
+      "to": "jiangnan",
+      "factor": 0.3,
+      "delay_rounds": 2
+    },
+    {
+      "from": "central_plains",
+      "to": "northwest",
+      "factor": 0.4,
+      "delay_rounds": 1
+    },
+    {
+      "from": "jiangnan",
+      "to": "hexi_corridor",
+      "factor": 0.2,
+      "delay_rounds": 3
+    }
+  ]
+}

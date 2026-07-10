@@ -171,16 +171,62 @@ class PathSwitcher:
         # 不可识别的条件 → 不解锁
         return False
 
-    # ============= 触发器 3：板块格局触发 =============
+    # ============= 触发器 3：板块格局触发（v2.8.0 段五 W17 完整实现）============
 
     def _check_plate_shifts(self) -> list[PathEvent]:
         """触发器 3：板块格局变化 → 路径被强制激活/锁定
 
-        检测方式：state.plate_shift_events（段五才完整，W12 简化）
+        段五 W17 完整实现：
+        1. 检测 state.plate_state.shift_events
+        2. 板块 shifting/collapsed → 相关路径被强制激活
+        3. 板块 stable → 相关路径降级为 dormant
+
+        简化版：板块张力高 → 路径激活（板块更"需要"玩家介入）
         """
         events: list[PathEvent] = []
-        # W12 简化：不实现 plate_shift 事件的实际检测逻辑
-        # W13+ 接入 plates 层后扩展
+        ps = getattr(self.state, "plate_state", None)
+        if ps is None:
+            return events
+
+        # 1. 找出 shifting/collapsed 板块
+        shifting_plates = [
+            pid for pid, status in ps.statuses.items()
+            if status in ("shifting", "collapsed")
+        ]
+
+        if not shifting_plates:
+            return events
+
+        # 2. 遍历所有路径，看哪些路径的 plate_dependency 在 shifting 列表
+        #    （plate_dependency 在 segments 三 W11 已定义）
+        for path in self.registry.get_all():
+            if not path.plate_dependency:
+                continue
+            # plate_dependency 可能是单个 plate_id 或 "central_plains,jiangnan"
+            deps = [d.strip() for d in path.plate_dependency.split(",")]
+            # 依赖板块中至少 1 个 shifting → 激活
+            if any(dep in shifting_plates for dep in deps):
+                if path.id in self.state.path_state.locked_paths:
+                    # 板块需要 → 解锁
+                    events.append(PathEvent(
+                        type="UNLOCK",
+                        path_id=path.id,
+                        priority=85,  # 比选项触发的 80 更高
+                        reason=f"依赖板块 {path.plate_dependency} shifting/collapsed",
+                        payload={"trigger": "plate_shift"},
+                    ))
+            else:
+                # 依赖板块未 shifting（如 stable）→ 路径可能降级
+                # 简化：只对 main 路径做降级
+                if path.type == "main" and path.id in self.state.path_state.active_paths:
+                    # 路径依赖板块已稳定 → 降级为 dormant
+                    events.append(PathEvent(
+                        type="REORDER",
+                        path_id=path.id,
+                        priority=45,
+                        reason=f"依赖板块 {path.plate_dependency} 已稳定",
+                        payload={"new_status": "dormant", "trigger": "plate_stable"},
+                    ))
         return events
 
     # ============= 触发器 4：章节转化触发 =============

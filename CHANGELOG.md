@@ -140,6 +140,55 @@ Round 16: chapter_history 追加 1 条，current_chapter 重置为 0
 
 ---
 
+## [v2.8.0-段五] - 2026-07-11
+
+### 🎉 章节制叙事体系 · 段五交付（plates 板块格局，3 周计划完成 3 周）
+
+> **范围**：v2.8.0 段五 plates 板块格局（独立子项目，曾被原 A+B 段推迟）
+> **结果**：18 个新测试，0 回归，0 LLM 调用
+> **完整工作日志**：[docs/log/2026-07-11_v2.8.0-段五-work-log.md](docs/log/2026-07-11_v2.8.0-段五-work-log.md)
+
+#### ✨ 段五核心模块
+
+- ✨ `chapter/plates.py`：Plate / Corridor / TransmissionRule / PlateState / PlateRegistry
+- ✨ `chapter/plate_engine.py`：tension_fields + transmission 引擎（5 核心方法）
+- ✨ `chapter/path_switcher.py`：触发器 3 完整实现（板块 shifting → 路径 UNLOCK）
+- ✨ `eras/wanli1587/plates.json`：4 板块（中原/江南/河西/西北）+ 3 走廊 + 3 传导规则
+- ✨ `game_state.py`：plate_state 嵌套 dataclass 字段
+
+#### 关键设计决策
+
+1. **4 板块状态**：stable / tense / shifting / collapsed（按张力阈值推断）
+2. **传导延迟**：每条 transmission_rule 自带 delay_rounds（模拟历史传播）
+3. **自然衰减**：每回合张力向 baseline 回归 0.01（避免无限累积）
+4. **独立 JSON 配置**：plates.json 不进 era.json 的 6164 行（避免破坏其他逻辑）
+5. **触发器 3 优先级 85**（最高）— 板块格局 > 选项连续 > 解锁条件
+
+#### 端到端验证（smoke）
+
+- ✅ Round 5: 中原 boost → shifting
+- ✅ Round 6: 中→河西 传导（factor=0.4, delay=1）
+- ✅ Round 7-8: 河西 boost → collapsed
+- ✅ PathSwitcher 触发器 3 → UNLOCK hexi_trade
+- ✅ apply_events → hexi_trade 进入 active_paths
+
+#### 段五不交付（明确边界）
+
+- ❌ 真实历史事件触发板块张力（W18+ 才完整）
+- ❌ 多板块级联传导（当前单跳传导）
+- ❌ 板块事件写入 event_log（段六+ 才接）
+- ❌ 板块格局 UI（独立迭代）
+
+#### 测试覆盖
+
+- 🆕 W15：14 个测试（plates 基础结构）
+- 🆕 W16：4 个测试（plate_engine）
+- 🆕 W17：7 个测试（PathSwitcher 触发器 3）
+- **总计 18 个新测试，全部通过**
+- **基线 196 测试 + 段一-四 0 回归 + 段五 18 = 214 测试全过**
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
