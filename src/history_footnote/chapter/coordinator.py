@@ -147,7 +147,7 @@ class ChapterCoordinator:
 
         流程：
         1. facade.build_prompt_context(chapter_id) → 喂 LLM 的完整上下文
-        2. self._llm(prompt_dict) → LLM 返回章节蓝图 JSON
+        2. self._invoke_llm(prompt_dict) → LLM 返回章节蓝图 dict
         3. facade.convert_llm_to_blueprint(llm_output, chapter_id) → 校验+兑底
         4. 写入 state.chapter_state（继承 facade.init_chapter 的逻辑）
         5. 🆕 v2.8.0 段三 W13：设置 just_initialized=True 触发 PathSwitcher
@@ -155,9 +155,9 @@ class ChapterCoordinator:
         # 1. 构建 prompt
         prompt_ctx = self.facade.build_prompt_context(chapter_id)
 
-        # 2. 调 LLM
+        # 2. 调 LLM（兼容 LangChain BaseChatModel 类 LLM 和 callable 函数）
         try:
-            llm_output = self._llm(prompt_ctx)
+            llm_output = self._invoke_llm(prompt_ctx)
         except Exception as e:
             _LOG.error("LLM 调用失败: %s，回退硬编码", e)
             self.facade.init_chapter(chapter_id)
@@ -189,6 +189,42 @@ class ChapterCoordinator:
             return 1
         last = history[-1]
         return last.get("chapter", 0) + 1
+
+    def _invoke_llm(self, prompt_ctx: dict) -> dict:
+        """🆕 v2.8.0 段六 W19 兼容 LangChain LLM
+
+        兼容 2 种 LLM 类型：
+        1. callable 函数（mock 模式 / 测试）：self._llm(prompt_ctx) → dict
+        2. LangChain BaseChatModel 类（真 LLM）：需 .invoke() + AIMessage.content
+           还要先调 facade.build_chapter_tool_prompt 转为字符串
+
+        Returns:
+            dict: LLM 生成的章节蓝图 dict
+
+        Raises:
+            Exception: LLM 调用失败时（让外层 fallback）
+        """
+        if self._llm is None:
+            raise ValueError("_llm is None")
+
+        # 判 callable
+        if callable(self._llm) and not hasattr(self._llm, "invoke"):
+            # mock 函数模式：直接调，返回 dict
+            return self._llm(prompt_ctx)
+
+        # LangChain 类模式：调 facade.build_chapter_tool_prompt → HumanMessage → .invoke
+        from history_footnote.chapter.dm_tool import fill_chapter_blueprint_via_llm
+        # 用 dm_tool 的完整路径（已实现 invoke + JSON 提取）
+        blueprint = fill_chapter_blueprint_via_llm(
+            state=self.state,
+            chapter_id=prompt_ctx["chapter_meta"]["chapter_id"],
+            era_config=prompt_ctx.get("chapter_meta", {}).get("era_config", {}),
+            llm_callable=self._llm,
+            chapter_facade=self.facade,
+        )
+        if blueprint is None:
+            raise RuntimeError("fill_chapter_blueprint_via_llm 返回 None")
+        return blueprint.to_dict()
 
     def _maybe_advance_node(self) -> None:
         """检查是否推进节点（段一硬编码：每 4 回合推进一个）"""
