@@ -404,6 +404,71 @@ class ChapterFacade:
             return blueprint.meta
         return self.resolve_chapter_meta(chapter_id)
 
+    # ============= 🆕 v2.8.0 段三 W11 路径系统 =============
+
+    @property
+    def path_registry(self):
+        """路径注册表（懒加载）"""
+        if not hasattr(self, "_path_registry") or self._path_registry is None:
+            from history_footnote.chapter.paths import PathRegistry
+            self._path_registry = PathRegistry(self.era_config or {})
+        return self._path_registry
+
+    def get_path(self, path_id: str):
+        """查询路径定义"""
+        return self.path_registry.get(path_id)
+
+    def get_paths_for_chapter(self, chapter_id: int):
+        """查询指定章节的可用路径"""
+        return self.path_registry.get_applicable_to_chapter(chapter_id)
+
+    def get_main_paths(self):
+        """查询所有主路径"""
+        return self.path_registry.get_main_paths()
+
+    def get_active_paths(self) -> list:
+        """查询当前活跃路径（从 state.path_state）"""
+        ps = getattr(self.state, "path_state", None)
+        if ps is None:
+            return []
+        return list(ps.active_paths)
+
+    def get_path_status(self, path_id: str) -> str:
+        """查询路径状态（locked/active/dormant）"""
+        ps = getattr(self.state, "path_state", None)
+        if ps is None:
+            return "locked"
+        return ps.get_status(path_id)
+
+    # ============= 🆕 v2.8.0 段三 W12 路径切换 =============
+
+    @property
+    def path_switcher(self):
+        """路径切换触发器（懒加载）"""
+        if not hasattr(self, "_path_switcher") or self._path_switcher is None:
+            from history_footnote.chapter.path_switcher import PathSwitcher
+            self._path_switcher = PathSwitcher(self.state, self.path_registry)
+        return self._path_switcher
+
+    def check_path_events(self) -> list:
+        """跑 4 触发器，返回 PathEvent 列表
+
+        不直接修改 state，由 Coordinator 决定何时 apply
+        """
+        return self.path_switcher.check()
+
+    def apply_path_events(self, events: list) -> None:
+        """应用 PathEvent 列表到 state.path_state"""
+        from history_footnote.chapter.path_switcher import PathSwitcher
+        PathSwitcher.apply_events(self.state, events)
+
+    def record_path_choice(self, path_id: str) -> None:
+        """记录玩家最近一次选择（供触发器 1 检测）"""
+        recent = getattr(self.state, "recent_path_choices", []) or []
+        recent.append(path_id)
+        # 只保留最近 5 次
+        self.state.recent_path_choices = recent[-5:]
+
     # ============= 🆕 v2.8.0 段二 LLM 蓝图生成 =============
 
     def convert_llm_to_blueprint(
@@ -484,6 +549,8 @@ class ChapterFacade:
         cs.chapter_start_round = self.state.round_number
         cs.blueprint = blueprint.to_dict()
         cs.last_closure_status = "INIT"
+        # 🆕 v2.8.0 段三 W13：标记章节刚初始化（PathSwitcher 触发器 4 用）
+        cs.just_initialized = True
         return blueprint
 
     # ============= 收束查询 =============

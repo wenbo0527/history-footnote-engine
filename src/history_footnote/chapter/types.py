@@ -115,6 +115,11 @@ class ChapterState:
     # === 收束状态 ===
     last_closure_status: str = "INIT"     # INIT / CONTINUE / SOFT_READY / HARD_FORCED
 
+    # === 🆕 v2.8.0 段三 W13 章节初始化标记 ===
+    # PathSwitcher 触发器 4 用：just_initialized=True 时重排路径优先级
+    # Coordinator 在 post_step 末尾清空
+    just_initialized: bool = False
+
     # === 章节历史（每章结算后追加） ===
     chapter_history: list[dict] = field(default_factory=list)
     # 形如：
@@ -136,6 +141,7 @@ class ChapterState:
             blueprint_loaded_at=data.get("blueprint_loaded_at", ""),
             last_closure_status=data.get("last_closure_status", "INIT"),
             chapter_history=data.get("chapter_history", []),
+            just_initialized=data.get("just_initialized", False),
         )
 
 

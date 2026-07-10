@@ -150,6 +150,7 @@ class ChapterCoordinator:
         2. self._llm(prompt_dict) → LLM 返回章节蓝图 JSON
         3. facade.convert_llm_to_blueprint(llm_output, chapter_id) → 校验+兑底
         4. 写入 state.chapter_state（继承 facade.init_chapter 的逻辑）
+        5. 🆕 v2.8.0 段三 W13：设置 just_initialized=True 触发 PathSwitcher
         """
         # 1. 构建 prompt
         prompt_ctx = self.facade.build_prompt_context(chapter_id)
@@ -160,6 +161,8 @@ class ChapterCoordinator:
         except Exception as e:
             _LOG.error("LLM 调用失败: %s，回退硬编码", e)
             self.facade.init_chapter(chapter_id)
+            # 段三 W13：硬编码路径也要设标记
+            self.state.chapter_state.just_initialized = True
             return
 
         # 3. 转换+校验+兑底
@@ -172,6 +175,8 @@ class ChapterCoordinator:
         cs.chapter_start_round = self.state.round_number
         cs.blueprint = blueprint.to_dict()
         cs.last_closure_status = "INIT"
+        # 段三 W13：标记章节刚初始化（PathSwitcher 触发器 4 用）
+        cs.just_initialized = True
 
     def _next_chapter_to_init(self) -> Optional[int]:
         """段二 W9：决定下一章序号
@@ -212,10 +217,25 @@ class ChapterCoordinator:
 
         行为：
         - 调用 facade.check_closure() 写回 last_closure_status
+        - 🆕 v2.8.0 段三 W13：跑 PathSwitcher 4 触发器 + apply events
+        - 🆕 v2.8.0 段三 W13：清空 just_initialized 标记
         """
         if self.state.chapter_state.current_chapter == 0:
             return
         self.facade.check_closure()
+
+        # 段三 W13：跑 PathSwitcher
+        try:
+            events = self.facade.check_path_events()
+            if events:
+                self.facade.apply_path_events(events)
+                _LOG.info("应用 %d 个路径事件", len(events))
+        except Exception as e:
+            _LOG.warning("PathSwitcher 跑失败: %s", e)
+
+        # 段三 W13：清空 just_initialized（只触发一次）
+        if self.state.chapter_state.just_initialized:
+            self.state.chapter_state.just_initialized = False
 
     # ============= 钩子 3：条件触发结算 =============
 

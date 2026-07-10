@@ -208,6 +208,15 @@ class GameState:
     from history_footnote.chapter.types import ChapterState
     chapter_state: ChapterState = field(default_factory=ChapterState)
 
+    # === 🆕 v2.8.0 段三 路径运行时状态（嵌套 dataclass） ===
+    # 路径三态：locked / active / dormant
+    # 段三 W11：基础数据结构（NarrativePath + PathState + PathRegistry）
+    # 段三 W12：4 触发器（选项/NPC/板块/章节转化）
+    # 段三 W13：Coordinator 接入路径状态更新
+    # 旧存档无此字段 → field(default_factory) 自动建空对象，零回归
+    from history_footnote.chapter.paths import PathState
+    path_state: PathState = field(default_factory=PathState)
+
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
     rounds_since_last_insight: int = 0
