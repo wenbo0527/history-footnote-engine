@@ -295,7 +295,12 @@ class ChapterCoordinator:
 
         # 段二 W8：调 Settlement 生成完整记录
         from history_footnote.chapter.settlement import ChapterSettlement
-        settlement = ChapterSettlement(self.state, era_config=None)
+        # 段六+ W20：Settlement 也接 LLM（与 Coordinator 共用同一个 _llm）
+        settlement = ChapterSettlement(
+            self.state,
+            era_config=None,
+            llm_callable=self._llm,  # 🆕 段六+ W20：Settlement 共享 LLM
+        )
         chapter_record = settlement.settle(closure_status=status)
         if chapter_record:
             cs.chapter_history.append(chapter_record)

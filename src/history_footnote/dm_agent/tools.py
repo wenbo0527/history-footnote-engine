@@ -481,4 +481,62 @@ def make_tools(
             _LOG.error("fill_chapter_blueprint 失败: %s", e)
             return {}
 
-    return [get_state, recall_events, check_rules, query_knowledge, query_narrative_snippets, query_story_segments, get_random_segment, roll_dice, offer_identity_switch, save_event, fill_chapter_blueprint]
+    # 🆕 v2.8.0 段六+ W20：fill_chapter_summary（章节摘要 LLM 生成）
+    @tool
+    def fill_chapter_summary(
+        chapter_id: int = 1,
+        core_event: str = "",
+        key_choice: str = "",
+        build_summary: str = "",
+        path_summary: str = "",
+    ) -> dict:
+        """通过 LLM 生成章节摘要（v2.8.0 章节制 L2 层 Tool）
+
+        Args:
+            chapter_id: 章节序号（1-based）
+            core_event: 核心事件（从 state.event_log 提取）
+            key_choice: 关键选择（从 state.last_voice_options 提取）
+            build_summary: 玩家 Build 画像
+            path_summary: 当前活跃路径
+
+        Returns:
+            dict: {"summary": str, "length": int, "via": "llm|rule"}
+            via="rule" 表示 LLM 失败回退到规则压缩
+        """
+        try:
+            from history_footnote.chapter.dm_tool import fill_chapter_summary_via_llm
+            from history_footnote.llm_providers import make_llm_for_purpose
+
+            # 构造章节制 LLM（purpose="chapter_settle"，温度 0）
+            summary_llm = make_llm_for_purpose(
+                purpose="chapter_settle",
+                provider="mock",  # 段六+ W20 默认 mock
+                era_config=era_config or {},
+            )
+
+            # 调 LLM 生成摘要
+            summary = fill_chapter_summary_via_llm(
+                state=state,
+                chapter_id=chapter_id,
+                core_event=core_event or "无显著事件",
+                key_choice=key_choice or "无显著选择",
+                build_summary=build_summary or "Build 画像不显著",
+                path_summary=path_summary or "无活跃路径",
+                era_config=era_config or {},
+                llm_callable=summary_llm,
+                max_words=200,
+            )
+            return {
+                "summary": summary,
+                "length": len(summary),
+                "via": "llm",
+            }
+        except Exception as e:
+            _LOG.error("fill_chapter_summary 失败: %s", e)
+            return {
+                "summary": "本章无显著进展",
+                "length": 8,
+                "via": "rule",
+            }
+
+    return [get_state, recall_events, check_rules, query_knowledge, query_narrative_snippets, query_story_segments, get_random_segment, roll_dice, offer_identity_switch, save_event, fill_chapter_blueprint, fill_chapter_summary]

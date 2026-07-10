@@ -119,7 +119,12 @@ def main():
                 options = nodes[current_node_idx].get("option_directions", [])
                 if options:
                     first_opt = options[0]
-                    path = first_opt.get("path") or first_opt.get("path_hint", "")
+                    # 容错：可能是 dict 或 str
+                    if isinstance(first_opt, dict):
+                        path = first_opt.get("path") or first_opt.get("path_hint", "")
+                    else:
+                        # str 形式（如 fallback 简化版）→ 不写 path
+                        path = ""
                     if path:
                         facade.record_path_choice(path)
         # post_step（PathSwitcher）

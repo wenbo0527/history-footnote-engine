@@ -147,3 +147,103 @@ def fill_chapter_blueprint_via_llm(
     except Exception as e:
         _LOG.error("fill_chapter_blueprint_via_llm 失败: %s，回退硬编码", e)
         return chapter_facade.init_chapter(chapter_id)
+
+
+# ============= 🆕 v2.8.0 段六+ W20 章节摘要 LLM =============
+
+def build_chapter_summary_prompt(
+    chapter_id: int,
+    core_event: str,
+    key_choice: str,
+    build_summary: str,
+    path_summary: str,
+    era_config: Optional[dict] = None,
+) -> str:
+    """构建喂给章节摘要 LLM 的 prompt
+
+    Args:
+        chapter_id: 章节序号
+        core_event: 核心事件（来自 Settlement._extract_core_event）
+        key_choice: 关键选择（来自 Settlement._extract_key_choice）
+        build_summary: Build 画像（来自 Settlement._extract_build_summary）
+        path_summary: 当前路径（来自 Settlement._extract_path_summary）
+        era_config: era.json 配置（可选，提供时代背景）
+
+    Returns:
+        str: 喂给 LLM 的 prompt
+    """
+    era_bg = ""
+    if era_config:
+        era_name = era_config.get("era_name", "万历十五年")
+        era_location = era_config.get("primary_location", "江南")
+        era_bg = f"\n## 时代背景\n- 时代: {era_name}\n- 主场景: {era_location}\n"
+
+    return (
+        f"你是历史注脚引擎的章节摘要生成助手。请用 100-200 字总结第 {chapter_id} 章。\n\n"
+        f"## 必填内容（必须覆盖）\n"
+        f"1. **核心事件**: {core_event}\n"
+        f"2. **关键选择**: {key_choice}\n"
+        f"3. **玩家画像**: {build_summary}\n"
+        f"4. **当前路径**: {path_summary}\n"
+        f"{era_bg}\n"
+        f"## 输出要求\n"
+        f"- 100-200 字\n"
+        f"- 用古典白话语调（不要现代口语）\n"
+        f"- 自然融入 4 必填项，不要列表\n"
+        f"- 输出纯文本摘要（不要 JSON）\n\n"
+        f"## 章节摘要（100-200 字）\n"
+    )
+
+
+def fill_chapter_summary_via_llm(
+    state,
+    chapter_id: int,
+    core_event: str,
+    key_choice: str,
+    build_summary: str,
+    path_summary: str,
+    era_config: Optional[dict],
+    llm_callable,
+    max_words: int = 200,
+) -> str:
+    """通过真 LLM 生成章节摘要（v2.8.0 段六+ W20）
+
+    Args:
+        state: GameState
+        chapter_id: 章节序号
+        core_event / key_choice / build_summary / path_summary: 4 必填项
+        era_config: era.json 配置
+        llm_callable: LangChain LLM 实例
+        max_words: 摘要最大字数（默认 200）
+
+    Returns:
+        str: 章节摘要（< max_words 字）
+
+    Raises:
+        Exception: LLM 调用失败时（让外层 fallback 到规则压缩）
+    """
+    # 1. 构建 prompt
+    prompt = build_chapter_summary_prompt(
+        chapter_id=chapter_id,
+        core_event=core_event,
+        key_choice=key_choice,
+        build_summary=build_summary,
+        path_summary=path_summary,
+        era_config=era_config,
+    )
+
+    # 2. 调 LLM
+    from langchain_core.messages import HumanMessage
+    response = llm_callable.invoke([HumanMessage(content=prompt)])
+    raw_text = response.content if hasattr(response, "content") else str(response)
+
+    # 3. 截断到 max_words
+    summary = raw_text.strip()
+    if len(summary) > max_words:
+        summary = summary[:max_words - 3] + "..."
+
+    _LOG.info(
+        "fill_chapter_summary_via_llm: chapter=%d, summary=%d 字",
+        chapter_id, len(summary),
+    )
+    return summary

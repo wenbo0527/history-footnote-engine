@@ -60,6 +60,66 @@ class ChapterSettlement:
         self.era_config = era_config or {}
         self._llm = llm_callable  # None → mock 模式
 
+    def _get_summary_text(
+        self,
+        core_event: str,
+        key_choice: str,
+        build_summary: str,
+        path_summary: str,
+    ) -> str:
+        """段六+ W20 升级：可注入真 LLM 生成摘要
+
+        兼容 3 种 LLM：
+        1. None（默认）：_build_summary_rule 规则压缩
+        2. callable 函数（mock 模式）：self._llm(prompt_str) → str
+        3. LangChain 类（真 LLM）：fill_chapter_summary_via_llm（用 .invoke）
+
+        Returns:
+            str: 章节摘要
+        """
+        if self._llm is None:
+            return self._build_summary_rule(core_event, key_choice, build_summary, path_summary)
+
+        # callable 函数模式（兼容段二 W8 测试）
+        if callable(self._llm) and not hasattr(self._llm, "invoke"):
+            try:
+                prompt = self._build_summarize_prompt(
+                    core_event, key_choice, build_summary, path_summary
+                )
+                result = self._llm(prompt)
+                # 兼容：可能返回 str（直接用）或 dict（取 summary 字段）
+                if isinstance(result, dict):
+                    summary = result.get("summary", "") or result.get("text", "")
+                else:
+                    summary = str(result) if result is not None else ""
+                if not summary:
+                    # callable 返回的是 Blueprint 而非摘要（如 V28_133 mock）→ fallback
+                    _LOG.debug("callable LLM 返回空摘要，回退规则压缩")
+                    return self._build_summary_rule(core_event, key_choice, build_summary, path_summary)
+                return self._truncate_summary(summary)
+            except Exception as e:
+                _LOG.warning("callable LLM 摘要失败: %s，回退规则压缩", e)
+                return self._build_summary_rule(core_event, key_choice, build_summary, path_summary)
+
+        # LangChain 类模式（真 LLM）
+        try:
+            from history_footnote.chapter.dm_tool import fill_chapter_summary_via_llm
+            cs = self.state.chapter_state
+            return fill_chapter_summary_via_llm(
+                state=self.state,
+                chapter_id=cs.current_chapter,
+                core_event=core_event,
+                key_choice=key_choice,
+                build_summary=build_summary,
+                path_summary=path_summary,
+                era_config=self.era_config,
+                llm_callable=self._llm,
+                max_words=MAX_SUMMARY_LENGTH,
+            )
+        except Exception as e:
+            _LOG.warning("LLM 摘要生成失败: %s，回退规则压缩", e)
+            return self._build_summary_rule(core_event, key_choice, build_summary, path_summary)
+
     def settle(self, closure_status: str = "SOFT_READY") -> dict:
         """生成章节结算记录
 
@@ -91,19 +151,7 @@ class ChapterSettlement:
         path_summary = self._extract_path_summary()
 
         # 2. 压缩为 summary（200字内）
-        if self._llm is not None:
-            # 真 LLM 模式（段三/W10 启用）
-            try:
-                summary = self._llm(self._build_summarize_prompt(
-                    core_event, key_choice, build_summary, path_summary
-                ))
-                summary = self._truncate_summary(summary)
-            except Exception as e:
-                _LOG.warning("LLM 摘要失败: %s，使用规则压缩", e)
-                summary = self._build_summary_rule(core_event, key_choice, build_summary, path_summary)
-        else:
-            # Mock 模式（段二 W8）
-            summary = self._build_summary_rule(core_event, key_choice, build_summary, path_summary)
+        summary = self._get_summary_text(core_event, key_choice, build_summary, path_summary)
 
         # 3. 收尾元信息
         rounds_in_chapter = max(0, self.state.round_number - cs.chapter_start_round + 1)

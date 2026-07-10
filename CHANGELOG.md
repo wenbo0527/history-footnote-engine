@@ -233,6 +233,44 @@ Round 16: chapter_history 追加 1 条，current_chapter 重置为 0
 
 ---
 
+## [v2.8.0-段六+ W20] - 2026-07-11
+
+### 🎉 章节制叙事体系 · 段六+ 增量（章节摘要 LLM 化）
+
+> **范围**：v2.8.0 段六+ 章节摘要 LLM 化
+> **结果**：11 个新测试，0 回归，30 回合真 LLM 端到端跑 2 章 + 2 摘要
+
+#### ✨ 段六+ 核心模块
+
+- ✨ `chapter/dm_tool.py`：build_chapter_summary_prompt + fill_chapter_summary_via_llm
+- ✨ `chapter/settlement.py`：Settlement._get_summary_text 兼容 3 种 LLM
+- ✨ `dm_agent/tools.py`：fill_chapter_summary Tool（第 12 个 Tool）
+- ✨ `chapter/coordinator.py`：maybe_settle 把 _llm 传给 Settlement
+
+#### 关键设计决策
+
+1. **Settlement 共享 Coordinator 的 _llm** — 无重复注入
+2. **3 种 LLM 兼容**：None / callable 函数 / LangChain 类
+3. **callable 返回 dict/str 都兼容** — V28_133 mock 返 dict 也能跑
+4. **失败兜底** — LLM 异常自动回退到规则压缩
+5. **古典白话语调** — prompt 强制约束
+
+#### 端到端验证（30 回合真 LLM）
+
+```
+Chapter 1: 第 1 章无显著事件发生...玩家品性已隐然可见：行事谨严...尽责任之心偏正且达 0.8 之数
+Chapter 2: 此章波澜不兴...唯见行事之人守分循理、约束身边之人未尝逾矩
+总耗时: 30 秒（4 次 HTTP 200 OK: 2 蓝图 + 2 摘要）
+```
+
+#### 测试覆盖
+
+- 🆕 W20：11 个测试（build/fill/Settlement/3 种 LLM/Tool 集成/端到端）
+- **总计 11 个新测试，全部通过**
+- **基线 221 + W20 11 = 232 测试全过**
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
