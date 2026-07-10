@@ -14,6 +14,7 @@ GameEngineFacade 聚合这 5 个 Sub-Facade。
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Optional
 
 from history_footnote.game_state import GameState
@@ -309,3 +310,224 @@ if __name__ == "__main__":
     s_summary = sf.get_summary()
     for k, v in s_summary.items():
         print(f"  {k}: {v}")
+
+
+# ============= 🆕 v2.8.0 ChapterFacade =============
+
+class ChapterFacade:
+    """章节管理子 facade（v2.8.0 段一）
+
+    参考 v1.7.40 Sub-Facades 模式，复用 DramaManager.player_model
+    段一只提供蓝图加载、章节初始化、收束查询、信息查询
+    """
+
+    def __init__(
+        self,
+        state: "GameState",
+        era_config: dict,
+        root_dir: Optional[Path] = None,
+        drama_manager: Optional["DramaManager"] = None,
+    ):
+        self.state = state
+        self.era_config = era_config
+        # root_dir 默认是项目根（含 eras/ 目录）
+        # 蓝图路径 = root_dir / eras / {era_id} / chapter{N}_blueprint.json
+        if root_dir is None:
+            self.root_dir = Path(".")
+        else:
+            self.root_dir = root_dir
+        self._drama = drama_manager
+        self._closure = None  # 懒加载
+
+    @property
+    def _blueprint_dir(self) -> Path:
+        """蓝图目录：root_dir / eras / {era_id}"""
+        era_id = self.state.era_id or "wanli1587"
+        return self.root_dir / "eras" / era_id
+
+    @property
+    def drama_manager(self):
+        return self._drama
+
+    @drama_manager.setter
+    def drama_manager(self, value: "DramaManager") -> None:
+        """允许后续注入"""
+        self._drama = value
+        self._closure = None
+
+    @property
+    def closure(self):
+        """懒加载收束判定器"""
+        if self._closure is None:
+            from history_footnote.chapter.closure import ChapterClosure
+            self._closure = ChapterClosure(self.state, self._drama)
+        return self._closure
+
+    # ============= 蓝图加载 =============
+
+    def load_blueprint(self, chapter_id: int) -> "ChapterBlueprint":
+        """从 chapter{N}_blueprint.json 加载蓝图"""
+        from history_footnote.chapter.types import ChapterBlueprint
+        path = self._blueprint_dir / f"chapter{chapter_id}_blueprint.json"
+        if not path.exists():
+            raise FileNotFoundError(f"蓝图文件不存在: {path}")
+        json_str = path.read_text(encoding="utf-8")
+        blueprint = ChapterBlueprint.from_json(json_str)
+        return blueprint
+
+    def blueprint_exists(self, chapter_id: int) -> bool:
+        """检查蓝图文件是否存在"""
+        path = self._blueprint_dir / f"chapter{chapter_id}_blueprint.json"
+        return path.exists()
+
+    # ============= 🆕 v2.8.0 段二 元属性 =============
+
+    def resolve_chapter_meta(self, chapter_id: int):
+        """从 era_config 解析章节元属性
+
+        段二纯规则引擎产出，不调 LLM
+        段三会扩展：LLM 可读这个 meta 作为硬约束
+        """
+        from history_footnote.chapter.meta_resolver import ChapterMetaResolver
+        resolver = ChapterMetaResolver(self.era_config or {})
+        return resolver.resolve(chapter_id)
+
+    def get_or_resolve_meta(self, chapter_id: int, blueprint: "ChapterBlueprint" = None):
+        """优先从 blueprint 读 meta，缺失则用规则引擎解析
+
+        段二逻辑：
+        1. blueprint.meta 存在 → 用它
+        2. 否则 → 调 resolve_chapter_meta
+        """
+        from history_footnote.chapter.types import ChapterMeta
+        if blueprint is not None and blueprint.meta is not None:
+            return blueprint.meta
+        return self.resolve_chapter_meta(chapter_id)
+
+    # ============= 🆕 v2.8.0 段二 LLM 蓝图生成 =============
+
+    def convert_llm_to_blueprint(
+        self,
+        llm_output: dict,
+        chapter_id: int = None,
+    ) -> "ChapterBlueprint":
+        """LLM JSON → ChapterBlueprint（带校验+兑底）
+
+        段二 W6 完整流程：
+        1. 解析元属性（从 chapter_id 或 llm_output）
+        2. schema_converter 转换（含节点裁剪）
+        3. validator 校验
+        4. 校验失败 → fallback 兑底（内容保留+结构换默认）
+        5. 返回最终 Blueprint
+
+        Args:
+            llm_output: LLM 生成的 dict
+            chapter_id: 章节序号（从 llm_output.meta.chapter_id 也可读）
+
+        Returns:
+            ChapterBlueprint 实例
+        """
+        from history_footnote.chapter.types import ChapterMeta
+        from history_footnote.chapter.schema_converter import SchemaConverter
+        from history_footnote.chapter.validator import ChapterValidator
+        from history_footnote.chapter.fallback import ChapterFallback
+
+        # 1. 解析元属性
+        if chapter_id is None:
+            chapter_id = llm_output.get("meta", {}).get("chapter_id", 1) if isinstance(llm_output, dict) else 1
+        chapter_meta = self.resolve_chapter_meta(chapter_id)
+
+        # 2. schema 转换
+        converter = SchemaConverter(self.era_config or {})
+        try:
+            blueprint = converter.convert(llm_output, chapter_meta)
+        except ValueError as e:
+            _LOG.error("SchemaConverter 失败: %s，直接兑底", e)
+            return ChapterFallback.fallback(llm_output, chapter_meta, [str(e)])
+
+        # 3. 校验
+        validator = ChapterValidator(self.era_config or {})
+        errors = validator.validate(llm_output)
+
+        # 4. 兑底（如果校验失败）
+        if errors:
+            return ChapterFallback.fallback(llm_output, chapter_meta, errors)
+        return blueprint
+
+    # ============= 🆕 v2.8.0 段二 W7 Prompt 上下文 =============
+
+    def build_prompt_context(self, chapter_id: int) -> dict:
+        """构建喂给 LLM 的完整 prompt 上下文
+
+        段二 W7：4 个上下文区 + 4 条 focus_points 规则
+        喂给 LLM → 生成 llm_output → 调 convert_llm_to_blueprint
+
+        Args:
+            chapter_id: 章节序号
+
+        Returns:
+            dict: 完整上下文（chapter_meta / chapter_history / focus_points / player / available_*）
+        """
+        from history_footnote.chapter.prompt_builder import ChapterPromptBuilder
+        chapter_meta = self.resolve_chapter_meta(chapter_id)
+        builder = ChapterPromptBuilder(self.state, self.era_config or {})
+        return builder.build(chapter_meta)
+
+    # ============= 章节初始化 =============
+
+    def init_chapter(self, chapter_id: int) -> "ChapterBlueprint":
+        """初始化章节（首次进入时调用）"""
+        blueprint = self.load_blueprint(chapter_id)
+        cs = self.state.chapter_state
+        cs.current_chapter = chapter_id
+        cs.current_node = 1
+        cs.chapter_start_round = self.state.round_number
+        cs.blueprint = blueprint.to_dict()
+        cs.last_closure_status = "INIT"
+        return blueprint
+
+    # ============= 收束查询 =============
+
+    def check_closure(self) -> str:
+        """查询当前收束状态
+
+        优先级：
+        1. 如果刚初始化（last_closure_status == "INIT" 且章节第 1 回合）→ 返回 INIT
+        2. 否则调用 closure.check() 计算新状态
+        """
+        cs = self.state.chapter_state
+        # 刚初始化那一回合保持 INIT 状态
+        if cs.last_closure_status == "INIT" and cs.chapter_start_round == self.state.round_number:
+            return "INIT"
+        status = self.closure.check()
+        cs.last_closure_status = status
+        return status
+
+    # ============= 章节信息查询 =============
+
+    def get_chapter_info(self) -> dict:
+        """获取当前章节信息"""
+        cs = self.state.chapter_state
+        blueprint_dict = cs.blueprint or {}
+        nodes = blueprint_dict.get("nodes", [])
+        return {
+            "current_chapter": cs.current_chapter,
+            "current_node": cs.current_node,
+            "total_nodes": len(nodes) if nodes else 4,
+            "chapter_title": blueprint_dict.get("chapter_title", ""),
+            "chapter_subtitle": blueprint_dict.get("chapter_subtitle", ""),
+            "rounds_in_chapter": self.closure._rounds_in_chapter(),
+            "last_closure_status": cs.last_closure_status,
+        }
+
+    def get_chapter_history(self) -> list:
+        return list(self.state.chapter_state.chapter_history)
+
+    def get_progress_text(self) -> str:
+        """获取章节进度文本（前端展示用）"""
+        info = self.get_chapter_info()
+        if info["current_chapter"] == 0:
+            return "未进入章节"
+        title = info["chapter_title"]
+        title_short = title.split("·")[-1].strip() if "·" in title else title
+        return f"第 {info['current_chapter']} 章 · {title_short} · 节点 {info['current_node']}/{info['total_nodes']}"

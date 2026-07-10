@@ -1,0 +1,72 @@
+{
+  "chapter_id": 1,
+  "chapter_title": "且听下回分解 · 春蚕",
+  "chapter_subtitle": "春风又绿江南岸",
+  "meta": {
+    "act": "departure",
+    "role": "ordinary",
+    "emotion_tone": "unease→resolve",
+    "choice_type": "whether_to_step_out",
+    "suggested_node_count": 4,
+    "suggested_template": "pressure_divide_choose_consequence"
+  },
+  "transition_hint": "season",
+  "nodes": [
+    {
+      "index": 1,
+      "role": "introduction",
+      "scene": "万历十五年三月，盛泽镇春市开张。织机声此起彼伏，牙行门口挤满了卖丝的织户。沈氏在后院缫丝，你正在检修织机。",
+      "npc_ids": ["fm_wife", "fm_son"],
+      "option_directions": [
+        {"text": "去牙行看看今春丝价", "path_hint": "main_tax_resistance"},
+        {"text": "先修好织机再说", "path_hint": "main_tax_resistance"},
+        {"text": "带阿宝去镇上走走", "path_hint": "side_silk_trade"},
+        {"text": "陪沈氏在自家织房", "path_hint": "side_silk_trade"}
+      ],
+      "knowledge_ids": ["kn_silk_price_1587_spring", "kn_shengze_market"],
+      "completion_condition": "round_4_reached"
+    },
+    {
+      "index": 2,
+      "role": "escalation",
+      "scene": "春税预单下来了。赵里长派人挨家挨户送文书，今年税额比去年多了三成。邻家王二嫂来敲门诉苦。",
+      "npc_ids": ["npc_zhao_lizhang", "npc_wang_sao"],
+      "option_directions": [
+        {"text": "今年收成不好，赵里长也得吃饭，先交一半", "path_hint": "main_tax_resistance"},
+        {"text": "税额太重，跟王二嫂商量怎么抗税", "path_hint": "main_tax_resistance"},
+        {"text": "向牙行借债先垫上", "path_hint": "main_tax_resistance"},
+        {"text": "去苏州府问问有没有减免", "path_hint": "side_silk_trade"}
+      ],
+      "knowledge_ids": ["kn_tax_pressure_wanli", "kn_zhao_lizhang_role"],
+      "completion_condition": "round_8_reached"
+    },
+    {
+      "index": 3,
+      "role": "climax",
+      "scene": "赵里长亲自上门催税。他身后跟着两个衙役，口气不善：'三日之内交齐，否则织机充公。'沈氏抱着阿宝躲在里屋。",
+      "npc_ids": ["npc_zhao_lizhang", "fm_wife", "fm_son"],
+      "option_directions": [
+        {"text": "当面顶撞，把税单扔出门", "path_hint": "main_tax_resistance"},
+        {"text": "好言求情，宽限几日", "path_hint": "main_tax_resistance"},
+        {"text": "拿出全部现银交税", "path_hint": "main_tax_resistance"},
+        {"text": "让沈氏带孩子去娘家躲几天", "path_hint": "side_silk_trade"}
+      ],
+      "knowledge_ids": ["kn_bailiff_role", "kn_yamen_procedure"],
+      "completion_condition": "round_12_reached"
+    },
+    {
+      "index": 4,
+      "role": "resolution",
+      "scene": "春蚕上簇时节到了。里屋摆满了蚕匾，全家夜以继日缫丝。王二嫂送来半斤丝，说是大家凑的。",
+      "npc_ids": ["fm_wife", "fm_son", "npc_wang_sao"],
+      "option_directions": [
+        {"text": "全家动员，织出春丝还债", "path_hint": "main_tax_resistance"},
+        {"text": "找邻人帮忙，外包缫丝", "path_hint": "side_silk_trade"},
+        {"text": "借贷买丝，先撑过这一关", "path_hint": "main_tax_resistance"},
+        {"text": "把蚕种分给邻人，共度时艰", "path_hint": "side_silk_trade"}
+      ],
+      "knowledge_ids": ["kn_spring_silk_harvest", "kn_shengze_community"],
+      "completion_condition": "round_16_reached"
+    }
+  ]
+}

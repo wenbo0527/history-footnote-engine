@@ -48,6 +48,7 @@ class GameEngineFacade:
     def __init__(self, state: GameState, era_config: dict, root_dir: Optional[Path] = None):
         self.state = state
         self.era_config = era_config
+        self.root_dir = root_dir  # 🆕 v2.8.0（ChapterFacade 蓝图加载用）
         # 子系统（延迟初始化）
         self._event_bus: Optional[EventBus] = None
         self._drama_manager: Optional[DramaManager] = None
@@ -75,6 +76,7 @@ class GameEngineFacade:
         if self._sub_facades is None:
             from history_footnote.sub_facades import (
                 QuestFacade, DramaFacade, WikiFacade, EventFacade, StateFacade,
+                ChapterFacade,  # 🆕 v2.8.0
             )
             self._sub_facades = {
                 "quest": QuestFacade(self.state, self.event_bus, self.quest_system),
@@ -82,6 +84,9 @@ class GameEngineFacade:
                 "wiki": WikiFacade(self.wiki_retriever),
                 "event": EventFacade(self.event_bus),
                 "state": StateFacade(self.state),
+                "chapter": ChapterFacade(  # 🆕 v2.8.0
+                    self.state, self.era_config, self.root_dir, self.drama_manager
+                ),
             }
         return self._sub_facades
 

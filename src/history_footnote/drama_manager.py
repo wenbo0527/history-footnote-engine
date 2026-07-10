@@ -192,6 +192,59 @@ class DramaManager:
             })
         return interventions
 
+    # === 🆕 v2.8.0 章节维度（第 4 维度，段一追加）===
+    # 段一承诺：不删除/不修改 evaluate() / _evaluate_pace / _evaluate_balance / _evaluate_memory
+    # 新方法全部以 evaluate_/get_ 开头，便于测试
+
+    def evaluate_chapter(self) -> Optional[Intervention]:
+        """章节维度干预（v2.8.0 段一）
+
+        段一极简版：节点停留过久提示
+        - 检查 chapter_state.current_node 和 rounds_in_chapter
+        - 如果节点停留 ≥ 4 回合还没推进 → 提示 DM 给玩家引导
+
+        Returns:
+            Intervention 或 None
+        """
+        cs = getattr(self.state, "chapter_state", None)
+        if cs is None or cs.current_chapter == 0:
+            return None
+        if cs.current_node >= 4:
+            return None  # 末节点不评估
+
+        rounds_in_chapter = max(0, self.state.round_number - cs.chapter_start_round + 1)
+        rounds_in_node = rounds_in_chapter - (cs.current_node - 1) * 4
+
+        if rounds_in_node >= 4:
+            return Intervention(
+                type="CHAPTER_NODE_HINT",
+                priority=50,
+                reason=f"节点 {cs.current_node} 停留 {rounds_in_node} 回合未推进",
+                action=f"应给玩家引导往节点 {cs.current_node + 1} 推进",
+                payload={
+                    "current_chapter": cs.current_chapter,
+                    "current_node": cs.current_node,
+                    "rounds_in_node": rounds_in_node,
+                },
+            )
+        return None
+
+    def get_chapter_pressure(self) -> dict:
+        """章节压力摘要（v2.8.0 段一，4 维度评估给 facade 看）"""
+        cs = getattr(self.state, "chapter_state", None)
+        if cs is None or cs.current_chapter == 0:
+            return {"active": False}
+
+        rounds_in_chapter = max(0, self.state.round_number - cs.chapter_start_round + 1)
+        return {
+            "active": True,
+            "current_chapter": cs.current_chapter,
+            "current_node": cs.current_node,
+            "rounds_in_chapter": rounds_in_chapter,
+            "rounds_in_node": rounds_in_chapter - (cs.current_node - 1) * 4,
+            "pressure": "high" if rounds_in_chapter > 12 else ("medium" if rounds_in_chapter > 6 else "low"),
+        }
+
     def _evaluate_pace(self) -> Optional[Intervention]:
         """节奏评估（v1.7.36 优化：cooldown + 任务模式判定）"""
         ir = self.player_model.initiative_ratio

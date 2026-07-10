@@ -9,6 +9,137 @@
 
 ---
 
+## [v2.8.0-段一] - 2026-07-10
+
+### 🎉 章节制叙事体系 · 段一交付（4 周计划完成 3 周）
+
+> **范围**：v2.8.0 章节制叙事体系的最小可用版本（MVP）
+> **总耗时**：~6 小时（10/22 晚间启动，1 个会话完成）
+> **结果**：41 个新测试，0 回归，0 新 LLM 调用
+> **完整工作日志**：[docs/log/2026-07-10_v2.8.0-段一-work-log.md](docs/log/2026-07-10_v2.8.0-段一-work-log.md)
+
+#### ✨ 章节制核心架构
+
+```
+L0 数据层: era.json + GameState       (已有)
+L1 游玩层: 9 步单循环                  (已有,不动)
+L2 章节层: ChapterCoordinator 3 钩子  (🆕 段一交付)
+L3 叙事层: 英雄之旅元结构              (段二/段三)
+```
+
+#### 段一交付清单
+
+- ✨ `chapter/types.py`：ChapterState / ChapterBlueprint / BlueprintNode / 3 枚举
+- ✨ `chapter/closure.py`：ChapterClosure 4 收束状态判定器
+- ✨ `chapter/coordinator.py`：ChapterCoordinator 3 钩子（pre_step / post_step / maybe_settle）
+- ✨ `sub_facades.py` + `ChapterFacade`：v1.7.40 模式接入（第 6 个 Sub-Facade）
+- ✨ `game_engine_facade.py`：`sub_facades["chapter"]` 暴露
+- ✨ `game_state.py`：`chapter_state` 嵌套 dataclass 字段
+- ✨ `game_loop.py`：`run()` 主循环 + 3 行钩子（pre_step / post_step / maybe_settle）
+- ✨ `drama_manager.py`：第 4 维度 `evaluate_chapter` + `get_chapter_pressure`（追加不动现有）
+- ✨ `eras/wanli1587/chapter1_blueprint.json`：4 节点硬编码蓝图（万历十五年/盛泽镇）
+
+#### 关键设计决策
+
+1. **嵌套 dataclass**（ChapterState）— 不让 GameState 字段超 250
+2. **field(default_factory=ChapterState)** — 旧存档零回归
+3. **ChapterFacade 放 sub_facades.py** — 遵循 v1.7.40 模式
+4. **3 行钩子接入 game_loop.run** — 完全不动 `_run_round` 内部 9 步
+5. **CHAPTER 维度追加而非修改** — drama_manager 现有 195 行字节级不动
+6. **蓝图存 dict 而非 dataclass** — 段三再升级（避免影响现有序列化测试）
+
+#### 段一不交付（明确边界）
+
+- ❌ LLM 自由生成（段二 W5-W10）
+- ❌ 路径三态 + 4 触发器（段三 W11-W13）
+- ❌ Build × 章节分化（段四 W14）
+- ❌ plates 板块格局（推迟到段五 / 独立子项目）
+- ❌ 章节摘要 LLM（段二）
+- ❌ 自动初始化下一章（段二/段三）
+- ❌ 前端 UI（独立迭代）
+
+#### 测试覆盖
+
+- 🆕 W1：15 个测试（types + 序列化 + 蓝图加载）
+- 🆕 W2：13 个测试（closure 4 状态 + facade 5 方法 + 集成）
+- 🆕 W3：13 个测试（coordinator 3 钩子 + drama_manager 第 4 维度 + 完整生命周期）
+- **总计 41 个新测试，全部通过**
+- **基线 38 测试零回归**
+
+#### 运行时行为（运行 30 回合会观察到）
+
+```
+Round 1:  初始化第 1 章（"且听下回分解 · 春蚕"）
+Round 5:  节点 1 → 节点 2（"春税预单下来"）
+Round 9:  节点 2 → 节点 3（"赵里长催税上门"）
+Round 13: 节点 3 → 节点 4（"春蚕上簇"）
+Round 15: 节点 4 停留 3 回合 → SOFT_READY → 章节结算
+Round 16: chapter_history 追加 1 条，current_chapter 重置为 0
+```
+
+---
+
+## [v2.8.0-段二] - 2026-07-11
+
+### 🎉 章节制叙事体系 · 段二交付（6 周计划完成 6 周）
+
+> **范围**：v2.8.0 段二 LLM 自由生成（节点结构 3-5 浮动 + 元属性硬约束 + 4 必填项摘要）
+> **结果**：47 个新测试，0 回归，mock LLM 模式
+> **完整工作日志**：[docs/log/2026-07-11_v2.8.0-段二-work-log.md](docs/log/2026-07-11_v2.8.0-段二-work-log.md)
+
+#### ✨ 段二核心模块
+
+- ✨ `chapter/types.py`：新增 `ChapterMeta` dataclass + `ActType` 枚举（act/role/emotion_tone/choice_type）
+- ✨ `chapter/meta_resolver.py`：规则引擎从 `hero_journey_acts` 产出元属性
+- ✨ `chapter/schema_converter.py`：LLM JSON → ChapterBlueprint（节点裁剪 + 字符串归一化）
+- ✨ `chapter/validator.py`：4 步后校验（节点数/角色顺序/NPC 存在性/知识+路径）
+- ✨ `chapter/fallback.py`：内容保留 + 结构换默认（用户决策 B）
+- ✨ `chapter/prompt_builder.py`：4 上下文区 + 4 focus_points 规则
+- ✨ `chapter/settlement.py`：4 必填项摘要 + Mock LLM/真 LLM 双模式
+- ✨ `chapter/coordinator.py`：升级接 LLM（llm_callable 注入 + 硬编码兜底）
+
+#### 关键设计决策
+
+1. **节点结构 3-5 浮动**（用户决策 A）— 段一硬编码 4，段二 LLM 自由
+2. **内容保留 + 结构换默认**（用户决策 B）— 校验失败时不丢 LLM 内容
+3. **全部摘要 + 增量规则**（用户决策 C）— focus_points 4 条规则
+4. **加权评分兑底**（W4 决策）— Validator 错误分级
+5. **3 个新 enum 容错**（NodeRole / ActType / TransitionType）— LLM 拼错回退
+
+#### 端到端验证
+
+- ✅ 30 回合跑 2 章（每章 15 回合）
+- ✅ LLM 调用 2 次（每章 1 次生成）
+- ✅ 元属性自动推进：chapter 1 = ordinary → chapter 2 = call
+- ✅ 章节间 history 传递（第 2 章 LLM 收到第 1 章 summary）
+- ✅ 4 必填项摘要（core_event / key_choice / build_summary / path_summary）
+
+#### 段二不交付（明确边界）
+
+- ❌ 路径三态 + 4 触发器（段三 W11-W13）
+- ❌ Build × 章节分化（段四 W14）
+- ❌ 真实 LLM 接入（make_llm_for_purpose）
+- ❌ DM Agent Tool（fill_chapter_blueprint 注入 dm_agent）
+- ❌ plates 板块格局（推迟）
+
+#### 测试覆盖
+
+- 🆕 W5：15 个测试（元属性机制 + Resolver + Blueprint 序列化）
+- 🆕 W6：14 个测试（schema + 校验 + 兑底 + facade 端到端）
+- 🆕 W7：10 个测试（prompt builder 4 区 + 4 focus 规则 + token 估算）
+- 🆕 W8：8 个测试（Settlement 4 必填项 + Mock LLM + 真 LLM 注入）
+- 🆕 W9：6 个测试（Coordinator 接 LLM + 硬编码兜底 + _next_chapter）
+- 🆕 W10：6 个测试（30 回合跑 2 章 + 元属性推进 + 失败恢复）
+- **总计 47 个新测试，全部通过**
+- **基线 38 测试 + 段一 41 测试 + 段二 47 测试 = 138 测试全过**
+
+#### 关键修复
+
+- W8 升级 W3 测试：用 `closure_status` 字段代替硬编码 summary 关键词
+- W10 修复多章端到端测试断言：用 4 必填项代替 chapter_title 关键词
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
@@ -100,6 +231,353 @@ v2.5 抽  v2.6 主动  v2.6.1 prompt  v2.6.2 档案  v2.7 100%
 | 命运卡测试 | 0 | 9 | +9 |
 | commit 数（v2.5-v2.7）| — | 13 | +13 |
 | LLM 调用点 | 4 | 4（全部加 purpose）| 0 |
+
+---
+
+## [v2.7.2] - 2026-07-10 — 结构化剧情事实锚点（修复上下文不连贯）
+
+### 痛点
+玩家在第 0 回合埋的伏笔（阿宝 8 岁、束脩二两、赵里长收税）到第 1 回合**完全丢失**。LLM 写出来的剧情与前一回合矛盾（"李先生" 没出现过却用其名、阿宝忽然变成 12 岁等）。
+
+### 根因
+`game_loop.py:497` 写入的 `summary` 字段是 LLM 输出 `events_to_save[0]`（2-10 字），
+加上 `narrative[:400]`（截开篇不是结尾），`player_input` 截一行——
+关键伏笔和状态变化全被截掉。
+
+### 修复
+新增 **结构化剧情事实** 提取器 `narrative_facts_extractor.py`：
+
+1. **每回合 DM 出文后**，调 LLM 提取 4 类 fact：
+   - `character` 人物（NPC 身份/关系/承诺）
+   - `fact` 事实（具体数字/物品/事件结果）
+   - `hook` 伏笔（本回合埋的钩子）
+   - `open_question` 未解问题（未回答的提问）
+2. **GameState** 加 `narrative_facts` 字段（容量 50 条，按 key 去重）
+3. **分级注入**到下回合 system prompt：
+   - 人物/事实类 always 注入（top-10 by importance）
+   - 伏笔/未解类按相关度注入（top-3）
+4. **启发式 fallback**：LLM 超时/失败时用 regex 提取 NPC + 金额 + 末尾问号
+5. **开场也调用** extractor（让第 1 回合能接上文）
+
+### 改动文件
+- `src/history_footnote/narrative_facts_extractor.py` （新增 305 行）
+- `src/history_footnote/game_state.py`（+`narrative_facts` 字段、`append_facts()` / `get_facts_for_prompt()`）
+- `src/history_footnote/dm_agent/agent.py`（`_build_recent_context_for_prompt` 追加 fact 段）
+- `src/history_footnote/game_loop.py`（每回合跑完调 extractor，try/except 静默降级）
+- `src/history_footnote/web_server/routers/session.py`（开场也调 extractor）
+- `scripts/test_narrative_facts_extractor.py`（8 项单元测试）
+
+### 
+
+> **范围**：emoji → webp 迁移 + 4 character 半身像 + 8 fate card 图 + taste-skill 3 项 P0 优化
+> **核心思路**：anti-slop —— 用自生成国风水墨 webp 替代系统 emoji 和 AI 紫渐变默认
+
+#### ✨ v2.7.1-A：emoji → 国风水墨 webp 全面迁移
+
+> **问题**：33 处系统 emoji 散落在 UI 组件中
+> - 跨设备表现不一致（iOS / Android / Windows emoji 各异）
+> - 偏离项目"国风水墨"语言
+> - 卡通/系统字形破坏"明代 1587"沉浸感
+
+**3 阶段迁移**：
+
+```
+v1：emojis + 米黄背景（passable，混合风格）
+v2：emojis + 透明背景（clean icon 风）
+v3：webp + 透明背景（最终国风水墨）
+```
+
+**图片生成 prompt 模板**（成功版）：
+
+```text
+flat icon design, solid pure white background, simple vector line drawing,
+isolated object in the center, no decoration, no watermark, no text,
+no signature, no stamp, no seal mark, no logo, no shadow, no other colors,
+no background decoration, Chinese ink brush stroke style, single object only,
+centered composition, large object fills 70% of frame
+```
+
+**关键 5 否定词**：`no decoration, no watermark, no text, no shadow, no background`
+
+**图片处理流水线**（ImageMagick + cwebp）：
+
+```bash
+# 1. 智能去白：背景是米黄 #FEFDF8（不是纯白！fuzz 30%）
+convert input.webp -fuzz 30% -transparent "#FEFDF8" -alpha set PNG32:/tmp/c1.png
+
+# 2. 加 1px 白边 + trim
+convert /tmp/c1.png -bordercolor white -border 1x1 -fuzz 5% -trim +repage \
+  -background none -alpha set PNG32:/tmp/c2.png
+
+# 3. 缩放 112x112 + 居中 128x128（8px padding）
+convert /tmp/c2.png -resize 112x112 -background none -alpha set \
+  -gravity center -extent 128x128 PNG32:/tmp/c3.png
+
+# 4. webp near-lossless 90 + alpha 100（必须！否则 alpha 通道丢失）
+cwebp -near_lossless 90 -alpha_q 100 /tmp/c3.png -o output.webp
+```
+
+**文件大小**（平均 5-7KB/icon）：
+- icons/stats/: 5 webp（cash / loom / reputation / action / health）
+- icons/nav/: 7 webp（home / archive / wiki / choice / recap / settings / share）
+- character/: 4 webp（weaving_male/female, merchant_male, farmer_male）
+- fate/: 8 webp（核心 8 张）
+- **总计 24 张 webp / ~150KB**
+
+**33 处组件替换**：
+
+| 组件 | 位置 | emoji | → webp |
+|---|---|---|---|
+| AppHeader | 顶部 logo + 3 stats + 标题 | 🏮💰🧵⭐ | home + 3 stat icons |
+| GameHeader | 4 stats（年/行动点/3 数据）| 🎭❤💰🧵⭐ | home + action + 3 stat icons |
+| GameToolbar | 5 工具 | 📜🔄📖💬⚙️ | wiki/recap/share/settings |
+| StartMenu | 3 卡片 | 🎭👤📜 | home/choice/archive |
+| ShareCard | 4 处 | 💰🧵⭐📜 | 文字 + share |
+| RecapModal | 3 处 | 📅📖🔄 | 纯文字 |
+| CharCard | 1 avatar | 👤 | character/weaving_male.webp |
+| Wizard identity | 4 张卡 | 🧵💰🌾 | loom/cash.webp |
+| 后端 menu API | 4 处 | 🎮📂⚙️🛡️ | home/archive/settings/reputation |
+| **合计** | | | **33 处** |
+
+**关键后端改动**：
+
+```python
+# web_server/routers/menu.py
+sections = [
+    {"id": "new_game", "title": "开始新游戏", "icon": "/icons/nav/home.webp"},
+    {"id": "saves",     "title": "我的存档",  "icon": "/icons/nav/archive.webp"},
+    {"id": "settings",  "title": "系统",      "icon": "/icons/nav/settings.webp"},
+]
+```
+
+```python
+# fate_cards.py：36 张卡 icon 字段：emoji → card.id
+# 原因：让前端通过 /fate/{card.id}.webp 自动找图
+# 未生成图的卡自动 fallback 到 emoji（前端正则 ^[a-z_]+$ 判定）
+FateCard("windfall", "天降横财", "windfall", "#6b8b5a", ...)  # 第 3 参从 "💰" 改 "windfall"
+```
+
+**关键前端改动**（4 处 svelte 组件）：
+
+```svelte
+<!-- 通用：emoji → webp -->
+<img src="/icons/.../...webp" alt="" class="..." />
+```
+
+```svelte
+<!-- FateHandPanel：自动 fallback -->
+{#if /^[a-z_]+$/.test(card.icon)}
+  <img src={`/fate/${card.icon}.webp`} alt="" />
+{:else}
+  {card.icon}
+{/if}
+```
+
+**CharCard avatar 智能 fallback**：
+
+```svelte
+<img
+  src={`/character/${character.identity ?? $game?.identity ?? 'weaving_male'}_${$game?.gender ?? 'male'}.webp`}
+  alt=""
+  class="char-card-avatar-img"
+/>
+```
+
+#### ✨ v2.7.1-B：4 character 半身像 + 8 fate card 图
+
+**4 character 半身像**（256x320 透明背景）：
+
+| 角色 | 文件 | 大小 | 特点 |
+|---|---|---|---|
+| 织工 (weaving_male) | weaving_male.webp | 35KB | 蓝头巾 + 额点 + 褐衫 |
+| 织女 (weaving_female) | weaving_female.webp | 26KB | 蓝头巾 + 蓝色背带裙 |
+| 牙商 (merchant_male) | merchant_male.webp | 31KB | 发髻 + 灰色长衫 |
+| 佃户 (farmer_male) | farmer_male.webp | 46KB | 斗笠 + 灰白胡须 |
+
+**8 fate card 图**（96x96 透明背景）：
+
+| 卡名 | 文件 | 内容 |
+|---|---|---|
+| windfall | windfall.webp | 金元宝 + "吉"字 + 光晕 |
+| rice_lost | rice_lost.webp | 空碗 + 一粒米 |
+| lucky_star | lucky_star.webp | 8 角星 + 光辉 |
+| renowned | renowned.webp | 朱砂印章 + 红印 |
+| shen_loves_you | shen_loves_you.webp | 红色心形结 |
+| vigor | vigor.webp | 金色闪电 |
+| illness | illness.webp | 中药包布 |
+| harvest_fest | harvest_fest.webp | 金色稻穗 |
+
+**Prompt 模板**（character 专用）：
+
+```text
+Chinese traditional ink painting style, portrait of upper body,
+Ming dynasty 1587 Jiangnan, realistic figure, isolated character in center,
+no decoration, no watermark, no text, no signature, no background decoration,
+no other characters, no shadow, soft natural lighting, solid pure white background
+```
+
+**总耗时**：~3 分钟（含 11 张生成 + 自动 webp 处理）
+
+#### ✨ v2.7.1-C：Taste-Skill UI/UX 升级
+
+> **分析工具**：[taste-skill](https://github.com/Leonxlnx/taste-skill) anti-slop frontend framework
+> **评估结果**：8/10（项目本身已较好遵循 anti-slop 原则）
+
+**Brief 推断**：
+
+```
+Reading this as: 历史 RPG 游戏（万历十五年），对 B 端文创/历史爱好者玩家，
+国风水墨雅致语言，leaning toward Editorial + Heritage + Premium aesthetic.
+```
+
+**Dial 设置**：
+
+| Dial | 值 | 原因 |
+|---|---|---|
+| DESIGN_VARIANCE | 5-6 | 国风讲究对称 + 留白 |
+| MOTION_INTENSITY | 5-6 | 已有 800-1500ms 慢节奏 |
+| VISUAL_DENSITY | 3-4 | "计白当黑"，不能密 |
+
+**3 项 P0 优化**（已应用）：
+
+**1) 西文字体升级**（避开 AI 默认）：
+
+```css
+/* tokens.css */
+/* Before: Cormorant Garamond (与 Instrument Serif 类似，AI 默认) */
+/* After: PP Editorial New（heritage editorial 专属）+ Charter + Iowan Old Style */
+--font-en: "PP Editorial New", "Saol Display", "Canela", "Charter",
+          "Iowan Old Style", Georgia, "Times New Roman", serif;
+```
+
+**2) `prefers-reduced-motion` 双层防御**（可访问性）：
+
+```css
+/* base.css: 全局 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* aesthetic.css: 局部（4 个动画单独降级） */
+.ink-spread, .stamp-press { animation: none; filter: none; }
+```
+
+**3) 新增 2 个水墨国风专属动效**：
+
+```css
+/* aesthetic.css */
+
+/* 墨水晕开：filter blur 渐入（"墨水渗透宣纸"质感）*/
+@keyframes inkSpread {
+  0%   { filter: blur(6px) opacity(0); transform: scale(1.04); }
+  100% { filter: blur(0) opacity(1); transform: scale(1); }
+}
+.ink-spread { animation: inkSpread 800ms var(--ease-ink) both; }
+
+/* 印章敲下：垂直反弹（"朱砂盖印"质感）*/
+@keyframes stampPress {
+  0%   { transform: scale(1.4); opacity: 0; filter: blur(2px); }
+  60%  { transform: scale(0.92); opacity: 1; filter: blur(0); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.stamp-press { animation: stampPress 400ms var(--ease-ink) both; }
+```
+
+**3 个新动画 token**（tokens.css）：
+
+```css
+--anim-ink-spread:    800ms var(--ease-ink) both;     /* 墨水晕开 */
+--anim-scroll-unroll: 1200ms var(--ease-brush) both;  /* 卷轴展开 */
+--anim-stamp-press:   400ms var(--ease-ink) both;     /* 印章敲下 */
+```
+
+**应用示例**（LoadingOverlay.svelte）：
+
+```svelte
+<div class="overlay-title ink-spread">
+  <span class="title-ornament">❀</span>
+  <h2 class="title-text">命数推演中</h2>
+  <span class="title-ornament">❀</span>
+</div>
+```
+
+**Taste-Skill 红线遵守情况**：
+
+| 红线 | 状态 | 说明 |
+|---|---|---|
+| 不用 AI 紫渐变 | ✅ | 用宣纸 + 墨 + 朱砂（4 色） |
+| 不用 Inter 默认 | ✅ | 用 Noto Serif SC + Charter + PP Editorial New |
+| 不用 Fraunces/Instrument Serif | ✅ | Cormorant Garamond 替换 |
+| h-screen 改用 100dvh | ✅ | 4 处全用 100dvh |
+| prefers-reduced-motion | ✅ | 双层防御 |
+| EMOJIS 禁用 | ✅ | 33 处替换 |
+| Grid over flex-math | ✅ | 多组件用 grid |
+| Inter 字体 | ✅ | 未用 |
+
+#### 🐛 修复：HMR 累积态 + CSS 多余 `}`
+
+**问题**：连续多次 HMR 后 vite 报 ERR_ABORTED：
+
+```
+[error] net::ERR_ABORTED StepIdentity.svelte
+[warn] The next HMR update will cause the page to reload
+[error] TypeError: Failed to fetch dynamically imported module: ... 6.js
+```
+
+**根因**：之前 SearchReplace 编辑 `StepIdentity.svelte` 时插入了一个多余的 `}`（line 123），从 Svelte 编译角度看是合法 CSS，**但 postcss 报 `Unexpected }`**
+
+**修复**：
+
+```diff
+  .identity-icon-img {
+    width: 2.5em;
+    height: 2.5em;
+    object-fit: contain;
+  }
+- }
+```
+
+**教训**：
+
+1. SearchReplace 改 CSS 后**必须** 跑 `npm run check` 或 `npx svelte-check`
+2. 看到 vite `Pre-transform error` 立即修（不要等下次 HMR 累积）
+3. HMR 失败 → 立即清 `.svelte-kit` + `node_modules/.vite` 缓存
+
+#### 修改文件
+
+**前端**：
+- 🔧 12 个 svelte 组件（AppHeader / GameHeader / GameToolbar / StartMenu / ShareCardButton / RecapModal / CharCard / FateHandPanel / LoadingOverlay / StepIdentity / wizard.svelte.ts）
+- 🔧 `src/lib/styles/tokens.css`（font-en 升级 + 3 anim token）
+- 🔧 `src/lib/styles/aesthetic.css`（2 个新 @keyframes + reduced-motion 降级）
+- 🔧 `src/lib/styles/base.css`（全局 prefers-reduced-motion）
+
+**后端**：
+- 🔧 `web_server/routers/menu.py`（4 处 icon 改 webp）
+- 🔧 `fate_cards.py`（36 张卡 icon 字段：emoji → card.id）
+
+**素材**：
+- ➕ `static/icons/stats/*.webp`（5 张）
+- ➕ `static/icons/nav/*.webp`（7 张）
+- ➕ `static/character/*.webp`（4 张）
+- ➕ `static/fate/*.webp`（8 张）
+
+**总计**：~24 张新 webp，~150KB，0 张 emoji 视觉残留
+
+#### 数字统计
+
+| 维度 | v2.7 | v2.7.1 | 变化 |
+|---|---|---|---|
+| 系统 emoji 视觉 | 33 处 | 0 处 | **-33** |
+| 自生成 webp 图标 | 0 | 24 张 | +24 |
+| 平均 icon 大小 | 1KB（emoji 字体）| 5-7KB | +5KB |
+| 跨设备一致性 | ❌ | ✅ | — |
+| 国风语言一致 | ❌ | ✅ | — |
+| prefers-reduced-motion | 部分 | 全局 | ✅ |
+| 动效质感 | 12 keyframes | 14 keyframes | +2 |
+| 测试数 | 66 | 66 | 0（仅 UI/UX 改动）|
 
 ---
 

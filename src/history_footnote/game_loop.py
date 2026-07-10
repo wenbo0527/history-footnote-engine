@@ -120,6 +120,8 @@ class GameLoop:
             # 🐛 v1.5.1 P0 Bug #1 修复：注入 custom_character
             if hasattr(self, '_pending_custom_character') and self._pending_custom_character:
                 self.state.custom_character = self._pending_custom_character
+            # 🆕 v1.9.5：解析 custom_character → 结构化 state 字段（cash/debt/family/...）
+            self._apply_character_initial_state()
 
         # 初始化组件
         self.rule_engine = RuleEngine(era_config)
@@ -149,6 +151,14 @@ class GameLoop:
         self.engine = GameEngineFacade(self.state, era_config)
         # 把 facade 子系统映射到 self（保兼容）
         self._bind_facade()
+
+        # 🆕 v2.8.0 章节层协调器（在 facade 之后初始化，复用 chapter sub-facade）
+        from history_footnote.chapter.coordinator import ChapterCoordinator
+        self._chapter_coordinator = ChapterCoordinator(
+            state=self.state,
+            chapter_facade=self.engine.sub_facades["chapter"],
+            drama_manager=self.drama_manager,
+        )
 
         self.knowledge_base = KnowledgeBase(
             entries=era_config.get("knowledge", {}).get("entries", []),
@@ -198,6 +208,38 @@ class GameLoop:
             current_ref = self.dm.llm._state_ref_slot_ref[0]
             current_ref["identity_switch_offers"] = available
 
+    def _apply_character_initial_state(self) -> None:
+        """🆕 v1.9.5 把 custom_character 解析为结构化 state 字段
+
+        解决问题：LLM 生成的"现银一两二钱 / 欠三两 / 母亲张氏"在 custom_character 里，
+        但 state.cash/state.debt/state.family_members 等是 dataclass 默认 0/[]。
+        解析层级（按优先级）：
+        1. cc.initial_state（LLM 直接返回结构化）
+        2. 正则解析 cc.background + cc.starting_situation
+        3. identity_config.base_state 兜底
+        """
+        from history_footnote.initial_state_resolver import (
+            extract_initial_state_from_character,
+            apply_initial_state,
+        )
+        cc = getattr(self.state, "custom_character", None)
+        if not cc:
+            return
+        # 优先用 self.identity_config（已在 __init__ 解析好）
+        identity_config = getattr(self, "identity_config", {}) or {}
+        try:
+            initial = extract_initial_state_from_character(cc, identity_config)
+            apply_initial_state(self.state, initial)
+            logger.info(
+                f"[v1.9.5] 初始状态已应用: source={initial.get('source')}, "
+                f"cash={self.state.cash:.2f}, debt={self.state.debt:.2f}, "
+                f"family={len(self.state.family_members)}, "
+                f"tasks={len(self.state.active_tasks)}, "
+                f"deadlines={len(self.state.upcoming_deadlines)}"
+            )
+        except Exception as e:
+            logger.exception(f"[v1.9.5] 初始状态解析失败: {e}")
+
     def run(self) -> None:
         """启动游戏主循环"""
         # 注入background知识（游戏开始时）
@@ -222,7 +264,10 @@ class GameLoop:
                         continue
 
                 # 执行一回合
+                self._chapter_coordinator.pre_step()  # 🆕 v2.8.0 章节层钩子
                 self._run_round(player_input)
+                self._chapter_coordinator.post_step()  # 🆕 v2.8.0
+                self._chapter_coordinator.maybe_settle()  # 🆕 v2.8.0
 
             except KeyboardInterrupt:
                 print("\n[INFO] 游戏已暂停。输入 /quit 退出，/save 保存。")
@@ -467,6 +512,31 @@ class GameLoop:
             event_summary,
         )
 
+        # 🆕 v2.7.2：从 narrative 提取 4 类结构化 fact（保持上下文连贯性）
+        # 同步调用，超时 8s 静默降级到启发式（不影响 narrative 响应）
+        try:
+            from history_footnote.narrative_facts_extractor import extract_facts_from_narrative
+            llm_wrapper = getattr(self.dm, "llm", None)
+            # 兼容：llm 可能是被 wrapper 包装过的
+            if hasattr(llm_wrapper, "invoke") and not hasattr(llm_wrapper, "_invoke_with_timeout"):
+                # 已经被 LLMWrapper 包装
+                pass
+            elif hasattr(self.dm, "llm_wrapper"):
+                llm_wrapper = self.dm.llm_wrapper
+            facts = extract_facts_from_narrative(
+                narrative=narrative,
+                round_num=self.state.round_number,
+                llm_wrapper=llm_wrapper,
+                timeout=8.0,
+            )
+            if facts:
+                self.state.append_facts([f.to_dict() for f in facts])
+                logger.info(
+                    f"[v2.7.2] 提取 {len(facts)} 条 fact（回合 {self.state.round_number}）"
+                )
+        except Exception as e:
+            logger.warning(f"[v2.7.2] fact 提取失败（不影响主流程）: {e}")
+
         # 🆕 v1.7.30：event_parser 解析 LLM 输出中的 <events> 块 → 写入 GameState
         # 替代旧的 LLM 自由写 financial_status 模式
         from history_footnote.event_parser import process_llm_output
@@ -649,10 +719,18 @@ class GameLoop:
         description = self.identity_config.get("description", "你是这个时代的一个小人物。")
 
         # 🐛 v1.5.1 P0 Bug #1 修复：优先用 custom_character
+        # 🆕 v1.7.32 重构（C 方案）：判据改为「LLM 是否真正生成了叙事字段」
+        # 仅看 opening_paragraph / background / starting_situation ——这三个是 8 步向导 LLM 生成的产物
+        # name 不再作为判据（v2.0 简化为 3 步 wizard 后，cc 只有 name+age+occupation+hometown 4 键，
+        # 原判据 `... or name` 会错误进入 cc 分支并只打 6 行 → 退化叙事）
+        # 结构化字段（cash/debt/family/tasks）由 _apply_character_initial_state() 走 base_state 兜底，与此处独立
         cc = getattr(self.state, "custom_character", None)
-        if cc and (cc.get("opening_paragraph") or cc.get("background") or cc.get("name")):
-            print(f"\n{'=' * 60}")
-            print(f"欢迎来到【{era_name}】 {gender_label}")
+        cc_has_narrative = cc and (
+            cc.get("opening_paragraph") or cc.get("background") or cc.get("starting_situation")
+        )
+        if cc and cc_has_narrative:
+            # 🆕 v1.9.5 修复：去掉装饰性 "==========" 字符（前端 narrative 会原样显示）
+            print(f"\n欢迎来到【{era_name}】 {gender_label}")
             print(f"\n你是 {cc.get('name', '?')} — {cc.get('hometown', '盛泽镇')}")
             if cc.get('family'):
                 family_str = ' / '.join([f"{k}: {v}" for k, v in list(cc.get('family', {}).items())[:3]])
@@ -664,8 +742,7 @@ class GameLoop:
                 print(f"\n【开局处境】{cc['starting_situation']}")
             if cc.get('opening_paragraph'):
                 print(f"\n{cc['opening_paragraph']}")
-            print(f"\n日期：{self.state.current_date}")
-            print(f"{'=' * 60}\n")
+            print(f"\n日期：{self.state.current_date}\n")
             return
 
         # 优先从dm_persona.md的开场白部分读（但只在身份为默认男性时使用）
@@ -674,19 +751,17 @@ class GameLoop:
 
         # 动态identity开场白（当不是默认男性身份时）
         if not is_default_identity or not self._has_persona_opening():
-            print(f"\n{'=' * 60}")
-            print(f"欢迎来到【{era_name}】 {gender_label}")
+            # 🆕 v1.9.5 修复：去掉装饰性 "==========" 字符
+            print(f"\n欢迎来到【{era_name}】 {gender_label}")
             print(f"\n你选择成为：{label}")
             print(f"你的身份：{role}")
             print(f"\n{description}")
-            print(f"\n日期：{self.state.current_date}")
-            print(f"{'=' * 60}\n")
+            print(f"\n日期：{self.state.current_date}\n")
         else:
             # 默认男性身份 + 有persona.md → 用persona的开场白
             opening = self._get_persona_opening()
-            print(f"\n{'=' * 60}")
-            print(opening)
-            print(f"{'=' * 60}\n")
+            # 🆕 v1.9.5 修复：去掉装饰性 "==========" 字符
+            print(f"\n{opening}\n")
 
     def _has_persona_opening(self) -> bool:
         """检查dm_persona.md是否有开场白"""

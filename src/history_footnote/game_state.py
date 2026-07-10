@@ -103,6 +103,12 @@ class GameState:
     narrative_recent: list[dict] = field(default_factory=list)
     narrative_archive: list[dict] = field(default_factory=list)
 
+    # === 🆕 v2.7.2 结构化剧情事实 ===
+    # 从每回合 narrative 自动提取的 4 类 fact（人物/事实/伏笔/未解）
+    # 替代贫瘠的 events_to_save[0] summary → 注入下回合 prompt
+    # 容量限制 50 条（防 prompt 爆炸）
+    narrative_facts: list[dict] = field(default_factory=list)  # NarrativeFact.to_dict()
+
     # === 🆕 v1.6.6 明朝名词首次出现跟踪（用于 tooltip 高亮未读词） ===
     # seen_terms: 玩家已经见过并解释过的名词（已读）
     # 新词首次出现时高亮 + tooltip
@@ -191,6 +197,16 @@ class GameState:
     # 存档绑定的账户 ID（v1.7.30 账户系统）
     # 空字符串 = 旧存档/未登录/访客
     account_id: str = ""
+
+    # === 🆕 v2.8.0 章节制状态（嵌套 dataclass，避免字段超 250） ===
+    # L2 章节层的运行时状态
+    # 段一：只接入结构 + 硬编码第 1 章蓝图
+    # 段二：接入 LLM 自由生成（fill_chapter_blueprint Tool）
+    # 段三：接入路径三态（path_state / 4 触发器）
+    # 段四：接入 Build × 章节分化
+    # 旧存档无此字段 → field(default_factory) 自动建空对象，零回归
+    from history_footnote.chapter.types import ChapterState
+    chapter_state: ChapterState = field(default_factory=ChapterState)
 
     # === 节奏追踪（规则引擎的元数据） ===
     player_idle_rounds: int = 0
@@ -575,6 +591,48 @@ class GameState:
         # archive 上限
         if len(self.narrative_archive) > self.NARRATIVE_ARCHIVE_SIZE:
             self.narrative_archive = self.narrative_archive[-self.NARRATIVE_ARCHIVE_SIZE:]
+
+    def append_facts(self, facts: list[dict]) -> None:
+        """🆕 v2.7.2 追加结构化 fact（来自 narrative_facts_extractor）
+
+        Args:
+            facts: list[NarrativeFact.to_dict()]
+
+        规则：
+        - 按 key 去重（相同 key 的 fact 替换旧的 + round 更新）
+        - 容量上限 50 条（防 prompt 爆炸），超出时按 importance 淘汰
+        """
+        if not facts:
+            return
+        from history_footnote.narrative_facts_extractor import NarrativeFact
+        existing_keys = {f.get("key", "") for f in self.narrative_facts if f.get("key")}
+        for f in facts:
+            fact = NarrativeFact.from_dict(f) if isinstance(f, dict) else f
+            if not isinstance(fact, NarrativeFact):
+                continue
+            # 按 key 替换
+            if fact.key and fact.key in existing_keys:
+                for i, old in enumerate(self.narrative_facts):
+                    if old.get("key") == fact.key:
+                        self.narrative_facts[i] = fact.to_dict()
+                        break
+            else:
+                self.narrative_facts.append(fact.to_dict())
+                if fact.key:
+                    existing_keys.add(fact.key)
+
+        # 容量限制：按 importance + created_at 淘汰
+        MAX_FACTS = 50
+        if len(self.narrative_facts) > MAX_FACTS:
+            self.narrative_facts.sort(key=lambda x: (-x.get("importance", 5), -x.get("created_at", 0)))
+            self.narrative_facts = self.narrative_facts[:MAX_FACTS]
+
+    def get_facts_for_prompt(self) -> list[dict]:
+        """🆕 v2.7.2 拿要注入 prompt 的 fact 列表（按 importance 倒序）"""
+        return sorted(
+            self.narrative_facts,
+            key=lambda x: (-x.get("importance", 5), -x.get("created_at", 0)),
+        )
 
     def get_recap(self, recent_count: int = 5, archive_count: int = 30) -> dict:
         """🆕 v1.6.3 剧情回顾
