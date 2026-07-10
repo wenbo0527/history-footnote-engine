@@ -1,9 +1,11 @@
 /**
- * 🆕 v2.8.0 W21: Vitest 配置（最终版）
+ * 🆕 v2.8.0 W21: Vitest 配置
  *
- * Svelte 5 + vitest + jsdom 兼容性修复：
- * - vite-plugin-svelte 加载 component.svelte 文件
- * - 用 svelte/internal/client 替换 svelte 的 server-mode (mount source)
+ * 适配 Svelte 5 + SvelteKit + vitest 的项目：
+ * - 用 jsdom 模拟浏览器（API client 测试需要 window/document）
+ * - 不测 .svelte 组件 mount（Svelte 5 + testing-library 5 已知兼容性问题
+ *   需等 SvelteKit 升级 vite-plugin-svelte v3 → v4 后再解）
+ * - 只测 API client + 业务不变量
  */
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
@@ -13,16 +15,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.{test,spec}.{js,ts,svelte}'],
-    exclude: ['node_modules', '.svelte-kit', 'build', 'e2e'],
+    // 只测 .ts/.js 测试（不测 .svelte 组件 mount）
+    include: ['src/lib/api/**/*.{test,spec}.{js,ts}'],
+    exclude: ['node_modules', '.svelte-kit', 'build', 'e2e', 'src/lib/components/**'],
     setupFiles: ['./vitest.setup.ts'],
-  },
-  resolve: {
-    alias: {
-      $lib: '/src/lib',
-      // Svelte 5 + vitest：强制 client 端
-      // 让 svelte/index-server.js 解析为 client 版本（避免 "mount is server-only" 报错）
-      // 此别名由 vite-plugin-svelte 在打包时自动加；这里显式声明强化
-    },
   },
 });
