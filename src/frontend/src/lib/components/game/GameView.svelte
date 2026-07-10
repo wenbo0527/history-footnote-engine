@@ -29,6 +29,8 @@
   import ActionPanel from './ActionPanel.svelte';
   import LoadingOverlay from './LoadingOverlay.svelte';
   import EmergencyModal from './EmergencyModal.svelte';
+  import ChapterProgressBar from './ChapterProgressBar.svelte';
+  import ChapterHistoryDrawer from './ChapterHistoryDrawer.svelte';
   import type { FateCard } from '$lib/api/types';
 
   async function handleSelectVoice(voice: { voice_id: string; voice_name: string; intent_text?: string }) {

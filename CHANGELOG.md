@@ -271,6 +271,56 @@ Chapter 2: 此章波澜不兴...唯见行事之人守分循理、约束身边之
 
 ---
 
+## [v2.8.0-UI] - 2026-07-11
+
+### 🎉 章节制叙事体系 · 前端 UI 集成（之前未完成部分）
+
+> **范围**：v2.8.0 前端 UI 章节制接入（之前章节制只是后端，未呈现给玩家）
+> **结果**：8 个新测试，0 回归
+
+#### 🆕 前端交付
+
+- ✨ `frontend/src/lib/api/chapter.ts`：4 个 API 客户端函数
+- ✨ `frontend/src/lib/components/game/ChapterProgressBar.svelte`：章节进度条（节点圆点 + 进度% + Build/路径/板块标签）
+- ✨ `frontend/src/lib/components/game/ChapterHistoryDrawer.svelte`：已结算章节列表抽屉
+- ✨ `frontend/src/lib/components/game/GameView.svelte`：挂载进度条 + 历史抽屉
+- ✨ `backend/src/history_footnote/web_server/routers/chapter.py`：4 个 API handler
+- ✨ `backend/src/history_footnote/web_server/router_registry.py`：注册 `/api/chapter/*` 路由
+
+#### API 端点（4 个）
+
+| 端点 | 方法 | 说明 |
+|---|---|---|
+| `/api/chapter/state` | GET | 章节进度（current_chapter/node/round + progress_pct + player_build + main_path_focus + active_plate）|
+| `/api/chapter/blueprint` | GET | 当前章节蓝图（chapter_title + nodes + meta） |
+| `/api/chapter/history` | GET | 已结算章节摘要（chapter_history）|
+| `/api/chapter/record_choice` | POST | 记录玩家选项 → 写入 recent_path_choices |
+
+#### 关键设计决策
+
+1. **GameView 集成** — 进度条在 narrative 区域上方，不动 ActionPanel
+2. **老存档兼容** — 无 chapter_state → 返回 active=False，UI 显示"章节制未激活"
+3. **容错** — MagicMock + patch._get_or_load_session 测 handler 不启动 server
+4. **板块压力可视化** — state.active_plate 显示第一个 shifting 板块
+5. **节点动画** — current 节点有 box-shadow + 2s 呼吸动画
+
+#### 测试覆盖
+
+- 🆕 `tests/test_v28_chapter_ui_api.py`：8 个 API handler 集成测试
+  - GET /state 格式 + 进度计算
+  - 缺 session → 400
+  - GET /blueprint 节点数据
+  - 无 blueprint → active=False 容错
+  - GET /history 章节历史
+  - POST /record_choice 写入 recent_path_choices
+  - 老存档 → active=False 零回归
+  - shifting 板块 → active_plate 字段
+
+- **总计 8 个新测试，全部通过**
+- **基线 232 + UI 8 = 240 测试全过**
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

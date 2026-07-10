@@ -19,6 +19,7 @@ from urllib.parse import parse_qs
 from history_footnote.web_server.routers import (
     account as _account,
     admin as _admin,
+    chapter as _chapter,
     character as _character,
     eras as _eras,
     glossary as _glossary,
@@ -50,6 +51,10 @@ GET_ROUTES = {
     "/api/eras": _eras.handle_GET_eras,
     "/api/identities": _eras.handle_GET_identities,
     "/api/state": _state.handle_GET_state,
+    # 🆕 v2.8.0 章节制 API
+    "/api/chapter/state": _chapter.handle_GET_chapter_state,
+    "/api/chapter/blueprint": _chapter.handle_GET_chapter_blueprint,
+    "/api/chapter/history": _chapter.handle_GET_chapter_history,
     "/api/feedback_categories": _misc.handle_GET_feedback_categories,
     "/api/llm/stats": _observability.handle_GET_llm_stats,
     "/api/llm/reset_stats": _observability.handle_GET_llm_reset_stats,
@@ -100,6 +105,8 @@ POST_ROUTES = {
     "/api/sanitize_patterns": _glossary.handle_GET_sanitize_patterns,
     "/api/version": _misc.handle_POST_version,  # 🆕 v1.8.0 POST 包装
     "/api/feedback": _misc.handle_POST_feedback,
+    # 🆕 v2.8.0 章节制 API
+    "/api/chapter/record_choice": _chapter.handle_POST_record_choice,
     "/api/feedback_categories": _misc.handle_GET_feedback_categories,  # 同上
     "/api/merge_voice_options": _input.handle_POST_merge_voice_options,
     # 🆕 v2.4 文字地图系统
