@@ -1147,6 +1147,73 @@ git push origin v2.9.0
 
 ---
 
+## [v2.9.x-W39] - 2026-07-11
+
+### 🚀 W39: 前端 LLM 流式响应（SSE + SvelteKit runes）— 用户体验质变（W39）
+
+> **范围**：前端接入后端 `/api/input_stream` SSE 端点，LLM 文本逐 token 流式显示
+> **结果**：首 token < 1 秒 vs 整章 30+ 秒等待；用户感受质变
+
+#### 🆕 新增
+
+| 文件 | 用途 |
+|---|---|
+| `src/frontend/src/lib/api/streaming.ts` | SSE 客户端（fetch + ReadableStream + 事件分发）|
+| `src/frontend/src/lib/hooks/useStreamingNarrative.ts` | SvelteKit runes hook（runes state）|
+| `src/frontend/src/lib/hooks/useStreamingNarrative.test.ts` | 21 个 vitest 测试 |
+| `src/frontend/vitest.config.ts` | include `hooks/**/*.test.ts` |
+
+#### 6 类 SSE 事件
+
+| 事件 | 数据 | 用途 |
+|---|---|---|
+| `thinking` | `{"message": "DM 思考中..."}` | 显示"思考中"UI |
+| `token` | `{"delta": "今晚"}` | 逐字追加 narrative |
+| `metadata` | `{"state_changes": {...}}` | 状态变更 |
+| `options` | `{"voices": [...]}` | 命运卡选项 |
+| `done` | `{"ok": true}` | 关闭流 |
+| `error` | `{"message": "..."}` | 错误处理 |
+
+#### 21 个 W39 测试
+
+| 类别 | 数量 | 验证 |
+|---|---|---|
+| extractField | 4 | SSE 字段解析 |
+| dispatchEvent | 7 | 6 类事件分发 + 未知事件忽略 |
+| streamInput 集成 | 7 | HTTP 500/400/非 JSON/chunked/intent 优先/网络错 |
+| useStreamingNarrative | 2 | hook 导出 |
+| **总计** | **21** | **全部 PASSED** |
+
+#### 关键修复
+
+- **fetch 网络错 catch** — 原 `await fetch()` 在 try 之外，抛出会逃出。修：加 try-catch 调 `onError` 回调
+- **vitest config include hooks/** — 之前没含，新 W39 测试能被发现
+- **extractField/dispatchEvent export** — 测试需要 import
+
+#### 用户体验对比
+
+| 之前（W32 之前）| 之后（W39）|
+|---|---|
+| 整章 30+ 秒等待 | 首 token < 1 秒 |
+| 看不到 LLM 思考 | "DM 思考中..." 提示 |
+| 不可中断 | AbortController 可中断 |
+| 无 loading 反馈 | thinking/token/done 三态 UI |
+
+#### 验证结果
+
+```
+后端 pytest:     337 PASSED（无回归）
+前端 vitest:     51 PASSED (30 之前 + 21 W39)
+```
+
+#### 未来集成
+
+- `GameView.svelte` 调 `useStreamingNarrative.start()`
+- `NarrativeArea.svelte` 显示 `stream.narrative` 实时流式
+- "DM 思考中..." 状态用 thinking 事件
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
