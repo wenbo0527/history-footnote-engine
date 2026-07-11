@@ -1915,6 +1915,54 @@ http://localhost:5173/game/sess-123?admin=true
 
 ---
 
+## [v2.10.x-W51] - 2026-07-11
+
+### 📚 W51: 多会话存档 API 客户端 + 派生函数（W51）
+
+> **范围**：v2.10.x 第一个 sprint — 多会话支持
+> **结果**：前端可调用 /api/archives 拿存档列表 + 按时间/era 排序
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/api/archives.ts`：
+  - `listArchives(account?, includeArchived?)` — GET /archives
+  - `sortByRecent(sessions)` — 按 updated_at 倒序
+  - `groupByEra(sessions)` — 按 era_id 分组
+  - 类型：ArchiveSession / ArchivesResponse
+- ✨ `src/frontend/src/lib/api/archives.test.ts`：11 个测试
+  - listArchives 路由（4：默认 + account + include_archived + 网络错）
+  - sortByRecent（4：倒序 + fallback + 不改原 + 空）
+  - groupByEra（3：基础 + 空 + 缺 era_id）
+
+#### 关键发现
+
+- **后端 `/api/archives` 已存在**（v1.7.30+ `save_manager.list_sessions`）
+- W51 任务：**前端接入**而非后端重写
+
+#### 11 个 W51 测试
+
+| 类别 | 数量 |
+|---|---|
+| listArchives | 4 |
+| sortByRecent | 4 |
+| groupByEra | 3 |
+| **总计** | **11** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     134 PASSED (123 + 11 W51)
+```
+
+#### v2.10.x 进展
+
+| Sprint | 状态 | 描述 | 测试 |
+|---|---|---|---|
+| **W51** | ✅ | **多会话存档 API 客户端** | **11** |
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
