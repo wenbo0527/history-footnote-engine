@@ -1633,6 +1633,77 @@ past  past  past  cur  future
 
 ---
 
+## [v2.9.x-W47] - 2026-07-11
+
+### 📊 W47: 性能监控前端 API + 派生函数（W47）
+
+> **范围**：把 W44 /metrics 端点接入前端 + 派生分析函数
+> **结果**：前端可实时查询 + 分析端点性能 + LLM token 用量
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/api/metrics.ts`：
+  - `getMetrics()` — GET /metrics
+  - `slowestEndpoints(metrics, limit)` — 按 p95 排序找最慢
+  - `totalLLMTokens(metrics)` — 总 LLM token 用量 + 按 provider 分组
+  - `formatUptime(seconds)` — 人类可读（s/m/h/d）
+  - 类型：EndpointMetrics / LLMMetrics / MetricsResponse
+- ✨ `src/frontend/src/lib/api/metrics.test.ts`：12 个测试
+  - 路由 /metrics（1 + 1 网络错）
+  - slowestEndpoints（3：top N / 全返 / 空）
+  - totalLLMTokens（3：sums / by_provider / 空）
+  - formatUptime（4：s/m/h/d）
+
+#### 派生函数
+
+| 函数 | 作用 |
+|---|---|
+| `getMetrics()` | 调 /metrics 拿全量快照 |
+| `slowestEndpoints(m, 5)` | 返回 p95 最高的 5 个端点 |
+| `totalLLMTokens(m)` | 总 prompt + completion token + 按 provider 分组 |
+| `formatUptime(3725)` | "1.0h" |
+
+#### 12 个 W47 测试
+
+| 类别 | 数量 |
+|---|---|
+| getMetrics 路由 + 网络错 | 2 |
+| slowestEndpoints | 3 |
+| totalLLMTokens | 3 |
+| formatUptime | 4 |
+| **总计** | **12** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     106 PASSED (94 + 12 W47)
+```
+
+#### 未来用法
+
+```svelte
+<script>
+  import { getMetrics, slowestEndpoints, totalLLMTokens, formatUptime } from '$lib/api/metrics';
+  // 用 MetricsPanel.svelte 显示
+</script>
+
+<div>
+  <h3>性能监控</h3>
+  <p>Uptime: {formatUptime(metrics.uptime_seconds)}</p>
+  <p>最慢端点: {slowest[0].endpoint} (p95 {slowest[0].p95_ms}ms)</p>
+  <p>总 token: {tokens.prompt + tokens.completion}</p>
+</div>
+```
+
+#### 未来 W48 集成
+
+- `MetricsPanel.svelte` 组件（用本 API）
+- 折线图 + 端点表 + LLM 分布
+- 自动 30 秒轮询
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
