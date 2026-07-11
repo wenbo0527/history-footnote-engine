@@ -930,6 +930,51 @@ WARNING:         28 (含 Tool 注入日志)
 
 ---
 
+## [v2.9.x-W35] - 2026-07-11
+
+### 🎯 W35 修复：DMAgent 真正接入 fill_chapter Tool（W35）
+
+> **范围**：修 W30 报告"Tool 注入完成"后留下的同名冲突 bug
+> **结果**：DMAgent.tools 从 10 → 12，含 fill_chapter_*；LLM 现在能真正自主调章节 Tool
+
+#### 🆕 修复
+
+| 问题 | 根因 | 修复 |
+|---|---|---|
+| DMAgent.tools 只有 10 个（不含 fill_chapter_*）| agent.py:90 有同名 `make_tools` 函数（10 个，本地）覆盖了 tools.py:12 个版 | DMAgent.__init__ line 1040 改 import `dm_make_tools` from `dm_agent.tools` |
+
+#### 历史原因
+
+- `agent.py:90 def make_tools(...)` —— v1.x 老函数（10 个 tool 工厂，返回 list[dict]）
+- `tools.py def make_tools(...)` —— v2.8.0 新函数（12 个 @tool 装饰 LangChain Tool）
+- `DMAgent.__init__ line 1040` 之前用本地 10 个版——**chapter Tool 未注入 LLM**
+
+#### 修复效果
+
+```
+之前: DMAgent.tools = 10 (不含 fill_chapter_*)
+      LLM 看不到 fill_chapter，无法自主决策章节生成
+之后: DMAgent.tools = 12 (含 fill_chapter_*)
+      decision_tools = 6 (含 fill_chapter_blueprint + fill_chapter_summary)
+      LLM 能在生成叙事时自主决定调章节 Tool
+```
+
+#### 🆕 测试
+
+- ✨ `tests/test_v35_dm_agent_autonomy.py`：10 个测试验证 12 tools + 6 decision + bind LLM
+- 验证 fill_chapter 实际可调
+- 验证拆分规则（6 + 6 = 12）
+
+#### 验证结果
+
+```
+后端 pytest:     305 PASSED (295 + 10 W35)
+前端 vitest:     30 PASSED
+零回归:         ✅
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

@@ -1037,7 +1037,11 @@ class DMAgent(MockHelpersMixin):
         self.llm = llm_model
         # 🐛 v1.6+ 修复：selected_identity 应来自 state（避免 AttributeError）
         self.selected_identity = getattr(state, "selected_identity", "") or ""
-        self.tools = make_tools(state, rule_engine, memory, knowledge_base, era_config)
+        # 🆕 W35: 用 tools.py.make_tools（含 fill_chapter_* 12 个 Tool）而非本地 10 个 make_tools
+        # 历史原因：agent.py:90 的本地 make_tools 早于 v2.8.0 章节制（不含 fill_chapter）
+        # 用 dm_agent.tools.make_tools 让 LLM 能看到所有 12 个 Tool
+        from history_footnote.dm_agent.tools import make_tools as dm_make_tools
+        self.tools = dm_make_tools(state, rule_engine, memory, knowledge_base, era_config)
 
         # 🆕 v2.7+ Wiki Agent 拆分：把 10 个 tool 拆成两类
         # - query_tools: 6 个查询类（get_state / recall_events / check_rules / query_knowledge / query_narrative_snippets / query_story_segments）
