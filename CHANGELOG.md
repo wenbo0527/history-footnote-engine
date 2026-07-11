@@ -1263,6 +1263,71 @@ git push origin v2.9.0
 
 ---
 
+## [v2.9.x-W42] - 2026-07-11
+
+### 🗺️ W42: PlateMap 集成 SVG 节点图（W42）
+
+> **范围**：把 W41 graphLayout 接入 PlateMap.svelte，加节点图视图
+> **结果**：用户可切换 grid ↔ graph 视图；板块关系可视化（圆周布局 + 连线 + 状态色）
+
+#### 🆕 增强
+
+- ✨ `src/frontend/src/lib/components/game/PlateMap.svelte`：
+  - 视图切换 tab：网格 / 节点图
+  - SVG 节点图（基于 W41 graphLayout）：
+    - 圆周布局（5 节点 = 32px 半径）
+    - 连线（neighbors 关系）
+    - 4 状态颜色填充（stable/tense/shifting/collapsed）
+    - 激活板块红色 stroke 加重
+    - shifting 状态 pulse 动画
+  - 节点 hover 显示详情
+- ✨ `src/frontend/src/lib/components/game/plateMapGraph.test.ts`：5 个集成测试
+  - 5 节点布局 + 5 边（去重）
+  - 8 节点自适应 radius
+  - 4 状态颜色映射
+  - active_plate 字段识别
+- 🆕 `src/frontend/vitest.config.ts` 加 plateMapGraph.test.ts include
+
+#### 视觉效果
+
+**Grid 模式**（之前 W28）：
+```
+┌────────┐ ──走廊──┌────────┐
+│  中原  │         │  江南  │
+│ ▮▮▯▯  │         │ ▮▮▮▮  │
+│ tension│         │ tension│
+└────────┘         └────────┘
+```
+
+**SVG 节点图模式**（W42 新增）：
+```
+         中原 (active red)
+       /     \
+   江南 ── 河西 (shifting pulse)
+       \     /
+         西北
+```
+
+#### 5 个 W42 测试
+
+| 类别 | 数量 |
+|---|---|
+| 5 节点布局 | 1 |
+| 5 节点 + neighbors → 6 边 | 1 |
+| 8 节点布局 + radius | 1 |
+| 4 状态颜色映射 | 1 |
+| 激活板块识别 | 1 |
+| **总计** | **5** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     337 PASSED（无回归）
+前端 vitest:     70 PASSED (65 之前 + 5 W42)
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

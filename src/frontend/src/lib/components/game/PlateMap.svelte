@@ -1,14 +1,26 @@
 <script lang="ts">
   /**
-   * 🆕 v2.8.x W28: PlateMap — 板块格局矩阵图
+   * 🆕 v2.8.x W28 + v2.9.x W42: PlateMap — 板块格局矩阵图 + SVG 节点图
    *
-   * 视觉效果：
+   * W42 新增：
+   * - SVG 节点图（圆周布局 + 连线）
+   * - 视图切换 tab（grid ↔ graph）
+   * - 状态颜色根据 tension + status 动态
+   *
+   * 视觉效果（grid 模式）：
    *   ┌────────┐ ──走廊──┌────────┐
    *   │  中原  │         │  江南  │
    *   │ core   │         │ core   │
    *   │ ▮▮▯▯  │         │ ▮▮▮▮  │
    *   │ tension│         │        │
    *   └────────┘         └────────┘
+   *
+   * 视觉效果（SVG 节点图模式）：
+   *         中原
+   *       /     \
+   *   江南 ── 河西
+   *       \     /
+   *         西北
    *
    * 4 状态颜色：
    * - stable: 绿色 (rgb(80, 140, 80))
@@ -21,6 +33,7 @@
    */
   import { onMount } from 'svelte';
   import { getPlateMap, type PlateMapResponse, type PlateDefinition } from '$lib/api/chapter';
+  import { circularLayout, buildEdges, findNode, nodeRadius } from './graphLayout';
 
   interface Props {
     sessionId: string;
@@ -31,6 +44,7 @@
   let plateMap = $state<PlateMapResponse | null>(null);
   let error = $state<string | null>(null);
   let showDetail = $state<string | null>(null); // 当前查看的板块 id
+  let viewMode = $state<'grid' | 'graph'>('grid'); // 🆕 W42: 视图模式
 
   async function refresh() {
     if (!sessionId) return;
@@ -93,6 +107,24 @@
   function tensionWidth(tension: number): string {
     return `${Math.max(0, Math.min(1, tension)) * 100}%`;
   }
+
+  // 🆕 W42: SVG 节点图派生数据
+  let svgLayout = $derived.by(() => {
+    if (!plateMap || plateMap.definitions.length === 0) return null;
+    const ids = plateMap.definitions.map((p) => p.id);
+    return circularLayout(ids, { width: 400, height: 360, padding: 50 });
+  });
+
+  let svgEdges = $derived.by(() => {
+    if (!plateMap || !svgLayout) return [];
+    const neighbors: Record<string, string[]> = {};
+    for (const p of plateMap.definitions) {
+      neighbors[p.id] = p.neighbors || [];
+    }
+    return buildEdges(svgLayout, neighbors);
+  });
+
+  let svgNodeR = $derived(nodeRadius(plateMap?.plate_count || 0));
 </script>
 
 {#if plateMap}
@@ -104,8 +136,119 @@
       {#if plateMap.active_plate}
         <span class="plate-map-active">激变中: {plateMap.active_plate}</span>
       {/if}
+      <!-- 🆕 W42: 视图模式切换 -->
+      <div class="plate-map-tabs" role="tablist" aria-label="视图模式">
+        <button
+          type="button"
+          class="plate-map-tab"
+          class:plate-map-tab-active={viewMode === 'grid'}
+          role="tab"
+          aria-selected={viewMode === 'grid'}
+          onclick={() => (viewMode = 'grid')}
+        >
+          网格
+        </button>
+        <button
+          type="button"
+          class="plate-map-tab"
+          class:plate-map-tab-active={viewMode === 'graph'}
+          role="tab"
+          aria-selected={viewMode === 'graph'}
+          onclick={() => (viewMode = 'graph')}
+        >
+          节点图
+        </button>
+      </div>
     </header>
 
+    <!-- 🆕 W42: SVG 节点图模式 -->
+    {#if viewMode === 'graph' && svgLayout}
+      <div class="plate-map-svg-wrap">
+        <svg
+          class="plate-map-svg"
+          viewBox="0 0 {svgLayout.width} {svgLayout.height}"
+          role="img"
+          aria-label="板块格局节点图"
+        >
+          <!-- 连线 -->
+          {#each svgEdges as e (`edge-${e.from}-${e.to}`)}
+            <line
+              class="plate-map-edge"
+              x1={e.fromX}
+              y1={e.fromY}
+              x2={e.toX}
+              y2={e.toY}
+              stroke="rgba(143, 75, 40, 0.4)"
+              stroke-width="1.5"
+            />
+          {/each}
+
+          <!-- 节点 -->
+          {#each plateMap.definitions as plate (`node-${plate.id}`)}
+            {@const node = findNode(svgLayout, plate.id)}
+            {@const status = plateMap.statuses[plate.id] ?? 'stable'}
+            {@const isActive = plateMap.active_plate === plate.id}
+            {@const isShifting = status === 'shifting'}
+            {#if node}
+              <g
+                class="plate-map-node"
+                class:plate-map-node-active={isActive}
+                class:plate-map-node-shifting={isShifting}
+                onclick={() => (showDetail = showDetail === plate.id ? null : plate.id)}
+                onkeydown={(e: KeyboardEvent) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    showDetail = showDetail === plate.id ? null : plate.id;
+                  }
+                }}
+                role="button"
+                tabindex="0"
+                aria-label={`${plate.name} 板块，${statusLabel(status)}`}
+              >
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={svgNodeR}
+                  fill={statusColor(status)}
+                  fill-opacity={isActive ? 0.95 : 0.75}
+                  stroke={isActive ? 'var(--color-crimson)' : 'rgba(255,255,255,0.6)'}
+                  stroke-width={isActive ? 3 : 1.5}
+                />
+                <text
+                  x={node.x}
+                  y={node.y}
+                  text-anchor="middle"
+                  dominant-baseline="central"
+                  fill="white"
+                  font-size="11"
+                  font-weight="600"
+                  style="pointer-events: none;"
+                >
+                  {plate.name}
+                </text>
+              </g>
+            {/if}
+          {/each}
+        </svg>
+        {#if showDetail}
+          {@const detail = plateMap.definitions.find((p) => p.id === showDetail)}
+          {#if detail}
+            <div class="plate-map-svg-detail">
+              <strong>{detail.name}</strong> · {typeLabel(detail.type)} ·
+              {statusLabel(plateMap.statuses[detail.id] ?? 'stable')}
+              <p>{detail.description}</p>
+              <button
+                type="button"
+                class="plate-map-svg-close"
+                onclick={() => (showDetail = null)}
+              >
+                关闭
+              </button>
+            </div>
+          {/if}
+        {/if}
+      </div>
+    {:else}
     <div class="plate-map-grid">
       {#each plateMap.definitions as plate (`plate-${plate.id}`)}
         {@const status = plateMap.statuses[plate.id] ?? 'stable'}
@@ -156,6 +299,7 @@
         </article>
       {/each}
     </div>
+    {/if}
 
     {#if plateMap.corridors.length > 0}
       <div class="plate-map-corridors">
@@ -392,5 +536,90 @@
     font-size: var(--text-xs);
     color: var(--color-crimson-dark);
     font-style: italic;
+  }
+
+  /* 🆕 W42: 视图切换 tab */
+  .plate-map-tabs {
+    display: inline-flex;
+    margin-left: auto;
+    background: rgba(143, 75, 40, 0.08);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .plate-map-tab {
+    padding: 2px 10px;
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    color: var(--color-ink-light);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .plate-map-tab:hover {
+    background: rgba(143, 75, 40, 0.08);
+  }
+  .plate-map-tab-active {
+    background: var(--color-bronze);
+    color: white;
+    font-weight: 600;
+  }
+
+  /* 🆕 W42: SVG 节点图样式 */
+  .plate-map-svg-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .plate-map-svg {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    background: radial-gradient(circle, rgba(255, 245, 220, 0.4) 0%, transparent 70%);
+    border: 1px solid rgba(143, 75, 40, 0.15);
+    border-radius: var(--radius-sm);
+  }
+  .plate-map-edge {
+    transition: stroke 0.3s, stroke-width 0.3s;
+  }
+  .plate-map-node {
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .plate-map-node:hover circle {
+    stroke: var(--color-bronze-dark);
+    stroke-width: 2.5;
+  }
+  .plate-map-node-shifting circle {
+    animation: plate-node-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes plate-node-pulse {
+    0%, 100% { stroke-opacity: 0.6; }
+    50%      { stroke-opacity: 1.0; }
+  }
+  .plate-map-svg-detail {
+    padding: var(--space-2);
+    background: rgba(255, 245, 220, 0.5);
+    border: 1px solid rgba(143, 75, 40, 0.25);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    color: var(--color-ink);
+  }
+  .plate-map-svg-detail p {
+    margin: 4px 0;
+    line-height: 1.4;
+  }
+  .plate-map-svg-close {
+    margin-top: 4px;
+    padding: 1px 8px;
+    font-size: var(--text-xs);
+    color: var(--color-bronze-dark);
+    background: transparent;
+    border: 1px solid rgba(143, 75, 40, 0.3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .plate-map-svg-close:hover {
+    background: rgba(143, 75, 40, 0.1);
   }
 </style>

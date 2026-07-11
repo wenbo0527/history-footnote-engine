@@ -23,6 +23,7 @@ export default defineConfig({
       'src/lib/components/game/sceneMap.test.ts',
       'src/lib/components/game/plateMap.test.ts',
       'src/lib/components/game/graphLayout.test.ts',
+      'src/lib/components/game/plateMapGraph.test.ts',
     ],
     exclude: ['node_modules', '.svelte-kit', 'build', 'e2e', 'src/lib/components/**/*.svelte'],
     setupFiles: ['./vitest.setup.ts'],
