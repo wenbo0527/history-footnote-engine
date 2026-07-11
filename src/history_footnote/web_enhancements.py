@@ -239,7 +239,11 @@ class MetricsCollector:
     """
 
     def __init__(self):
-        self._endpoints: dict[str, dict] = defaultdict(lambda: {"count": 0, "total_ms": 0.0, "errors": 0})
+        self._endpoints: dict[str, dict] = defaultdict(lambda: {"count": 0, "total_ms": 0.0, "errors": 0, "latencies": []})
+        # 🆕 W44: LLM 专用指标
+        self._llm: dict[str, dict] = defaultdict(lambda: {
+            "count": 0, "total_prompt_tokens": 0, "total_completion_tokens": 0, "latencies": []
+        })
         self._lock = threading.Lock()
         self._start_time = time.time()
 
@@ -249,8 +253,57 @@ class MetricsCollector:
             ep = self._endpoints[endpoint]
             ep["count"] += 1
             ep["total_ms"] += duration_ms
+            ep["latencies"].append(duration_ms)
+            # 防止内存无限增长：保留最近 1000 个延迟样本
+            if len(ep["latencies"]) > 1000:
+                ep["latencies"] = ep["latencies"][-1000:]
             if error:
                 ep["errors"] += 1
+
+    def record_llm_call(
+        self,
+        provider: str,
+        latency_ms: float,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+    ) -> None:
+        """🆕 W44: 记录一次 LLM 调用（按 provider 分组）
+
+        Args:
+            provider: "openai" / "anthropic" / "minimax-anthropic" / "minimax-openai" / "deepseek" / "custom" / "mock"
+            latency_ms: 调用耗时（毫秒）
+            prompt_tokens: 输入 token 数
+            completion_tokens: 输出 token 数
+        """
+        with self._lock:
+            llm = self._llm[provider]
+            llm["count"] += 1
+            llm["total_prompt_tokens"] += prompt_tokens
+            llm["total_completion_tokens"] += completion_tokens
+            llm["latencies"].append(latency_ms)
+            if len(llm["latencies"]) > 1000:
+                llm["latencies"] = llm["latencies"][-1000:]
+
+    @staticmethod
+    def _percentile(values: list, p: float) -> float:
+        """计算百分位（P50=0.5, P95=0.95, P99=0.99）
+
+        使用线性插值（Numpy 默认行为）：
+        - idx = (n-1) * p
+        - lower = floor(idx)
+        - upper = ceil(idx)
+        - weight = idx - lower
+        - return sorted[lower] * (1-weight) + sorted[upper] * weight
+        """
+        if not values:
+            return 0.0
+        sorted_v = sorted(values)
+        n = len(sorted_v)
+        pos = (n - 1) * p
+        lower = int(pos)  # 向下取整
+        upper = min(lower + 1, n - 1)
+        weight = pos - lower
+        return sorted_v[lower] * (1 - weight) + sorted_v[upper] * weight
 
     def snapshot(self) -> dict:
         """获取当前指标快照"""
@@ -262,12 +315,30 @@ class MetricsCollector:
                 endpoints[k] = {
                     "count": count,
                     "avg_ms": round(avg_ms, 2),
+                    "p50_ms": round(self._percentile(v["latencies"], 0.5), 2),
+                    "p95_ms": round(self._percentile(v["latencies"], 0.95), 2),
+                    "p99_ms": round(self._percentile(v["latencies"], 0.99), 2),
                     "errors": v["errors"],
                     "error_rate": v["errors"] / count if count > 0 else 0.0,
+                }
+            # 🆕 W44: LLM 指标
+            llm_stats = {}
+            for k, v in self._llm.items():
+                count = v["count"]
+                llm_stats[k] = {
+                    "count": count,
+                    "total_prompt_tokens": v["total_prompt_tokens"],
+                    "total_completion_tokens": v["total_completion_tokens"],
+                    "avg_prompt_tokens": round(v["total_prompt_tokens"] / count, 1) if count > 0 else 0,
+                    "avg_completion_tokens": round(v["total_completion_tokens"] / count, 1) if count > 0 else 0,
+                    "avg_latency_ms": round(sum(v["latencies"]) / count, 2) if count > 0 else 0,
+                    "p50_latency_ms": round(self._percentile(v["latencies"], 0.5), 2),
+                    "p95_latency_ms": round(self._percentile(v["latencies"], 0.95), 2),
                 }
             return {
                 "uptime_seconds": time.time() - self._start_time,
                 "endpoints": endpoints,
+                "llm": llm_stats,  # 🆕 W44
                 "tool_cache": TOOL_RESULT_CACHE.stats(),
                 "rate_limiter": GLOBAL_RATE_LIMITER.stats(),
                 "llm_throttle": _get_llm_throttle_stats(),

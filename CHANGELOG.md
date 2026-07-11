@@ -1401,6 +1401,104 @@ llm = make_llm(provider="openai")  # OPENAI_API_KEY
 
 ---
 
+## [v2.9.x-W44] - 2026-07-11
+
+### 📊 W44: 性能监控 P50/P95/P99 + LLM token 监控（W44）
+
+> **范围**：MetricsCollector 加百分位 + LLM 专用指标（按 provider 分组 + token 用量）
+> **结果**：监控可视化能力质变
+
+#### 🆕 MetricsCollector 增强
+
+- ✨ `record_request` 保留 latency 列表（最近 1000）
+- ✨ `record_llm_call(provider, latency_ms, prompt_tokens, completion_tokens)`
+  - 按 provider 分组（openai/anthropic/minimax-*/deepseek/custom/mock）
+  - token 用量累加
+- ✨ `_percentile(values, p)` 线性插值（Numpy 风格）
+- ✨ snapshot 加 `p50/p95/p99` 端点延迟 + `llm` 字段
+
+#### 字段对比
+
+| 字段 | 之前 | 之后（W44）|
+|---|---|---|
+| 端点 | count, avg_ms, errors, error_rate | + p50/p95/p99_ms |
+| LLM | 无 | count, prompt/completion tokens, avg/p50/p95 latency |
+
+#### 12 个 W44 测试
+
+| 类别 | 数量 |
+|---|---|
+| 端点 latency 列表保留 | 1 |
+| P50/P95/P99 正确 | 1 |
+| _percentile helper（边界 + 插值）| 1 |
+| LLM 按 provider 分组 | 1 |
+| LLM 平均 token 正确 | 1 |
+| LLM P50/P95 | 1 |
+| 端点 latency 1000 截断 | 1 |
+| LLM latency 1000 截断 | 1 |
+| snapshot 含 llm 字段 | 1 |
+| reset 清理 | 1 |
+| 空 LLM 状态 | 1 |
+| error_rate 正确 | 1 |
+| **总计** | **12** ✅ |
+
+#### 关键设计
+
+1. **百分位用 Numpy 风格线性插值** — P50 在 10 个值 [1..10] 是 5.5（不是 5）
+2. **latency 列表限 1000** — 防内存爆炸
+3. **LLM 按 provider 分组** — 用户可对比不同 provider 延迟/token
+4. **向后兼容** — 端点字段全增（p50/p95/p99 旧代码可忽略）
+
+#### 监控能力
+
+| 之前 | 之后 |
+|---|---|
+| 仅 avg_ms | **p50/p95/p99 真实延迟分布** |
+| LLM 调用不可见 | **按 provider 分组 + token 统计** |
+| 内存可能无限增长 | **1000 样本上限保护** |
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED (347 + 12 W44)
+前端 vitest:     70 PASSED
+零回归:         ✅
+```
+
+#### 未来用法
+
+```bash
+# 查看监控数据
+curl http://localhost:8000/metrics | jq
+
+# 输出示例
+{
+  "endpoints": {
+    "/api/input": {
+      "count": 1234,
+      "avg_ms": 1250.5,
+      "p50_ms": 1100.0,
+      "p95_ms": 3200.0,
+      "p99_ms": 5800.0,
+      "errors": 3,
+      "error_rate": 0.0024
+    }
+  },
+  "llm": {
+    "minimax-anthropic": {
+      "count": 567,
+      "total_prompt_tokens": 1234567,
+      "total_completion_tokens": 234567,
+      "avg_latency_ms": 1850.3,
+      "p50_latency_ms": 1700.0,
+      "p95_latency_ms": 4500.0
+    }
+  }
+}
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
