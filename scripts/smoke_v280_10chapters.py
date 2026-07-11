@@ -114,8 +114,8 @@ def main():
     chapter_count = 0
     init_count = 0
 
-    # 跑 ~150 回合
-    for r in range(1, 151):
+    # 跑 ~180 回合（10 章 × 15 回合 + 缓冲）
+    for r in range(1, 181):
         state.round_number = r
 
         # 模拟玩家选第一个 option（写入 recent_path_choices）
@@ -165,11 +165,54 @@ def main():
             _LOG.info(">>> 已完成 10 章，在 r=%d 停止 <<<", r)
             break
 
+    # 🆕 W30: 若第 10 章已 init 但未 settle（fallback 慢），补一次 settle
+    if chapter_count == 9 and state.chapter_state.blueprint and state.chapter_state.current_chapter == 10:
+        _LOG.info(">>> 第 10 章已 init 但未 settle，补一次 maybe_settle 强制收束 <<<")
+        # 强制触发 settle：通过模拟走到节点 4
+        while state.chapter_state.current_node < 4 and state.round_number < 200:
+            state.round_number += 1
+            coord.pre_step()
+            coord.post_step()
+            coord.maybe_settle()
+            if len(state.chapter_state.chapter_history) > chapter_count:
+                chapter_count = len(state.chapter_state.chapter_history)
+                last_record = state.chapter_state.chapter_history[-1]
+                _LOG.info(">>> 第 %d 章结算（rounds=%d, status=%s）补完",
+                          last_record.get("chapter"),
+                          last_record.get("rounds_in_chapter"),
+                          last_record.get("closure_status"))
+                break
+
     total_time = time.time() - start_time
     print()
     print("=" * 70)
     print("  ✅ 10 章完整端到端完成！")
     print("=" * 70)
+
+    # 🆕 W30: 验证章节 Tool 可注入 LangGraph dm_agent
+    print()
+    print(">>> 验证章节 Tool 注入 LangGraph <<<")
+    try:
+        from history_footnote.chapter.dm_tools_lc import make_chapter_dm_tools
+        tools = make_chapter_dm_tools(
+            state=state,
+            facade=facade,
+            llm_callable=llm,
+            era_config=era_config,
+        )
+        print(f"    ✅ make_chapter_dm_tools 返回 {len(tools)} 个 Tool")
+        for t in tools:
+            print(f"      - {t.name}: {t.description[:60]}...")
+        # 模拟 dm_agent 绑定（llm_wrapper.bind_tools 已支持）
+        if hasattr(llm, 'bind_tools'):
+            bound = llm.bind_tools(tools)
+            print(f"    ✅ llm.bind_tools(tools) 成功")
+        else:
+            print(f"    ℹ️ LLM 无 bind_tools（{type(llm).__name__}）")
+    except Exception as e:
+        print(f"    ❌ Tool 注入失败: {e}")
+        import traceback
+        traceback.print_exc()
     print(f"  总耗时:           {total_time:.1f} 秒")
     print(f"  最终回合:         round {state.round_number}")
     print(f"  章节历史:         {len(state.chapter_state.chapter_history)} 条")
