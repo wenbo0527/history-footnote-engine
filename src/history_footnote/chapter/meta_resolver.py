@@ -64,6 +64,14 @@ class ChapterMetaResolver:
     用法：
         resolver = ChapterMetaResolver(era_config)
         meta = resolver.resolve(chapter_id=1)  # 返回 ChapterMeta
+        total = resolver.total_chapters  # 🆕 W36: 总章节数（5-15 自适应）
+        is_last = resolver.is_last_chapter(10)  # 🆕 W36: 是否最后一章
+
+    🆕 W36: 章节长度自适应
+    - era_config.narrative.chapter_count 决定总章数（5-15）
+    - 缺失时：从 hero_journey_acts 的 chapters 字段推断
+    - 再缺失：用默认 10 章
+    - 上限 15（防失控）
     """
 
     def __init__(self, era_config: dict):
@@ -81,6 +89,44 @@ class ChapterMetaResolver:
             )
             return DEFAULT_HERO_JOURNEY_ACTS
         return acts
+
+    @property
+    def total_chapters(self) -> int:
+        """🆕 W36: 总章节数（5-15 自适应）
+
+        优先级：
+        1. era_config.narrative.chapter_count 显式指定 → 夹紧到 [5, 15]
+        2. 从 _acts 所有 chapters 字段推断（取 max）→ 夹紧到 [5, 15]
+        3. 默认 10 章
+
+        边界：5-15（防失控）
+        """
+        # 1. 显式指定（任何 int 都被夹紧到 [5, 15]）
+        narrative = self.era_config.get("narrative", {}) or {}
+        explicit = narrative.get("chapter_count")
+        if isinstance(explicit, int) and not isinstance(explicit, bool):
+            return max(5, min(15, explicit))
+        # 2. 从 _acts 推断
+        max_ch = 0
+        for act in self._acts:
+            chapters = act.get("chapters", [])
+            if chapters:
+                max_ch = max(max_ch, max(chapters))
+        if max_ch >= 5:
+            return min(max_ch, 15)
+        # 3. 兜底
+        return 10
+
+    def is_last_chapter(self, chapter_id: int) -> bool:
+        """🆕 W36: 是否最后一章
+
+        Coordinator 用这个判断是否要强制结算（防止 LLM 跳过最后一章）
+        """
+        return chapter_id >= self.total_chapters
+
+    def remaining_chapters(self, current_chapter_id: int) -> int:
+        """🆕 W36: 剩余章节数（用于 SMOKE / 进度条 / 章节历史显示）"""
+        return max(0, self.total_chapters - current_chapter_id)
 
     def resolve(self, chapter_id: int) -> ChapterMeta:
         """根据 chapter_id 产出 ChapterMeta

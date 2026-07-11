@@ -975,6 +975,61 @@ WARNING:         28 (含 Tool 注入日志)
 
 ---
 
+## [v2.9.x-W36] - 2026-07-11
+
+### 🎯 W36: 章节长度自适应（5-15）API（W36）
+
+> **范围**：让 era_config 显式控制总章数，从 5-15 区间自适应
+> **结果**：3 个新 API（total_chapters/is_last_chapter/remaining_chapters）+ 15 个测试
+
+#### 🆕 3 个 API
+
+| API | 作用 |
+|---|---|
+| `resolver.total_chapters` | 返回总章数（5-15 夹紧）|
+| `resolver.is_last_chapter(chapter_id)` | 是否最后一章（防止 LLM 跳过）|
+| `resolver.remaining_chapters(current_chapter_id)` | 剩余章节数（前端进度条）|
+
+#### 优先级
+
+1. **`era_config.narrative.chapter_count` 显式指定** → 夹紧到 [5, 15]
+2. **从 `_acts` 所有 `chapters` 字段推断**（取 max）→ 夹紧到 [5, 15]
+3. **兜底** → 10 章
+
+#### 边界处理
+
+| chapter_count 输入 | 输出 |
+|---|---|
+| `5` (min) | 5 |
+| `12` (mid) | 12 |
+| `15` (max) | 15 |
+| `3` (过小) | 5 (clamped) |
+| `20` (过大) | 15 (clamped) |
+| `0` / `-1` | 5 (clamped) |
+| `None` / `"10"` / `3.5` | 10 (推断默认) |
+
+#### 用途
+
+- **Coordinator**: 用 `is_last_chapter` 判断是否强制结算
+- **前端进度条**: 用 `total_chapters + remaining_chapters` 显示
+- **Smoke 测试**: 用 `total_chapters` 决定跑几章
+- **未来 W37+**: era.json 字段 `narrative.chapter_count` 直接生效
+
+#### 🆕 测试
+
+- ✨ `tests/test_v36_adaptive_chapters.py`：15 个测试
+  - 边界（min/max）、clamping、推断、兜底、is_last、remaining
+
+#### 验证结果
+
+```
+后端 pytest:     320 PASSED (305 + 15 W36)
+前端 vitest:     30 PASSED
+零回归:         ✅
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

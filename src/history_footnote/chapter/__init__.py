@@ -80,6 +80,7 @@ __all__ = [
     "ChapterCoordinator",
     "ChapterMetaResolver",
     "DEFAULT_HERO_JOURNEY_ACTS",
+    # 🆕 W36: 自适应 API 在 ChapterMetaResolver 实例上（total_chapters/is_last_chapter/remaining_chapters）
     "PlateEngine",
     "PathSwitcher",
     # 检查
