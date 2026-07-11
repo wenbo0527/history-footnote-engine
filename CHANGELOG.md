@@ -1843,6 +1843,78 @@ past  past  past  cur  future
 
 ---
 
+## [v2.9.x-W50] - 2026-07-11
+
+### 🛠️ W50: GameView 嵌入 3 大 admin 组件（W50）
+
+> **范围**：把 PlateMap / ChapterTimeline / MetricsPanel 接入 GameView admin 模式
+> **结果**：`?admin=true` 时 3 组件并排显示，6 个集成测试
+
+#### 🆕 集成
+
+- ✨ `src/frontend/src/lib/components/game/GameView.svelte`：
+  - 顶部 import PlateMap / ChapterTimeline / MetricsPanel
+  - `const showAdminTools = isAdminMode()`
+  - `{#if showAdminTools}` 条件渲染 admin 面板
+  - 3 组件 grid 布局（auto-fit 320px）
+  - 关闭链接 `?admin=false`
+  - 虚线边框 + 淡色背景（视觉区分 admin 区域）
+- ✨ `src/frontend/src/lib/components/game/gameViewAdmin.test.ts`：6 个测试
+  - isAdminMode 默认 false / true 切换
+  - GameView.svelte 包含 3 import
+  - 包含条件渲染 + 3 组件标签
+  - 包含 `?admin=false` 关闭链接
+  - 包含 CSS 样式
+
+#### 视觉效果
+
+```
+┌──────────────┬──────────────────────────────────────┐
+│              │  ┌──── 网格模式 ────┬──── 节点图 ───┐ │
+│  CharCard    │  │ PlateMap 1    │ PlateMap 2  │ │
+│              │  ├────────────────┼─────────────┤ │
+│  Sidebar     │  │ ChapterTimeline (横向)    │ │
+│              │  ├──────────────────────────────┤ │
+│              │  │ MetricsPanel 30s 轮询     │ │
+│              │  └──────────────────────────────┘ │
+│              │                                      │
+│              │  ┌──── 叙事区 ──────────────────┐  │
+│              │  │ ...                          │  │
+│              │  └──────────────────────────────┘  │
+│              │  [输入框........................]  │
+└──────────────┴──────────────────────────────────────┘
+```
+
+#### 6 个 W50 测试
+
+| 类别 | 数量 |
+|---|---|
+| isAdminMode 切换 | 2 |
+| GameView 包含 3 import | 1 |
+| 包含条件渲染 + 3 组件 | 1 |
+| 关闭链接 ?admin=false | 1 |
+| CSS 样式 | 1 |
+| **总计** | **6** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     123 PASSED (117 + 6 W50)
+```
+
+#### 用法
+
+```
+# 默认：普通用户
+http://localhost:5173/game/sess-123
+
+# Admin：开发者/调试
+http://localhost:5173/game/sess-123?admin=true
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

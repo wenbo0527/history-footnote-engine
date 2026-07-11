@@ -31,7 +31,15 @@
   import EmergencyModal from './EmergencyModal.svelte';
   import ChapterProgressBar from './ChapterProgressBar.svelte';
   import ChapterHistoryDrawer from './ChapterHistoryDrawer.svelte';
+  // 🆕 v2.9.x W50: admin 模式组件（?admin=true 时显示）
+  import PlateMap from './PlateMap.svelte';
+  import ChapterTimeline from './ChapterTimeline.svelte';
+  import MetricsPanel from './MetricsPanel.svelte';
+  import { isAdminMode } from './adminMode';
   import type { FateCard } from '$lib/api/types';
+
+  // 🆕 v2.9.x W50: admin 模式开关（URL ?admin=true）
+  const showAdminTools = isAdminMode();
 
   async function handleSelectVoice(voice: { voice_id: string; voice_name: string; intent_text?: string }) {
     if (!$game || $isLoading) return;
@@ -147,6 +155,26 @@
 
     <!-- 右栏：叙事区 + 行动面板（输入条固定底部） -->
     <main class="game-main">
+      <!-- 🆕 v2.9.x W50: admin 模式工具面板（?admin=true 才显示） -->
+      {#if showAdminTools}
+        <aside class="game-admin-panel" aria-label="Admin 工具面板">
+          <header class="game-admin-panel-header">
+            <h3>🛠️ Admin 模式</h3>
+            <a class="game-admin-close" href="?admin=false" aria-label="关闭 admin 模式">
+              关闭 ✕
+            </a>
+          </header>
+          <div class="game-admin-grid">
+            <PlateMap sessionId={$game.session_id} />
+            <ChapterTimeline
+              sessionId={$game.session_id}
+              currentChapter={$game.current_chapter ?? 0}
+              totalChapters={$game.total_chapters ?? 10}
+            />
+            <MetricsPanel />
+          </div>
+        </aside>
+      {/if}
       <div class="game-narrative-scroll">
         <NarrativeArea narrative={$game.narrative} game={$game} autoScroll={true} />
       </div>
@@ -329,5 +357,38 @@
   }
   .plate-map-container {
     margin-bottom: var(--space-2);
+  }
+
+  /* 🆕 v2.9.x W50: admin 面板样式 */
+  .game-admin-panel {
+    margin: var(--space-2);
+    padding: var(--space-3);
+    background: rgba(143, 75, 40, 0.05);
+    border: 2px dashed rgba(143, 75, 40, 0.4);
+    border-radius: var(--radius-sm);
+  }
+  .game-admin-panel-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+  .game-admin-panel-header h3 {
+    margin: 0;
+    font-size: var(--text-base);
+    color: var(--color-bronze-dark);
+  }
+  .game-admin-close {
+    margin-left: auto;
+    font-size: var(--text-xs);
+    color: var(--color-ink-light);
+    text-decoration: none;
+  }
+  .game-admin-close:hover {
+    color: var(--color-crimson-dark);
+  }
+  .game-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-2);
   }
 </style>

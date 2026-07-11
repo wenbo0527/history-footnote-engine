@@ -28,6 +28,7 @@ export default defineConfig({
       'src/lib/components/game/chapterTimelineApi.test.ts',
       'src/lib/components/game/metricsPanel.test.ts',
       'src/lib/components/game/adminMode.test.ts',
+      'src/lib/components/game/gameViewAdmin.test.ts',
     ],
     exclude: ['node_modules', '.svelte-kit', 'build', 'e2e', 'src/lib/components/**/*.svelte'],
     setupFiles: ['./vitest.setup.ts'],
