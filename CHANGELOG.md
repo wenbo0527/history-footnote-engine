@@ -485,6 +485,102 @@ Tests       11 passed
 
 ---
 
+## [v2.7.1-Task3] - 2026-07-11
+
+### 🎨 v2.7.1 TODO 任务 3 全部完成：3 张场景图重做
+
+> **范围**：v2.7.1 TODO 任务 3「重做 3 个场景图（米黄背景 → 透明）」
+> **结果**：3 张 webp（78-94K）正确带 alpha 通道，后端 240 测试零回归
+
+#### 🆕 交付
+
+| 文件 | 操作 | 大小 |
+|---|---|---|
+| `static/scenes/shengze.webp` | 🆕 覆盖（米黄→透明）| 78K |
+| `static/scenes/suzhou.webp` | 🆕 覆盖 | 94K |
+| `static/scenes/beijing.webp` | 🆕 覆盖 | 75K |
+| `scripts/regen_scenes_v2_full.sh` | 🆕 一键流水线 | 122 行 |
+| `scripts/retry_beijing.py` | 🆕 审查重试 | 53 行 |
+| `scripts/verify_alpha.py` | 🆕 alpha 验证 | 22 行 |
+
+#### 4 步流水线
+
+```
+步骤 1: minimax image-01 API
+  → 3 张 1280×720 JPEG（盛泽 280K, 苏州 332K, 北京 304K）
+  端点: https://api.minimaxi.com/v1/image_generation
+  提示词: v2.7.1 TODO 文档「水墨画+白底+无装饰+无水印」
+
+步骤 2: ImageMagick 去白底
+  → magick -fuzz 30% -transparent "#FEFDF8" -alpha set PNG32
+
+步骤 3: 加 50px 透明边距
+  → magick -bordercolor none -border 50x50
+  → 尺寸: 1280×720 → 1380×820
+
+步骤 4: cwebp 转 webp
+  → cwebp -q 85 -alpha_q 100
+  → 3 张 webp 75-94K（带 VP8X + ALPH 块）
+```
+
+#### 关键问题与解决
+
+| 问题 | 解决 |
+|---|---|
+| bash `declare -A` 在 zsh 报错 | 改用 python dict 替代 |
+| `MINIMAX_BASE_URL=https://api.minimaxi.com/anthropic` | 用专用 image 端点 `https://api.minimaxi.com/v1/image_generation` |
+| beijing 触发内容审查（"imperial"/"Forbidden City"）| 改用"northern capital" + "ancient Chinese palace" 重试 2 次 |
+| cwebp 看似无 alpha（flags check 错）| 改用 PIL `getpixel()` 验证：4 角 alpha=0 + 内容 alpha=255 |
+
+#### alpha 通道验证（PIL 5×5 采样）
+
+```
+shengze.webp 1380×820 RGBA:
+  4 角 alpha: [0, 0, 0, 0]    ← 50px 边距全透明
+  上半区: 全透明             ← 白底被去除
+  内容区: alpha=255          ← 盛泽镇河道保留
+
+suzhou.webp 1380×820 RGBA:
+  4 角 alpha: [0, 0, 0, 0]    ← 边距透明
+  内容区: alpha=255          ← 苏州府建筑保留
+
+beijing.webp 1380×820 RGBA:
+  4 角 alpha: [0, 0, 0, 0]    ← 边距透明
+  内容区: alpha=255 + 红墙色 (143, 61, 48)  ← 北京红墙保留
+```
+
+#### 关键发现：场景图未在 UI 中被引用
+
+v2.7.1 TODO 任务 3 假设了"Wiki 页面 / 落地页用 `<img class="scene-bg">`"，
+但 **v2.8.0 当前前端代码（LocationPanel、CharacterWikiModal 等）未引用** `scenes/*.webp`。
+
+这是 **TODO 文档超前于实际实现** —— 重做的图**为未来引用预留**。
+
+**当前可服务状态**（adapter-static 自动拷贝）：
+- ✅ 静态目录 `static/scenes/*.webp`（替换完成）
+- ✅ vite 自动服务 `/scenes/shengze.webp` → 200
+- ❌ 任何 Svelte 组件未引用
+
+**未来如需 UI 引用**，在 LocationPanel 或 WikiModal 加：
+```svelte
+{#if location === 'shengze'}
+  <img class="scene-bg" src="/scenes/shengze.webp" alt="盛泽镇" />
+{/if}
+```
+CSS：`.scene-bg { background: var(--paper); mix-blend-mode: multiply; }`
+（"如墨在宣纸"效果）
+
+#### 测试覆盖
+
+- 后端 240 测试零回归 ✅
+- alpha 通道 PIV 验证（verify_alpha.py）✅
+- 静态资源替换前后大小对比：
+  - shengze 113K → 78K（细节减少但更对）
+  - suzhou 124K → 94K
+  - beijing 59K → 75K（细节增加，符合"northern capital"重生成）
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
