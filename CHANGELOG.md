@@ -704,6 +704,51 @@ CSS：`.scene-bg { background: var(--paper); mix-blend-mode: multiply; }`
 
 ---
 
+## [v2.8.0-Release] - 2026-07-11
+
+### 🎉 v2.8.0 Git tag + Release 准备就绪（W31）
+
+> **范围**：v2.8.0 正式发版
+> **结果**：annotated tag v2.8.0 push origin，GitHub Release 由用户创建（需浏览器/GH_TOKEN）
+
+#### 🆕 交付
+
+- ✨ Git tag `v2.8.0`（annotated, 已 push origin）
+- ✨ `CREATE_GITHUB_RELEASE.md`：3 种创建 release 的方法（浏览器/gh/curl API）
+- 🔧 测试套件确认：271 测试全过
+
+#### Tag 信息
+
+```
+tag v2.8.0
+Tagger: wenbo0527
+Date:   2026-07-11
+
+v2.8.0 章节制叙事体系
+- 6 段（章节骨架+LLM自由生成+路径三态+Build分化+板块格局+DM Agent Tool）
+- 后续小迭代 W20-W30（UI接入+vitest+e2e+场景图+板块UI+10章端到端+Tool注入）
+- 240 后端 + 30 前端 + 1 smoke = 271 测试全过
+- 10/10 章真 LLM 端到端 169.8 秒跑通
+```
+
+#### 关键技术决策
+
+1. **annotated tag**（`-a`）而非 lightweight —— GitHub 默认显示 tagger + message
+2. **3 种 release 创建方案** —— 浏览器 / gh CLI / curl API，**任选其一**
+3. **不需要 CI/CD 自动化** —— 一次性发版，文档化手工流程足够
+4. **RELEASE_NOTES_v2.8.0.md 200+ 行** —— 仓内 source of truth
+
+#### 测试状态
+
+```
+后端 pytest:    246 PASSED (240 v28 + 6 plate)
+前端 vitest:    30 PASSED (11 chapter + 9 sceneMap + 10 plateMap)
+后端 10 章 e2e: 169.8 秒跑通 (minimax-anthropic 200 OK)
+零回归:         ✅
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
