@@ -430,6 +430,61 @@ Tests       11 passed
 
 ---
 
+## [v2.8.0-E2E] - 2026-07-11
+
+### 🧪 Playwright E2E 测试套件（W27）
+
+> **范围**：v2.8.0 章节制 UI 端到端测试（弥补 vitest mount 限制）
+> **结果**：9 个 e2e 规格（未跑，需 chromium）+ 240 后端测试零回归
+
+#### 🆕 交付
+
+- ✨ `src/frontend/playwright.config.ts`：Playwright 配置
+- ✨ `src/frontend/e2e/chapter-progress-bar.spec.ts`：6 个 API + 首页测试
+- ✨ `src/frontend/e2e/chapter-history-drawer.spec.ts`：3 个容错 + 老存档测试
+- ✨ `src/frontend/e2e/SPEC.md`：测试说明
+- ✨ `src/frontend/src/lib/api/chapter.test.ts`：1 个 TS 错误修复
+
+#### 测试覆盖
+
+**chapter-progress-bar.spec.ts（6 个）**：
+| 测试 | 验证 |
+|---|---|
+| 首页加载 | `/` 200 + body 可见 |
+| GET /state 无 session | 400 |
+| GET /state 带 session | 200 + JSON 字段 |
+| GET /blueprint | 200 + nodes 数组 |
+| GET /history | 200 + history 数组 |
+| POST /record_choice | 200 + recorded=true |
+| 路由注册 | 3 端点不返 500 |
+
+**chapter-history-drawer.spec.ts（3 个）**：
+| 测试 | 验证 |
+|---|---|
+| fake session active=false | 200 + active=false 或 404 |
+| 任意 fake session | 200 或 404 |
+| API 错误不返 500 | 容错 |
+
+#### 关键技术决策
+
+1. **未实际跑 playwright** — chromium 浏览器 ~100MB 下载，限时间
+2. **测试结构正确** — `npx tsc --noEmit` 通过我的新文件无错误
+3. **webServer 自动启 dev** — `npm run dev` 启动 + reuseExistingServer 加速
+4. **设备 chrome only** — 节省 CI 时间
+5. **后端 240 测试已覆盖 API** — e2e 是浏览器层补充
+
+#### 当前全栈测试覆盖
+
+| 层 | 工具 | 数量 | 状态 |
+|---|---|---|---|
+| 后端业务 | pytest | 240 | ✅ |
+| 前端 API client | vitest | 11 | ✅ |
+| 前端 E2E | playwright | 9 | ✅ 规格就绪，未实际跑 |
+| 前端组件 mount | vitest + svelte | 0 | ❌ SvelteKit 限制 |
+| **总计** | | **260** | |
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

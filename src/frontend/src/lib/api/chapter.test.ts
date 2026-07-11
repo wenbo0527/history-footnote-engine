@@ -102,7 +102,7 @@ describe('chapter API client (v2.8.0 段 UI)', () => {
     });
     expect(result.nodes.length).toBe(1);
     expect(result.nodes[0].role).toBe('introduction');
-    expect(result.meta.act).toBe('departure');
+    expect(result.meta?.act).toBe('departure');
   });
 
   it('recordChapterChoice: POST + body', async () => {
