@@ -1499,6 +1499,81 @@ curl http://localhost:8000/metrics | jq
 
 ---
 
+## [v2.9.x-W45] - 2026-07-11
+
+### 📜 W45: 章节历史时间线辅助函数（W45）
+
+> **范围**：把 chapter_history 数据转化为前端 timeline 节点
+> **结果**：为 ChapterTimeline.svelte 组件提供数据层
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/components/game/chapterHistory.ts`：
+  - `toTimeline(response, currentChapter, totalChapters)` — 转化 history 为 TimelineNode[]
+  - `buildDurationLabel(rec)` — "8 轮 (round 5-12)"
+  - `buildClosureLabel(closure_status)` — "软收束" / "强制收尾"
+  - `progressPercent(currentChapter, totalChapters)` — 0-100%
+  - `chapterDotX(chapter, totalChapters, width)` — 圆点 X 坐标
+- ✨ `src/frontend/src/lib/components/game/chapterHistory.test.ts`：19 个测试
+
+#### 11 个 chapter_history 字段
+
+| 字段 | 描述 |
+|---|---|
+| chapter | 章号 |
+| summary | 200字摘要 |
+| core_event | 核心事件 |
+| key_choice | 关键抉择 |
+| build_summary | Build 进度 |
+| path_summary | 路径选择 |
+| rounds_in_chapter | 本章轮数 |
+| ended_at_round | 结束轮次 |
+| ended_at | ISO 时间戳 |
+| transition | 过渡提示 |
+| closure_status | 收束状态（SOFT_READY / HARD_FORCED）|
+
+#### TimelineNode 扩展
+
+| 字段 | 描述 |
+|---|---|
+| isFirst | 是否第一章 |
+| isLast | 是否最后一章 |
+| durationLabel | "8 轮 (round 5-12)" |
+| closureLabel | "软收束" |
+| status | past / current / future |
+
+#### 19 个 W45 测试
+
+| 类别 | 数量 |
+|---|---|
+| buildDurationLabel | 3 |
+| buildClosureLabel | 3 |
+| toTimeline (5 个) | first/last + status + 未来占位 + durationLabel/closureLabel + empty |
+| progressPercent | 4 |
+| chapterDotX | 4 |
+| **总计** | **19** ✅ |
+
+#### 关键设计
+
+1. **自动填充未来章节占位** — `toTimeline` 返 10 节点（即使 history 只有 3）
+2. **三态 status** — past / current / future（用于不同样式）
+3. **辅助函数 pure** — 无副作用、可单测
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     89 PASSED (70 + 19 W45)
+```
+
+#### 未来集成（W46+）
+
+- `ChapterTimeline.svelte` 用 `toTimeline` 渲染
+- 横向时间线（圆点 + 连线 + 详情卡）
+- 点击节点跳转到对应章节
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
