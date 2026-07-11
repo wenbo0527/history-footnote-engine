@@ -59,6 +59,35 @@ export interface ChapterHistoryResponse {
   }>;
 }
 
+export interface PlateDefinition {
+  id: string;
+  name: string;
+  type: 'core' | 'peripheral' | 'corridor' | string;
+  neighbors: string[];
+  base_tension: number;
+  description: string;
+}
+
+export interface PlateCorridor {
+  id: string;
+  from_plate: string;
+  to_plate: string;
+  description: string;
+}
+
+export interface PlateMapResponse {
+  active: boolean;
+  plate_count: number;
+  definitions: PlateDefinition[];
+  corridors: PlateCorridor[];
+  /** 各板块当前张力 0-1 */
+  tensions: Record<string, number>;
+  /** 各板块当前状态 stable/tense/shifting/collapsed */
+  statuses: Record<string, string>;
+  /** 当前激活的 shifting 板块 */
+  active_plate: string;
+}
+
 /**
  * GET 章节状态（进度条 + 节点定位）
  * @throws ApiError if session 不存在
@@ -92,4 +121,12 @@ export async function recordChapterChoice(
  */
 export async function getChapterHistory(sessionId: string): Promise<ChapterHistoryResponse> {
   return api<ChapterHistoryResponse>('/chapter/history', { params: { session_id: sessionId } });
+}
+
+/**
+ * 🆕 v2.8.x W28: GET 板块格局地图
+ * 返回所有板块定义 + 走廊 + 实时张力 + 状态
+ */
+export async function getPlateMap(sessionId: string): Promise<PlateMapResponse> {
+  return api<PlateMapResponse>('/chapter/plate', { params: { session_id: sessionId } });
 }

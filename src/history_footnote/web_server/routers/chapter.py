@@ -178,3 +178,74 @@ def _first_shifting_plate(game) -> str:
         if status in ("shifting", "collapsed"):
             return pid
     return ""
+
+
+def handle_GET_plate_map(handler, query) -> bool:
+    """🆕 v2.8.x W28 GET /api/chapter/plate — 板块格局地图
+
+    返回所有板块 + 状态 + 张力 + 路径 + 类型，用于前端矩阵图。
+    """
+    qs = parse_qs(query)
+    sid = qs.get("session_id", [None])[0]
+    game = _get_game_or_404(handler, sid)
+    if game is None:
+        return True
+
+    try:
+        from history_footnote.chapter.plates import PlateRegistry
+
+        # 1. 从 era_config 加载板块定义
+        era_config = getattr(game, "era_config", {}) or {}
+        # PlateRegistry 直接接受 era_config（含 plates 字段）
+        registry = PlateRegistry(era_config)
+        definitions = [
+            {
+                "id": p.id,
+                "name": p.name,
+                "type": p.type,
+                "neighbors": list(p.neighbors),
+                "base_tension": p.base_tension,
+                "description": p.description,
+            }
+            for p in registry._plates.values()
+        ]
+        corridors = [
+            {
+                "id": c.id,
+                "from_plate": c.from_plate,
+                "to_plate": c.to_plate,
+                "type": getattr(c, "type", "trade"),
+                "description": getattr(c, "description", ""),
+            }
+            for c in registry._corridors.values()
+        ]
+
+        # 2. 运行时张力 + 状态
+        ps = getattr(game.state, "plate_state", None)
+        live_tensions = {}
+        live_statuses = {}
+        if ps is not None:
+            for pid in registry._plates:
+                live_tensions[pid] = ps.get_tension(pid)
+                live_statuses[pid] = (
+                    ps.statuses.get(pid, "stable") if hasattr(ps, "statuses") else "stable"
+                )
+        else:
+            # 老存档无 plate_state → 全部 0 / stable
+            for pid in registry._plates:
+                live_tensions[pid] = 0.0
+                live_statuses[pid] = "stable"
+
+        handler._json(200, {
+            "active": True,
+            "plate_count": len(definitions),
+            "definitions": definitions,
+            "corridors": corridors,
+            "tensions": live_tensions,
+            "statuses": live_statuses,
+            "active_plate": _first_shifting_plate(game),
+        })
+    except Exception as e:
+        logger.exception(f"[/api/chapter/plate] 失败: {e}")
+        handler._json(500, {"error": str(e)})
+    return True

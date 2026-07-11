@@ -55,6 +55,7 @@ GET_ROUTES = {
     "/api/chapter/state": _chapter.handle_GET_chapter_state,
     "/api/chapter/blueprint": _chapter.handle_GET_chapter_blueprint,
     "/api/chapter/history": _chapter.handle_GET_chapter_history,
+    "/api/chapter/plate": _chapter.handle_GET_plate_map,
     "/api/feedback_categories": _misc.handle_GET_feedback_categories,
     "/api/llm/stats": _observability.handle_GET_llm_stats,
     "/api/llm/reset_stats": _observability.handle_GET_llm_reset_stats,

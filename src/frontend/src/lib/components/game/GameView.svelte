@@ -310,4 +310,24 @@
       grid-template-rows: auto 1fr;
     }
   }
+
+  /* 🆕 v2.8.x W28 板块地图切换按钮 */
+  .plate-map-toggle {
+    background: transparent;
+    border: 1px dashed rgba(143, 75, 40, 0.4);
+    color: var(--color-bronze-dark, #8b6914);
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin: 4px 0;
+    align-self: flex-start;
+  }
+  .plate-map-toggle:hover {
+    background: rgba(143, 75, 40, 0.06);
+  }
+  .plate-map-container {
+    margin-bottom: var(--space-2);
+  }
 </style>
