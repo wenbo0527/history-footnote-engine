@@ -861,6 +861,75 @@ WARNING:         28 (含 Tool 注入日志)
 
 ---
 
+## [v2.8.x-W34] - 2026-07-11
+
+### 🔧 W34 架构 + 测试 review + 补缺（W34）
+
+> **范围**：review 整体架构和测试覆盖，补 3 个发现
+> **结果**：295 后端 + 30 前端 PASSED，3 个缺失全部补完
+
+#### 🆕 R.4.1 chapter 子系统公共 API（缺失点 1 修复）
+
+| 问题 | 状态 |
+|---|---|
+| chapter/ 目录 17 个文件，import 全靠绝对路径 | ✅ 补 `__init__.py` 公共 API |
+| 36 个核心组件统一入口 | ✅ 全部正确导入 |
+
+**36 个公共 API 分类**：
+- 类型 (8)：ActType, NodeRole, TransitionType, ClosureStatus, ChapterState, BlueprintNode, ChapterBlueprint, ChapterMeta
+- 路径 (2)：PathStatus, PathState
+- 板块 (6)：PlateStatus, PlateState, PlateRegistry, Plate, Corridor, PlateType, TransmissionRule
+- 引擎 (3)：ChapterCoordinator, ChapterMetaResolver, DEFAULT_HERO_JOURNEY_ACTS
+- 检查/路径切换 (3)：PlateEngine, PathSwitcher, settle_chapter
+- 容错/验证 (2)：fallback_chapter_blueprint, validate_chapter_output
+- Schema (2)：convert_llm_to_blueprint, apply_build_differentiation
+- Prompt/LLM/Tool (4)：build_chapter_prompt_context, fill_chapter_blueprint_via_llm, fill_chapter_summary_via_llm, make_chapter_dm_tools
+- Sanitizer (4)：extract_json_from_text, _strip_markdown_bold_in_json, _strip_control_chars, _fix_truncated_json_brackets
+- 杂项 (2)：_HAS_LC_TOOLS, __version__
+
+#### 🆕 R.4.2 补 Sub-Facade 单测（缺失点 2 修复）
+
+| 测试 | 验证 |
+|---|---|
+| W34_001-002 | QuestFacade 初始化 + 暴露 quest_system |
+| W34_003-004 | DramaFacade 初始化 + 暴露 drama_manager |
+| W34_005-006 | WikiFacade 初始化 + 暴露 wiki_retriever |
+| W34_007-008 | EventFacade 初始化 + publish 发事件 |
+| W34_009-010 | StateFacade 初始化 + 有方法 |
+| W34_011-012 | ChapterFacade + 6 Sub-Facade 全部可实例化 |
+| W34_013-014 | chapter 公共 API 36/36 + version |
+
+#### 🆕 R.4.3 补 game_loop 集成测试（缺失点 3 修复）
+
+| 测试 | 验证 |
+|---|---|
+| W34_020-024 | GameLoop 9 步流程 + 12 工具方法签名稳定 |
+| W34_025-027 | ChapterCoordinator 3 钩子（pre_step/post_step/maybe_settle）+ 签名 + 初始化 |
+| W34_028 | GameLoop 方法数 ≥20 |
+| W34_029 | dm_tools_lc 独立（不依赖 game_loop）|
+| W34_030 | 完整 chapter 管线模块（7 个）都存在 |
+
+#### 验证结果
+
+```
+后端 pytest:     295 PASSED (270 + 14 W34 sub-facades + 11 W34 game_loop)
+前端 vitest:     30 PASSED
+零回归:         ✅
+```
+
+#### 架构 Review 总评
+
+| 维度 | 评分 |
+|---|---|
+| **分层清晰度** (L4 LLM → L-1 工具) | ⭐⭐⭐⭐⭐ |
+| **Sub-Facade 拆分** (6 个独立 facade) | ⭐⭐⭐⭐⭐ |
+| **容错** (silent log + 双层 LLM + fallback 硬编码) | ⭐⭐⭐⭐⭐ |
+| **公共 API 完整性** (W34 补完) | ⭐⭐⭐⭐⭐ |
+| **测试覆盖度** (295 后端 + 30 前端) | ⭐⭐⭐⭐⭐ |
+| **Coordinator 钩子接入** (3 钩子不改 9 步) | ⭐⭐⭐⭐⭐ |
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
