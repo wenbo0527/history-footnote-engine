@@ -1328,6 +1328,79 @@ git push origin v2.9.0
 
 ---
 
+## [v2.9.x-W43] - 2026-07-11
+
+### 🌐 W43: 多 LLM provider 兼容性测试（W43）
+
+> **范围**：6 个 provider 路由 + 参数传递 + 环境变量 fallback 测试
+> **结果**：覆盖 minimax-anthropic / minimax-openai / openai / anthropic / deepseek / custom / mock
+
+#### 🆕 测试
+
+- ✨ `tests/test_v43_multi_provider.py`：10 个测试
+  - **路由测试 (6 个)**: mock/openai/anthropic/minimax-anthropic/minimax-openai/deepseek
+  - **base_url 测试 (3 个)**: minimax × 2 + deepseek
+  - **custom provider (1 个)**: moonshot 兼容
+  - **错误处理 (1 个)**: 未知 provider 抛 ValueError
+  - **fallback (2 个)**: api_key 从环境变量 + extra_kwargs 透传
+
+#### 6 个 Provider 列表
+
+| Provider | 协议 | 用途 |
+|---|---|---|
+| mock | 自定义 | 测试/开发（无 API 成本）|
+| openai | OpenAI | OpenAI 官方（gpt-4o-mini 等）|
+| anthropic | Anthropic | Anthropic 官方（claude-3-5-sonnet）|
+| minimax-anthropic | Anthropic 兼容 | 国内/海外（minimaxi）|
+| minimax-openai | OpenAI 兼容 | 国内/海外（minimaxi）|
+| deepseek | OpenAI 兼容 | DeepSeek（api.deepseek.com）|
+| custom | OpenAI 兼容 | moonshot / 其他自定义 |
+
+#### 关键发现
+
+- **ChatOpenAI/ChatAnthropic 在 llm_providers.py 中是函数本地 import**
+- mock 测试需 `patch("langchain_openai.ChatOpenAI")` 而非 `patch("history_footnote.llm_providers.ChatOpenAI")`
+
+#### 10 个 W43 测试
+
+| 类别 | 数量 |
+|---|---|
+| mock 路由 | 1 |
+| 4 个 openai 兼容（openai/minimax-openai/deepseek/custom）| 4 |
+| 2 个 anthropic 兼容（anthropic/minimax-anthropic）| 2 |
+| 错误处理（未知 provider）| 1 |
+| 环境变量 fallback + extra_kwargs | 2 |
+| **总计** | **10** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     347 PASSED (337 + 10 W43)
+前端 vitest:     70 PASSED
+零回归:         ✅
+```
+
+#### 未来用法
+
+```python
+# OpenAI
+llm = make_llm(provider="openai", model="gpt-4o-mini")
+
+# Anthropic
+llm = make_llm(provider="anthropic", model="claude-3-5-sonnet")
+
+# DeepSeek
+llm = make_llm(provider="deepseek", model="deepseek-chat")
+
+# Moonshot
+llm = make_llm(provider="custom", model="moonshot-v1-8k", base_url="https://api.moonshot.cn/v1")
+
+# api_key 从环境变量读
+llm = make_llm(provider="openai")  # OPENAI_API_KEY
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
