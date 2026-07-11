@@ -16,12 +16,13 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    // 测 API + scene 映射 + plate 映射 + hooks（不测 .svelte 组件 mount）
+    // 测 API + scene 映射 + plate 映射 + hooks + graphLayout（不测 .svelte 组件 mount）
     include: [
       'src/lib/api/**/*.{test,spec}.{js,ts}',
       'src/lib/hooks/**/*.{test,spec}.{js,ts}',
       'src/lib/components/game/sceneMap.test.ts',
       'src/lib/components/game/plateMap.test.ts',
+      'src/lib/components/game/graphLayout.test.ts',
     ],
     exclude: ['node_modules', '.svelte-kit', 'build', 'e2e', 'src/lib/components/**/*.svelte'],
     setupFiles: ['./vitest.setup.ts'],

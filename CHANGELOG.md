@@ -1214,6 +1214,55 @@ git push origin v2.9.0
 
 ---
 
+## [v2.9.x-W41] - 2026-07-11
+
+### 🗺️ W41: 板块图布局算法（SVG 节点图基础）— W41
+
+> **范围**：为板块格局 UI 矩阵图提供布局算法基础
+> **结果**：circular layout + edges + nodeRadius 4 个 helper；14 个 vitest 测试
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/components/game/graphLayout.ts`：
+  - `circularLayout(plateIds, options)` — 圆形布局
+  - `findNode(layout, id)` — 节点查找
+  - `buildEdges(layout, neighbors)` — 边构建（去重）
+  - `nodeRadius(plateCount)` — 自适应节点半径
+- ✨ `src/frontend/src/lib/components/game/graphLayout.test.ts`：14 个测试
+  - circularLayout: 5 测（基础/稳定/1 节点/0 节点/自定义）
+  - findNode: 2 测（找到/未找到）
+  - buildEdges: 4 测（去重/缺失节点/空/坐标正确）
+  - nodeRadius: 3 测（<5/5-8/>8）
+- 🆕 `src/frontend/vitest.config.ts` 加 `graphLayout.test.ts` include
+
+#### 设计决策
+
+- **不依赖 d3** — circular layout 仅 ~20 行，零额外依赖
+- **稳定布局** — 同 ID 永远在同位置（用户体验一致）
+- **自适应节点半径** — 1-4 节点 28px，5-8 节点 32px，9+ 节点 36px（避免重叠）
+- **边去重** — `seen` set 用 sorted key `a|b` 防止 A→B 和 B→A 重复
+
+#### 用途
+
+- 未来 W42: 在 PlateMap.svelte 集成 `<svg>` 节点图（替换 grid 列表）
+- 板块关系可视化：圆周节点 + 圆心放射连线
+- 激活板块高亮、相邻板块提示
+
+#### 验证结果
+
+```
+后端 pytest:     337 PASSED（无回归）
+前端 vitest:     65 PASSED (51 之前 + 14 W41)
+```
+
+#### 未来集成（W42+ 计划）
+
+- `PlateMap.svelte` 集成 `<svg>` 节点图
+- 鼠标 hover 节点显示 tension 历史曲线
+- 点击节点显示历史事件时间线
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
