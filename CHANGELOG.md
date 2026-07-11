@@ -1574,6 +1574,65 @@ curl http://localhost:8000/metrics | jq
 
 ---
 
+## [v2.9.x-W46] - 2026-07-11
+
+### 📜 W46: ChapterTimeline 前端组件（W46）
+
+> **范围**：把 W45 数据层接入前端组件
+> **结果**：横向 SVG 时间线 + 圆点 + 连线 + 详情卡
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/components/game/ChapterTimeline.svelte`：
+  - 横向 SVG 时间线
+  - 圆点 = 章节（past 实心绿 / current 红 pulse / future 空心虚线）
+  - 连线 = 已完成章节
+  - 进度条（绿色填充到 currentChapter）
+  - 点击节点展开详情卡（summary / core_event / key_choice / build / path / transition）
+- ✨ `src/frontend/src/lib/components/game/chapterTimelineApi.test.ts`：5 个集成测试
+  - getChapterHistory 路由
+  - 完整数据流（API → toTimeline）
+  - 网络错误 / 空 history
+
+#### 关键修复
+
+- **重复 export getChapterHistory** — chapter.ts 原本 line 131 已 export，我加的重复
+  修：删我加的（保留原有 + 测试已覆盖）
+
+#### 视觉效果
+
+```
+●─────●─────●─────●○○○○○○○
+Ch1   Ch2   Ch3   Ch4  Ch5-Ch10
+past  past  past  cur  future
+                  (pulse)
+```
+
+#### 5 个 W46 测试
+
+| 类别 | 数量 |
+|---|---|
+| getChapterHistory 导出 | 1 |
+| 路由 /chapter/history + session_id | 1 |
+| API → toTimeline 完整数据流 | 1 |
+| 网络错误处理 | 1 |
+| 空 history 处理 | 1 |
+| **总计** | **5** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     94 PASSED (89 + 5 W46)
+```
+
+#### 未来集成
+
+- GameView 调 `<ChapterTimeline sessionId={...} currentChapter={n} totalChapters={10} />`
+- 时间线显示在 NarrativeArea 旁边
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
