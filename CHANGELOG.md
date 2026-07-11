@@ -1963,6 +1963,85 @@ http://localhost:5173/game/sess-123?admin=true
 
 ---
 
+## [v2.10.x-W52] - 2026-07-11
+
+### 🌐 W52: i18n 国际化框架（中/英双语）— W52
+
+> **范围**：v2.10.x 第二个 sprint — i18n 基础
+> **结果**：locale store + t() 函数 + 嵌套字典 + localStorage 持久化
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/i18n/index.ts`：
+  - `locale` store（zh-CN / en-US）
+  - `setLocale(locale)` 切换
+  - `t(key, vars?)` 翻译（嵌套 key + 占位符）
+  - `tSync(key, locale, vars?)` 同步翻译
+  - `SUPPORTED_LOCALES` / `LOCALE_LABELS` / `LOCALE_FLAGS`
+  - localStorage 持久化（key: `hfe_locale`）
+  - 自定义 `isBrowser()` helper（SSR 兼容）
+- ✨ `src/frontend/src/lib/i18n/locales/zh-CN.ts`（60 翻译键）
+  - nav / status / chapter / plate / metrics / archives / char / error / common / admin
+- ✨ `src/frontend/src/lib/i18n/locales/en-US.ts`（60 翻译键对应）
+- ✨ `src/frontend/src/lib/i18n/index.test.ts`：19 个测试
+  - 框架（5：默认/setLocale/SUPPORTED/LABELS/FLAGS）
+  - t() 翻译（9：zh/en 基础/嵌套/未知/占位符/多占位符/动态切换）
+  - tSync()（3：明确 locale/占位符/未知）
+  - 4 状态色翻译（2：zh/en）
+
+#### 关键设计
+
+1. **嵌套 key 用 `.`** — `t('nav.main.game')` → "游戏" / "Game"
+2. **占位符 `{var}`** — `t('chapter.label', { n: 5 })` → "第 5 章"
+3. **找不到 key 返原 key** — 不抛错，开发者可立即看到缺失
+4. **localStorage 持久化** — 用户选择持久
+5. **SSR 兼容** — 用 `typeof window` 检测（与 W49 adminMode 同样方案）
+
+#### 19 个 W52 测试
+
+| 类别 | 数量 |
+|---|---|
+| 框架（store/locale/labels）| 5 |
+| t() 翻译 | 9 |
+| tSync() 同步 | 3 |
+| 4 状态色翻译 | 2 |
+| **总计** | **19** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     153 PASSED (134 + 19 W52)
+```
+
+#### 用法
+
+```svelte
+<script>
+  import { t, setLocale, LOCALE_FLAGS, LOCALE_LABELS } from '$lib/i18n';
+</script>
+
+<!-- 简单翻译 -->
+<p>{t('nav.main.game')}</p>
+
+<!-- 占位符 -->
+<p>{t('chapter.label', { n: 5 })}</p>
+
+<!-- 切换语言 -->
+<button onclick={() => setLocale('en-US')}>
+  {LOCALE_FLAGS['en-US']} {LOCALE_LABELS['en-US']}
+</button>
+```
+
+#### v2.10.x 进展
+
+| Sprint | 状态 | 描述 | 测试 |
+|---|---|---|---|
+| W51 | ✅ | 多会话存档 API 客户端 | 11 |
+| **W52** | ✅ | **i18n 国际化框架** | **19** |
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

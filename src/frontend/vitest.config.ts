@@ -20,6 +20,7 @@ export default defineConfig({
     include: [
       'src/lib/api/**/*.{test,spec}.{js,ts}',
       'src/lib/hooks/**/*.{test,spec}.{js,ts}',
+      'src/lib/i18n/**/*.{test,spec}.{js,ts}',
       'src/lib/components/game/sceneMap.test.ts',
       'src/lib/components/game/plateMap.test.ts',
       'src/lib/components/game/graphLayout.test.ts',
