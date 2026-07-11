@@ -804,6 +804,63 @@ ERROR:           26 个（每章 1-2 个 LLM JSON 重试，章节仍完成）
 
 ---
 
+## [v2.8.x-W33] - 2026-07-11
+
+### 🚀 W33 修复：LLM JSON 真实错误归零（W33）
+
+> **范围**：修 W32 后剩下的 51 个 LLM JSON 真实错误
+> **结果**：10 章 LLM 端到端 ERROR 51 → **0**，耗时 360 秒 → 187 秒（**快 50%**）
+
+#### 🆕 修复（2 个核心）
+
+| 问题 | 根因 | 修复 |
+|---|---|---|
+| 50+ 行 JSON 截断在第一个 `}` | `JSON_BLOCK_PATTERN` non-greedy `\{.*?\}` 在 `}` 停下 | 新增 `_fix_truncated_json_brackets()` 括号深度匹配算法 |
+| 字符串内裸换行/制表符破坏 JSON | LLM 长 scene 字段未转义 `\n` `\t` | 新增 `_strip_control_chars()` 替换为合法空格 |
+
+#### 文件改动
+
+| 文件 | 改动 |
+|---|---|
+| `narrative_sanitizer.py` | +60 行：`_fix_truncated_json_brackets` + `_strip_control_chars` + `JSON_TRAILING_PATTERN` 改 greedy |
+| `dm_tool.py` | +5 行 W33 prompt 硬约束（裸换行/制表符/双引号/括号齐全/无 trailing comma）|
+| `tests/test_v33_json_robust.py` | 🆕 10 个测试（嵌套括号 + 控制字符 + 综合）|
+| `tests/test_v32_md_strip.py` | 同步验证 W33 约束（4 个 assertion）|
+
+#### 关键技术决策
+
+1. **括号深度匹配算法** — 用 O(n) 单遍扫描 + escape 状态机，正确处理嵌套 `{}` + 字符串内 `{}`（不算深度）
+2. **JSON_TRAILING_PATTERN 改 greedy** `\{[\s\S]*\}$` — 从末尾反推最深 `{`
+3. **控制字符按"已合法？→ 不动 / 否则 → 替换"两步** — 不破坏已合法 JSON，只修补不合法
+4. **prompt W33 5 条**（续 W32 4 条）— 禁裸换行/制表符/双引号 + 括号齐全 + 无 trailing comma
+5. **escape `{{` 在 .format() 字符串里** — 避免 Python str.format() 把字面 `{}` 当 placeholder
+
+#### 验证结果
+
+```
+后端 pytest:     270 PASSED (260 + 10 W33)
+前端 vitest:     30 PASSED
+10 章 LLM 端到端: 10/10 (187 秒，比 W32 360 秒快 50%)
+HTTP 200 OK:     100%
+ERROR:           51 → 0 (降 100%)
+WARNING:         28 (含 Tool 注入日志)
+```
+
+#### 章节标题（修复后）
+
+| Ch | 标题 | 评 |
+|---|---|---|
+| 1 | 且听下回分解 · 春蚕 | ✅ 古典 |
+| 2-10 | 全新 8 个独特标题 | ✅ 古典（无重复）|
+
+#### 章节摘要样本
+
+- Ch 1: *此刻正值暮色初降，主人公于自家院中静坐，暂且无所事事，亦无要紧事情需料理。*
+- Ch 2: *此章无显著事件，亦无显著抉择，唯岁月缓缓流淌间，性情轮廓渐次分明。*
+- Ch 3: *第 3 章无显著事件发生，主角亦未面临关键抉择之分，唯其性情轮廓于平缓行迹间愈见分明。*
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

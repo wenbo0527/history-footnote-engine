@@ -43,6 +43,7 @@ def build_chapter_tool_prompt(
 
     # 序列化为人类可读 prompt
     # 🆕 W32: 加 4 条 prompt 硬约束（避免 LLM markdown + 重复 + 标题不一致）
+    # 🆕 W33: 加 JSON 转义硬约束（避免 LLM 裸换行/制表符）
     prompt = (
         "你是历史注脚引擎的章节蓝图生成助手。请按以下约束生成第 {chapter_id} 章的蓝图 JSON。\n\n"
         "## 🆕 W32 硬约束（不可违反）\n"
@@ -50,6 +51,12 @@ def build_chapter_tool_prompt(
         "- **章节标题不得重复**：本章节 chapter_title 必须与上一章不同（防重复）\n"
         "- **chapter_subtitle 不得为空**：必须 4-12 字文言短语\n"
         "- **transition_hint 必填**：必为 season/relationship/identity 之一\n\n"
+        "## 🆕 W33 硬约束（JSON 严格性）\n"
+        "- **字符串内不得含未转义换行**：scene/option/npc_id 等长字符串内**只能**用 `\\\\n`（双反斜杠）或一个字面字符串\n"
+        "- **字符串内不得含未转义制表符**：长 scene 字段若要分句，用逗号或句号，不要 `\\\\t` 或裸 tab\n"
+        "- **字符串内不得含未转义双引号**：单引号或全角引号 `\"` `\"` 替代 `\"`\n"
+        "- **JSON 闭合括号必齐全**：每个 `{{` 必有 `}}` 匹配，每个 `[` 必有 `]` 匹配\n"
+        "- **对象/数组最后一组后不加多余逗号**（JSON 不允许 trailing comma）\n\n"
         "## 硬约束（不可改）\n"
         "- act: {act}\n"
         "- role: {role}\n"
@@ -67,7 +74,7 @@ def build_chapter_tool_prompt(
         '  "chapter_subtitle": "副标题（4-12字文言）",\n'
         '  "transition_hint": "season",\n'
         '  "nodes": [\n'
-        '    {{"index": 1, "role": "introduction", "scene": "纯古白话场景", "npc_ids": [...], "option_directions": [...], "completion_condition": "..."}},\n'
+        '    {{"index": 1, "role": "introduction", "scene": "纯古白话场景，无换行无制表符", "npc_ids": ["npc_id_1"], "option_directions": [{{"path": "main_path_id", "path_hint": "古白话提示", "narrative_focus": "抉择"}}], "completion_condition": "完成条件"}},\n'
         "    ...\n"
         "  ]\n"
         "}}\n"

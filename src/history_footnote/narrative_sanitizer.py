@@ -116,8 +116,12 @@ EN_FAMILY_KEY_TO_CN = {
 }
 
 # JSON 提取模式（用于 LLM 在 markdown 中包裹 JSON 的情况）
-JSON_BLOCK_PATTERN = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
-JSON_TRAILING_PATTERN = re.compile(r"\{[\s\S]*?\}\s*$", re.MULTILINE)
+# 🆕 W33: 用括号深度匹配而非 non-greedy 截断
+# non-greedy `\{.*?\}` 会在第一个 `}` 停下，LLM JSON 通常 50+ 行 + 多个嵌套对象 → 截到一半
+# 用括号深度算法找到真正匹配的结束 `}`
+JSON_BLOCK_PATTERN = re.compile(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", re.DOTALL)
+# 末尾 JSON（greedy，从末尾倒推找最深 `{`）
+JSON_TRAILING_PATTERN = re.compile(r"\{[\s\S]*\}$", re.MULTILINE)
 
 
 def extract_json_from_text(text: str) -> Optional[str]:
@@ -128,8 +132,9 @@ def extract_json_from_text(text: str) -> Optional[str]:
     - 文本末尾 {...} 块
     - 纯 JSON 字符串
 
-    🆕 W32: 同时清洗 JSON 字符串内的 markdown 加粗污染（`**xxx**` → `xxx`）
-    背景：LLM 偶尔给 title/scene 等字符串加 markdown，破坏 JSON 解析。
+    🆕 W32: 清洗 markdown 加粗（`**xxx**` → `xxx`）
+    🆕 W33: 括号深度匹配（修 W32 的 non-greedy 截断 bug）
+    🆕 W33: 清洗控制字符（LLM 长 scene 字段偶尔含裸换行/制表符）
 
     Args:
         text: LLM 输出
@@ -140,40 +145,113 @@ def extract_json_from_text(text: str) -> Optional[str]:
     if not text:
         return None
     raw = None
-    # 优先尝试 markdown 包裹
+    # 1. markdown 包裹 + 括号深度匹配
     m = JSON_BLOCK_PATTERN.search(text)
     if m:
-        raw = m.group(1)
-    # 尝试末尾的 {...}
+        candidate = m.group(1)
+        raw = _fix_truncated_json_brackets(candidate)
+    # 2. 末尾 {...} 块（greedy）
     if raw is None:
         m = JSON_TRAILING_PATTERN.search(text.strip())
         if m:
-            raw = m.group(0)
-    # 整段就是 JSON
+            raw = _fix_truncated_json_brackets(m.group(0))
+    # 3. 整段就是 JSON
     if raw is None:
         stripped = text.strip()
         if stripped.startswith("{") and stripped.endswith("}"):
-            raw = stripped
+            raw = _fix_truncated_json_brackets(stripped)
     if raw is None:
         return None
 
-    # 🆕 W32: 清洗 JSON 内的 markdown 加粗污染
-    # 模式："**" 在 JSON 字符串值里被错误生成（如 "**门槛之前**"）
-    # 解决：只在 JSON 字符串值内（被双引号包围的）剥 **。
-    # 简单做法：直接全文本剥 **（不在 key 名里所以安全）
+    # 4. 清洗 markdown 加粗
     cleaned = _strip_markdown_bold_in_json(raw)
+    # 5. 清洗控制字符
+    cleaned = _strip_control_chars(cleaned)
     return cleaned
 
 
-def _strip_markdown_bold_in_json(json_str: str) -> str:
-    """剥 JSON 字符串内的 markdown 加粗（**xxx** → xxx）
+def _fix_truncated_json_brackets(json_str: str) -> str:
+    """括号深度匹配：找到真正匹配的 { ... }
 
-    只在 JSON 字符串值内（被双引号包围），不在 key 名上。
-    LLM 偶尔给 title/scene 等字符串加 **，破坏 JSON 解析（引号不平衡）。
+    之前的 non-greedy `\\{.*?\\}` 会在第一个 `}` 停下。
+    LLM JSON 50+ 行 + 嵌套对象（nodes 是 list of dict）→ 必须深度匹配。
     """
-    import re
-    # 模式："...**xxx**..." → "..."**xxx**"..."  剥 ** 即可
+    if not json_str or not json_str.lstrip().startswith("{"):
+        return json_str
+    depth = 0
+    in_str = False
+    escape = False
+    last_valid_end = -1
+    for i, ch in enumerate(json_str):
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"' and not escape:
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                last_valid_end = i
+                break
+    if last_valid_end > 0:
+        return json_str[: last_valid_end + 1]
+    return json_str
+
+
+def _strip_markdown_bold_in_json(json_str: str) -> str:
+    """剥 JSON 字符串内的 markdown 加粗（**xxx** → xxx）"""
     return re.sub(r"\*\*([^*]+)\*\*", r"\1", json_str)
+
+
+def _strip_control_chars(json_str: str) -> str:
+    """剥 JSON 字符串内的控制字符（裸换行/制表符）
+
+    背景：LLM 偶尔在长 scene 字段输出未转义的换行（应写为 \\n）
+    实际 JSON 标准允许字符串内裸换行（但 json.loads 严格模式会拒）
+    这里把所有 0x00-0x1F 字符替换为空格（保留在引号外的不变）。
+    """
+    import json as _json
+    try:
+        _json.loads(json_str)
+        return json_str  # 已合法就不动
+    except _json.JSONDecodeError:
+        pass
+    # 不合法：在字符串外剥控制字符，字符串内替换 \\n
+    out = []
+    in_str = False
+    escape = False
+    for ch in json_str:
+        if escape:
+            out.append(ch)
+            escape = False
+            continue
+        if ch == "\\":
+            out.append(ch)
+            escape = True
+            continue
+        if ch == '"' and not escape:
+            in_str = not in_str
+            out.append(ch)
+            continue
+        if in_str:
+            if ord(ch) < 0x20:
+                out.append(" ")  # 字符串内裸换行 → 空格
+            else:
+                out.append(ch)
+        else:
+            if ord(ch) < 0x20:
+                out.append(" ")  # 字符串外裸换行 → 空格
+            else:
+                out.append(ch)
+    return "".join(out)
 
 
 def strip_skill_metadata(text: str, min_length: int | None = None) -> str:

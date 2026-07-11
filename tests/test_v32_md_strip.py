@@ -126,6 +126,11 @@ def test_V32_007_prompt_has_w32_constraints():
     assert "禁用 markdown 标记" in prompt
     assert "章节标题不得重复" in prompt
     assert "chapter_subtitle 不得为空" in prompt
+    # 🆕 W33: 同时验证 JSON 严格性约束
+    assert "W33 硬约束" in prompt, "应含 W33 硬约束段"
+    assert "未转义换行" in prompt
+    assert "未转义制表符" in prompt
+    assert "未转义双引号" in prompt
     return True
 
 
