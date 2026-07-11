@@ -172,7 +172,13 @@ def handle_POST_input(handler, body) -> bool:
         except Exception as e:
             error_id = safe_error_id()
             logger.exception(f"[input] {error_id} failed during _run_round: {e}")
-            handler._json(500, {"error": "game error", "error_id": error_id})
+            # 🆕 v2.7+ 给玩家友好提示（前端 client.ts 优先用 suggestion）
+            handler._json(500, {
+                "error": "game error",
+                "error_id": error_id,
+                "message": "游戏流程异常",
+                "suggestion": "⚙️ DM 推理出错，请稍后重试（如持续失败请截图反馈）",
+            })
             return True
         dm_output = buf.getvalue()
         last = game.state.narrative_history[-1] if game.state.narrative_history else None
@@ -180,14 +186,18 @@ def handle_POST_input(handler, body) -> bool:
         if not game.state.last_voice_options and last:
             try:
                 from history_footnote.narrative_sanitizer import merge_voice_options
+                # 🆕 v2.7+ 性能剖析
+                import time as _t_vo
+                _t0_vo = _t_vo.time()
                 extracted = merge_voice_options(None, last.get("narrative", ""))
+                dt_vo = (_t_vo.time() - _t0_vo) * 1000
                 if extracted:
                     game.state.last_voice_options = extracted
-                    logger.info(f"[input] 注入 {len(extracted)} voice_options from narrative")
+                    logger.info(f"[input] 注入 {len(extracted)} voice_options from narrative (merge_voice_options: {dt_vo:.0f}ms)")
                 else:
                     # 🆕 v2.3: 传 game 给 LLM 驱动（不再用关键词匹配）
                     game.state.last_voice_options = _context_aware_voices(last.get("narrative", ""), game=game)
-                    logger.info(f"[input] 注入 {len(game.state.last_voice_options)} voice_options (context-aware)")
+                    logger.info(f"[input] 注入 {len(game.state.last_voice_options)} voice_options (context-aware LLM: {dt_vo:.0f}ms)")
             except Exception as e:
                 logger.exception(f"[input] voice_options 注入失败: {e}")
                 game.state.last_voice_options = _context_aware_voices(last.get("narrative", ""), game=game)

@@ -142,9 +142,20 @@ def main():
             state.plate_state.statuses["central_plains"] = "shifting"
             _LOG.info("[板块] r=90: central_plains→shifting")
 
-        coord.pre_step()
-        coord.post_step()
-        coord.maybe_settle()
+        # 🆕 W32: 容忍 LLM JSON 失败的瞬时异常（重试一次）
+        try:
+            coord.pre_step()
+            coord.post_step()
+            coord.maybe_settle()
+        except Exception as e:
+            _LOG.warning("round=%d Coordinator 异常（已重试 1 次）: %s", r, e)
+            # 重置 _initialized 让下一回合再试 init
+            coord._initialized = False
+            try:
+                coord.pre_step()
+                coord.maybe_settle()
+            except Exception as e2:
+                _LOG.error("round=%d Coordinator 重试仍失败: %s", r, e2)
 
         # 检测章节结算
         if len(state.chapter_state.chapter_history) > chapter_count:

@@ -71,6 +71,19 @@ class KnowledgeBase:
         if entry_ids:
             return [self.by_id[eid] for eid in entry_ids if eid in self.by_id]
 
+        # 🆕 v1.7.28 修复：空查询守卫
+        # 没有任何过滤条件时，禁止返回全部条目（避免炸库 + 上下文爆炸）
+        # 必须至少有：keywords / scene / layer 之一
+        if not keywords and not scene and not layer:
+            return []
+
+        # 关键词过滤：必须是有效中文 2-4 字 token 才参与匹配
+        # 避免"嗯"/"好"/标点等无意义输入穿透
+        if keywords:
+            keywords = [kw for kw in keywords if kw and len(kw) >= 2]
+            if not keywords and not scene and not layer:
+                return []
+
         results = []
         for entry in self.entries:
             if layer and entry.get("layer") != layer:
@@ -90,6 +103,30 @@ class KnowledgeBase:
 
             results.append(entry)
 
+        # 🆕 v1.7.29 修复塌房 3：layer 优先级排序
+        # 原因：旧逻辑返回顺序 = entries 列表顺序，"朝廷" 一次命中 7 条
+        # LLM 不知道哪条优先，可能乱用导致剧透
+        # 新逻辑：按 layer 优先级（background > principle > scene > entity）
+        # + 关键词命中数评分
+        def sort_key(e):
+            layer = e.get("layer", "entity")
+            layer_priority = {
+                "background": 0,    # 时代背景 → 最高优先（最普适）
+                "principle": 1,      # 制度/原理 → 高（提供时代逻辑）
+                "scene": 2,          # 场景知识 → 中（提供当下细节）
+                "entity": 3,         # 人物/地点 → 低（容易剧透）
+            }
+            layer_score = layer_priority.get(layer, 4)
+            # 关键词命中数（越多越相关）
+            hit_count = 0
+            if keywords:
+                for kw in keywords:
+                    if kw in e.get("trigger_keywords", []) or kw in e.get("content", ""):
+                        hit_count += 1
+            # 排序：先按 layer 优先级，再按 hit_count 倒序
+            return (layer_score, -hit_count)
+
+        results.sort(key=sort_key)
         return results
 
     def search_by_text(self, text: str, top_k: int = 3) -> list[dict]:

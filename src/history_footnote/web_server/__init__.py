@@ -27,11 +27,15 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
-from history_footnote.config import Server
+import os  # 🆕 v2.7+ LLM warmup: 读 MINIMAX_MODEL
+import time  # 🆕 v2.7+ LLM warmup: 计时
+
+from history_footnote.config import Server, GuestCookie
 from history_footnote.web_enhancements import (
     GLOBAL_RATE_LIMITER,
     setup_keepalive,
 )
+from history_footnote.web_server.handler_base import HandlerBaseMixin
 
 # ===== Views（状态序列化层） =====
 from history_footnote.web_server.views.format_state import (
@@ -64,33 +68,14 @@ from history_footnote.web_server.router_registry import dispatch_GET, dispatch_P
 # Handler 类：路由分发入口（依赖 dispatch_GET / dispatch_POST）
 # ============================================================
 
-class Handler(BaseHTTPRequestHandler):
-    """HTTP handler — 只做分发，不再持有任何具体路由逻辑"""
+class Handler(HandlerBaseMixin, BaseHTTPRequestHandler):
+    """HTTP handler — 只做分发，不再持有任何具体路由逻辑
+
+    🆕 v2.7+ 继承 HandlerBaseMixin 直接拿到所有工具方法（包括 cookie 工具）
+    """
 
     def log_message(self, fmt, *args):
         pass  # 静默
-
-    # --- 工具方法（从 handler_base 拷贝到实例以保持兼容） ---
-
-    def _gzip_if_accepted(self, body: bytes) -> bytes:
-        from history_footnote.web_server.handler_base import HandlerBaseMixin
-        return HandlerBaseMixin._gzip_if_accepted(self, body)
-
-    def _json(self, status: int, data: dict):
-        from history_footnote.web_server.handler_base import HandlerBaseMixin
-        return HandlerBaseMixin._json(self, status, data)
-
-    def _html(self, html: str):
-        from history_footnote.web_server.handler_base import HandlerBaseMixin
-        return HandlerBaseMixin._html(self, html)
-
-    def _serve_static(self, path: str):
-        from history_footnote.web_server.handler_base import HandlerBaseMixin
-        return HandlerBaseMixin._serve_static(self, path)
-
-    def _rate_limit_or_429(self, limiter, scope: str = "Too Many Requests"):
-        from history_footnote.web_server.handler_base import HandlerBaseMixin
-        return HandlerBaseMixin._rate_limit_or_429(self, limiter, scope)
 
     # --- 路由分发 ---
 
@@ -123,6 +108,75 @@ class Handler(BaseHTTPRequestHandler):
 def run(host: str = "0.0.0.0", port: int = Server.DEFAULT_PORT):
     """启动 web 服务器（开发用）"""
     setup_keepalive(Handler)
+    # 🆕 v2.7+ 启动时跑一次冷存档清理（30 天未动 → _archive/）
+    if GuestCookie.ARCHIVE_ON_STARTUP:
+        try:
+            from history_footnote.resource_cache import get_save_manager
+            sm = get_save_manager()
+            moved = sm.archive_inactive_sessions(within_days=GuestCookie.ARCHIVE_DAYS)
+            if moved:
+                logger.info(f"[v2.7] 冷存档清理：{moved} 个会话移入 _archive/")
+            else:
+                logger.info(f"[v2.7] 冷存档清理：无过期会话")
+        except Exception as e:
+            logger.warning(f"[v2.7] 冷存档清理失败（忽略）: {e}")
+
+    # 🆕 v2.7+ 启动 LLM 预热（消除首次 /api/input 的 53.9s SSL 冷启动）
+    # 原理：在 HTTP server 启动**之前**后台调一次 LLM，让 MiniMax-M3 端点的
+    #       外部 SSL 路由 + 模型冷加载在玩家**看不见的时刻**完成
+    # 节省：玩家首次 /api/input 从 53.9s → 10-30s
+    # 风险：极低（try/except + 后台线程，主流程不受影响）
+    import threading
+
+    def _warmup_llm() -> None:
+        """🆕 v2.7+ LLM 预热（后台线程）
+
+        设计要点：
+        - daemon=True → 主进程退出时自动结束
+        - try/except → 任何失败都**不影响**主服务
+        - 短消息 "hi" → 触发 SSL/路由/token 验证，但不消耗大量 tokens
+        - 60s timeout → 避免卡死（极端情况下模型无响应）
+        """
+        try:
+            from history_footnote.llm_providers import make_llm_for_purpose
+            from history_footnote.llm_wrapper import LLMWrapper
+
+            logger.info("[v2.7+ warmup] 启动 LLM 预热（消除首次 53.9s 冷启动）")
+
+            # 构造主 provider 的 LLM（minimax-anthropic）
+            warmup_llm = make_llm_for_purpose(
+                purpose="dm",
+                provider="minimax-anthropic",
+                model=os.environ.get("MINIMAX_MODEL", "MiniMax-M3"),
+            )
+
+            # 用 LLMWrapper 包一层（带 timeout / fallback）
+            wrapped = LLMWrapper(
+                primary_provider="minimax-anthropic",
+                timeout=60.0,
+                retry_on_same=1,
+            )
+
+            # 调一次简短消息（"hi"），触发 SSL 路由 + 模型冷加载
+            # 不传 tool schema → 避免 bind_tools 失败
+            t0 = time.time()
+            wrapped.invoke(
+                [{"role": "user", "content": "hi"}],
+                timeout=60.0,
+            )
+            dt = (time.time() - t0) * 1000
+            logger.info(
+                f"[v2.7+ warmup] ✅ LLM 预热完成（{dt:.0f}ms）"
+                f"—— 首次 /api/input 不再 53.9s 冷启动"
+            )
+        except Exception as e:
+            # 预热失败**不影响**服务启动（仅 warn log）
+            logger.warning(f"[v2.7+ warmup] ⚠️ 预热失败（不影响启动）: {e}")
+
+    # 后台线程执行预热（不阻塞主线程 / HTTP server 启动）
+    threading.Thread(target=_warmup_llm, daemon=True, name="llm-warmup").start()
+    logger.info("[v2.7+ warmup] LLM 预热已在后台启动（不等它完成即可接收 HTTP 请求）")
+
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"🎭 历史注脚体验引擎 已启动")
     print(f"   地址: http://{host}:{port}/")

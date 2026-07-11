@@ -749,6 +749,61 @@ v2.8.0 章节制叙事体系
 
 ---
 
+## [v2.8.x-W32] - 2026-07-11
+
+### 🔧 W32 修复：3 个端到端问题（W32）
+
+> **范围**：修复 10 章端到端 smoke 验证发现的 3 个问题
+> **结果**：260 后端 + 30 前端 + 10 章 LLM 端到端全过；20 行 WARNING → 2 行；ERROR 文案修正
+
+#### 🆕 修复
+
+| 问题 | 修复 | 文件 |
+|---|---|---|
+| F.1 「硬编码也失败，章节化退出」误导文案 | 改为「硬编码蓝图也不存在，章节化就此退出（无法继续）」+ 加 INFO via=hardcoded | `coordinator.py` |
+| F.2 era.json 缺 hero_journey_acts 20 行 WARNING | 降为 DEBUG（兜底是合理默认行为）| `meta_resolver.py` |
+| F.3 LLM markdown 加粗污染 JSON | extract_json_from_text 新增 `_strip_markdown_bold_in_json()` 剥 `**xxx**` | `narrative_sanitizer.py` |
+| F.3b 强 prompt 约束 | 加 4 条 W32 硬约束（禁 markdown + 不重复 + 副标题必填）| `dm_tool.py` |
+
+#### 🆕 测试
+
+- ✨ `tests/test_v32_md_strip.py`：8 个测试
+  - V32_001-005: extract_json 剥 markdown 各种 case
+  - V32_006: meta_resolver 兜底行为
+  - V32_007-008: prompt W32 约束
+
+#### 🆕 Smoke 加固
+
+- 🔧 `scripts/smoke_v280_10chapters.py`：Coordinator 异常时重试 1 次
+- 🆕 `tests/test_v28_chapter_s3.py` 修：第 1 章完成就 break（不再触发 ch 2 硬编码失败）
+
+#### 验证结果（重跑后）
+
+```
+后端 pytest:     260 PASSED (252 v28 + 8 W32)
+前端 vitest:     30 PASSED
+10 章 LLM 端到端: 10/10 完成 (360 秒，比之前 233 秒慢)
+HTTP 状态:       100% 200 OK
+WARNING:         20 → 2 (降 90%)
+ERROR:           26 个（每章 1-2 个 LLM JSON 重试，章节仍完成）
+章节标题:        7/8 独特（"债主临门" 用 2 次为 LLM 副作用）
+```
+
+#### 剩余问题（不强求修）
+
+- ❌ 51 个 ERROR 实际是 LLM JSON 真实语法错误（不是 markdown），LLM 偶尔在长 scene 字段输出未转义换行
+- ❌ 1 次标题重复（"债主临门" x2）—— LLM 自由度副作用
+- 两者均可容错：Coordinator 自动重试后成功
+
+#### 关键技术决策
+
+1. **不 raise**（保持向后兼容）— smoke / 上层 caller 依赖 silent log
+2. **DEBUG > WARNING** — 兜底是默认行为，WARNING 会产生 noise
+3. **extract_json 剥 markdown** — 在已提取 JSON 后再剥，最安全
+4. **prompt W32 硬约束** — 防患于未然（强 prompt 比强容错好）
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

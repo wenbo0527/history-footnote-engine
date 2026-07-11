@@ -7,8 +7,8 @@ v1.7.30 真实 LLM 端到端验证报告
 
 --- Round 1 ---
   input: 我织了一匹湖绫，丝光莹润。
-  cash=12.00, debt=1.00, rice=5.0
-  discoveries: items=0, persons=0, places=0, facts=0
+  cash=5.50, debt=1.00, rice=5.0
+  discoveries: items=5, persons=0, places=0, facts=0
   financial_log: 1 条
   triggered_events: 5 个
   monthly_settle 触发: 0 次
@@ -17,55 +17,49 @@ v1.7.30 真实 LLM 端到端验证报告
 
 --- Round 2 ---
   input: 我去镇上牙行卖这匹湖绫。
-  cash=15.00, debt=1.00, rice=5.0
-  discoveries: items=0, persons=0, places=0, facts=0
-  financial_log: 2 条
+  cash=9.20, debt=1.00, rice=5.0
+  discoveries: items=7, persons=0, places=0, facts=0
+  financial_log: 3 条
   triggered_events: 5 个
   monthly_settle 触发: 0 次
-  current_city: shengze
+  current_city: songjiang
   narrative: 2 条
 
 --- Round 3 ---
   input: 我搭船去苏州，听说阊门码头很热闹。
-  cash=15.00, debt=1.00, rice=5.0
-  discoveries: items=0, persons=0, places=0, facts=0
-  financial_log: 2 条
+  cash=6.20, debt=1.00, rice=5.0
+  discoveries: items=9, persons=0, places=0, facts=0
+  financial_log: 4 条
   triggered_events: 5 个
   monthly_settle 触发: 0 次
-  current_city: shengze
+  current_city: songjiang
   narrative: 3 条
 
 --- Round 4 ---
   input: 在苏州，我找了家茶馆坐坐，听说最近织造局加税了。
-  cash=4.10, debt=1.00, rice=4.4
-  discoveries: items=0, persons=0, places=0, facts=0
+  cash=5.30, debt=1.00, rice=4.7
+  discoveries: items=9, persons=0, places=0, facts=0
   financial_log: 9 条
   triggered_events: 5 个
   monthly_settle 触发: 1 次
-  current_city: shengze
+  current_city: songjiang
   narrative: 5 条
 
 --- Round 5 ---
   input: 我回盛泽，把苏州的见闻告诉沈氏。
-  cash=7.10, debt=0.00, rice=4.4
-  discoveries: items=0, persons=0, places=0, facts=0
-  financial_log: 13 条
-  triggered_events: 5 个
-  monthly_settle 触发: 1 次
-  current_city: shengze
-  narrative: 6 条
+  ❌ 失败: Error code: 529 - {'type': 'error', 'error': {'type': 'overloaded_error', 'message': 'overloaded_error (529)'}, 'request_id': '069b015860c96a31b1fe959423921d12'}
 
 --- Round 6 ---
   input: 我算算家里的账，发现这个月支出很大。
-  cash=7.10, debt=0.00, rice=4.4
-  discoveries: items=0, persons=0, places=0, facts=0
-  financial_log: 13 条
+  cash=4.30, debt=1.00, rice=4.7
+  discoveries: items=9, persons=1, places=0, facts=0
+  financial_log: 17 条
   triggered_events: 5 个
   monthly_settle 触发: 1 次
-  current_city: shengze
-  narrative: 7 条
+  current_city: songjiang
+  narrative: 6 条
 
-总耗时: 198.5s
+总耗时: 97.6s
 
 === 关键发现 ===
 ✅ 真实 LLM 调用 200 OK

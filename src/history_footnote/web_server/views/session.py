@@ -17,6 +17,8 @@ from history_footnote.resource_cache import (
 from history_footnote.game_loop import GameLoop
 from history_footnote.storage.save_manager import DEFAULT_SAVE_ROOT
 
+logger = logging.getLogger(__name__)
+
 
 def _storage_root_for_account() -> Path:
     """🆕 v1.7.30 账户系统的存储根目录
@@ -66,6 +68,22 @@ def _get_or_load_session(session_id: str | None) -> GameLoop | None:
         session=session,
         load_state_data=loaded,
     )
+
+    # 🆕 v1.7.32 修复：存档加载后从最近 narrative 派生 voice_options。
+    # 否则玩家跨页面 / 跨重启进入游戏后，脑海中的声音是空的（"暂无选项"）。
+    # 复用 /api/input 路径的轻量级 _context_aware_voices（关键字匹配，零 LLM 成本）
+    if not game.state.last_voice_options:
+        try:
+            from history_footnote.web_server.routers.input import _context_aware_voices
+            last = (game.state.narrative_history or [])[-1] if game.state.narrative_history else None
+            if last:
+                voices = _context_aware_voices(last.get("narrative", ""))
+                if voices:
+                    game.state.last_voice_options = voices
+                    logger.info(f"[load] 注入 {len(voices)} voice_options (context-aware from saved narrative)")
+        except Exception as e:
+            logger.exception(f"[load] 注入 voice_options 失败: {e}")
+
     session_set(session_id, game)
     return game
 

@@ -175,6 +175,34 @@ class Server:
 
 
 # ============================================================
+# Guest Cookie（v2.7+ 游客身份持久化）
+# ============================================================
+
+class GuestCookie:
+    """🆕 v2.7+ 游客 HttpOnly 签名 Cookie 配置
+
+    设计目标：
+    - 游客在浏览器里持久化身份（清 localStorage 也能找回）
+    - HttpOnly 防 XSS；SameSite=Lax 防止 CSRF；Secure 强制 HTTPS（生产）
+    - 签名防篡改（HMAC-SHA256）
+    """
+    # Cookie 名
+    NAME = _getenv_str("WEB_COOKIE_NAME", "hfe_guest")
+    # 有效期（秒），默认 1 年
+    MAX_AGE = _getenv_int("WEB_COOKIE_MAX_AGE", 365 * 24 * 60 * 60)
+    # HMAC 签名密钥（生产必须设；缺失会用固定 fallback 并 warning 一次）
+    SECRET = _getenv_str("WEB_COOKIE_SECRET", "")
+    # Secure flag：生产 true / 开发 false
+    SECURE = _getenv_bool("WEB_COOKIE_SECURE", False)
+    # SameSite
+    SAMESITE = _getenv_str("WEB_COOKIE_SAMESITE", "Lax")
+    # 启动时是否自动跑一次冷存档清理
+    ARCHIVE_ON_STARTUP = _getenv_bool("WEB_ARCHIVE_ON_STARTUP", True)
+    # 冷存档天数（last_saved_at 距今超过此值 → 标 archived）
+    ARCHIVE_DAYS = _getenv_int("WEB_ARCHIVE_DAYS", 30)
+
+
+# ============================================================
 # 集中导出
 # ============================================================
 
@@ -182,7 +210,7 @@ __all__ = [
     "APP_VERSION", "APP_VERSION_NAME", "APP_IS_BETA",
     "RateLimits", "Concurrency", "WikiLimits",
     "Narrative", "Sanitizer", "Feedback",
-    "Logging", "Server",
+    "Logging", "Server", "GuestCookie",
     "Seconds", "Rounds",
 ]
 

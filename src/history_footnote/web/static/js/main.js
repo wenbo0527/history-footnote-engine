@@ -532,21 +532,21 @@ function renderGameHeader() {
   const yearMaxLabel = `万历${g.year_max - 1573}年（${g.year_max}）`;
   const progress = Math.min(100, ((g.year_current - 1587) / (g.year_max - 1587)) * 100);
   return `
-    <div class="game-header" style="background:linear-gradient(135deg, #5a3e1f 0%, #3a2a17 100%);color:#f5e6c8;padding:16px 24px;border-radius:0 0 8px 8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-        <div style="font-size:24px">🎭</div>
+    <div class="game-header">
+      <div class="game-header-title-block">
+        <div class="game-header-emoji">🎭</div>
         <div>
-          <div style="font-size:18px;font-weight:600">${yearLabel} → ${yearMaxLabel}</div>
-          <div style="font-size:12px;color:#c4a878">第 ${g.round_current} 轮 · ${escapeHtmlInline(g.city)} · ${escapeHtmlInline(state.account_username || "游客")}</div>
+          <div class="game-header-title">${yearLabel} → ${yearMaxLabel}</div>
+          <div class="game-header-sub">第 ${g.round_current} 轮 · ${escapeHtmlInline(g.city)} · ${escapeHtmlInline(state.account_username || "游客")}</div>
         </div>
       </div>
-      <div style="flex:1;min-width:200px;max-width:400px">
-        <div style="font-size:11px;color:#c4a878;margin-bottom:4px">时代进度 ${progress.toFixed(0)}%</div>
-        <div style="height:6px;background:rgba(255,255,255,0.2);border-radius:3px;overflow:hidden">
-          <div style="height:100%;background:linear-gradient(90deg, #d4a574, #f5e6c8);width:${progress}%;transition:width 0.5s"></div>
+      <div class="game-header-progress">
+        <div class="game-header-progress-label">时代进度 ${progress.toFixed(0)}%</div>
+        <div class="game-header-progress-bar">
+          <div class="game-header-progress-fill" style="width:${progress}%"></div>
         </div>
       </div>
-      <div style="display:flex;gap:12px;font-size:13px">
+      <div class="game-header-stats">
         <div title="银两">💰 ${g.cash}</div>
         <div title="织机">🧵 ${g.looms}</div>
         <div title="声望">⭐ ${g.reputation}</div>
@@ -557,6 +557,11 @@ function renderGameHeader() {
 
 /** 角色卡侧栏（可折叠） */
 function renderCharacterCard() {
+  return `<aside class="char-card">${renderCharacterCardInner()}</aside>`;
+}
+
+/** 🆕 v1.9.5：char-card inner（不带外层 aside，由调用者包） */
+function renderCharacterCardInner() {
   const g = state.game;
   const char = state.character || {};
   const family = g.family.length > 0 ? g.family : [
@@ -568,41 +573,80 @@ function renderCharacterCard() {
     { name: "织绸", level: 2 },
   ];
   return `
-    <aside class="char-card" style="background:#faf3e0;border:1px solid #c4a878;border-radius:8px;padding:16px;width:240px;flex-shrink:0">
-      <div style="text-align:center;margin-bottom:12px">
-        <div style="font-size:48px">👤</div>
-        <div style="font-size:18px;font-weight:600;color:#5a3e1f;margin-top:4px">${escapeHtmlInline(char.name || state.account_username || "未命名")}</div>
-        <div style="font-size:12px;color:#8b6f47">${escapeHtmlInline(char.occupation || "织工")} · ${char.age || "?"}岁</div>
-        <div style="font-size:11px;color:#a08858">${escapeHtmlInline(char.location || g.city)}</div>
-      </div>
-      <div style="border-top:1px solid #c4a878;padding-top:8px;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:600;color:#5a3e1f;margin-bottom:4px">家庭</div>
-        ${family.map(f => `<div style="font-size:12px;color:#5a3e1f;display:flex;justify-content:space-between"><span>${escapeHtmlInline(f.relation)}：${escapeHtmlInline(f.name)}</span><span style="color:#8b6f47">${f.age}岁</span></div>`).join("")}
-      </div>
-      <div style="border-top:1px solid #c4a878;padding-top:8px">
-        <div style="font-size:12px;font-weight:600;color:#5a3e1f;margin-bottom:4px">技能</div>
-        ${skills.map(s => `<div style="font-size:12px;color:#5a3e1f">${escapeHtmlInline(s.name)} <span style="color:#d4a574">${"⭐".repeat(s.level)}</span></div>`).join("")}
-      </div>
-    </aside>
+    <div class="char-card-header">
+      <div class="char-card-avatar">👤</div>
+      <div class="char-card-name">${escapeHtmlInline(char.name || state.account_username || "未命名")}</div>
+      <div class="char-card-meta">${escapeHtmlInline(char.occupation || "织工")} · ${char.age || "?"}岁</div>
+      <div class="char-card-location">${escapeHtmlInline(char.location || g.city)}</div>
+    </div>
+    <div class="char-card-section">
+      <div class="char-card-section-title">家庭</div>
+      ${family.map(f => `<div class="char-card-family-row"><span>${escapeHtmlInline(f.relation)}：${escapeHtmlInline(f.name)}</span><span class="char-card-family-age">${f.age}岁</span></div>`).join("")}
+    </div>
+    <div class="char-card-section">
+      <div class="char-card-section-title">技能</div>
+      ${skills.map(s => `<div class="char-card-skill">${escapeHtmlInline(s.name)} <span class="char-card-skill-stars">${"⭐".repeat(s.level)}</span></div>`).join("")}
+    </div>
   `;
 }
 
-/** 时代大事记侧栏 */
+/** 🆕 v1.9.5：timeline inner（不带外层 aside） */
 function renderTimeline() {
+  return `<aside class="timeline">${renderTimelineInner()}</aside>`;
+}
+function renderTimelineInner() {
   const g = state.game;
+  const sb = state.game.sidebar || {};
+  const tasks = sb.active_tasks || [];
+  const deadlines = sb.upcoming_deadlines || [];
+  const cash = g.cash;
+  const rice = g.rice;
+  const debt = g.debt;
+  const burn = g.monthly_burn;
+
+  const tasksHtml = tasks.length > 0 ? tasks.map(t => {
+    const icon = t.urgency === "high" ? "🔴" : "🟡";
+    return `<div class="timeline-task-row"><span class="timeline-task-icon">${icon}</span><span>${escapeHtmlInline(t.title || "")}</span></div>`;
+  }).join("") : `<div class="timeline-empty">暂无待办</div>`;
+
+  const deadlinesHtml = deadlines.length > 0 ? deadlines.map(d => {
+    const days = d.days_estimate ? `约${d.days_estimate}天后` : "近期";
+    const amount = d.amount ? ` · ${escapeHtmlInline(d.amount)}` : "";
+    return `<div class="timeline-deadline-row">
+      <div class="timeline-deadline-name">${escapeHtmlInline(d.name || "")}</div>
+      <div class="timeline-deadline-meta">${days}${amount}</div>
+    </div>`;
+  }).join("") : `<div class="timeline-empty">近期无还债</div>`;
+
   return `
-    <aside class="timeline" style="border-radius:8px;padding:16px;width:200px;flex-shrink:0">
-      <div class="timeline-title" style="font-size:14px;font-weight:600;margin-bottom:12px">📜 大事记</div>
-      ${g.timeline.map(t => `
-        <div class="timeline-item" style="display:flex;gap:8px">
-          <div class="timeline-year" style="font-size:13px;font-weight:700;min-width:36px">${t.year}</div>
-          <div class="timeline-event ${t.highlight ? "highlight" : ""}" style="font-size:13px;flex:1">${escapeHtmlInline(t.event)}${t.highlight ? " 🔥" : ""}</div>
-        </div>
-      `).join("")}
-      <div style="font-size:11px;color:#8b6f47;margin-top:12px;padding-top:8px;border-top:1px solid rgba(90,62,31,0.2)">
-        💡 时代大事影响你的选择
+    <div class="timeline-title">📜 大事记</div>
+    ${g.timeline.map(t => `
+      <div class="timeline-item">
+        <div class="timeline-year">${t.year}</div>
+        <div class="timeline-event ${t.highlight ? "highlight" : ""}">${escapeHtmlInline(t.event)}${t.highlight ? " 🔥" : ""}</div>
       </div>
-    </aside>
+    `).join("")}
+    <div class="timeline-hint">💡 时代大事影响你的选择</div>
+
+    <div class="timeline-section">
+      <div class="timeline-section-title">💰 财务</div>
+      <div class="timeline-fin-grid">
+        <div>💵 现金</div><div class="timeline-fin-val">${(cash ?? 0).toFixed(2)} 两</div>
+        <div>🍚 存粮</div><div class="timeline-fin-val">${(rice ?? 0).toFixed(1)} 石</div>
+        <div>💳 欠债</div><div class="timeline-fin-val">${(debt ?? 0).toFixed(2)} 两</div>
+        <div>📉 月耗</div><div class="timeline-fin-val">${(burn ?? 0).toFixed(2)} 两</div>
+      </div>
+    </div>
+
+    <div class="timeline-section">
+      <div class="timeline-section-title">📋 待办</div>
+      ${tasksHtml}
+    </div>
+
+    <div class="timeline-section">
+      <div class="timeline-section-title">⏰ 还债日</div>
+      ${deadlinesHtml}
+    </div>
   `;
 }
 
@@ -658,37 +702,64 @@ function renderGameFull(narrativeContent) {
   `;
 }
 
-/** 🆕 v1.9.0 提交行动（占位，待 /api/play 接入）*/
-async function submitAction() {
-  const input = document.getElementById("action-input")?.value?.trim();
-  if (!input) {
+/** 🆕 v1.9.0 提交行动 — 🆕 v1.9.5 修复：桥接到 submitInputWithText（真实链路）
+ *  旧实现：占位（只 push 到 state.game.history + toast）
+ *  新实现：把文字塞进 #player_input + 调用 submitInput（/api/input 真实链路）
+ */
+async function submitAction(inputText) {
+  const text = (inputText ?? document.getElementById("action-input")?.value ?? "").trim();
+  if (!text) {
     showToast("请输入想做的事", "warning");
     return;
   }
-  // 简化版：直接用 fallback 渲染一段
-  showToast("行动已发送：" + input, "info", 2000);
   HAPTIC.tap();
-  // 加到 history
-  state.game.history.push(input);
-  document.getElementById("action-input").value = "";
-  // 重新渲染
+  // 🆕 v1.9.5：把 v1.9.0 action-bar 的提交桥接到 v1.7 真实 input 链路
+  const $ta = document.getElementById("player_input");
+  if ($ta) {
+    $ta.value = text;
+    // 触发 v1.7 真实提交（SSE 流式 + /api/input）
+    if (typeof submitInput === "function") {
+      await submitInput();
+    } else {
+      // fallback：用 submitInputWithText（如果 submitInput 还没定义）
+      if (typeof submitInputWithText === "function") {
+        await submitInputWithText(text);
+      }
+    }
+  } else {
+    // 兜底：直接走 v1.7 接口
+    if (typeof submitInputWithText === "function") {
+      await submitInputWithText(text);
+    } else {
+      showToast("提交失败：未找到输入框", "error");
+    }
+  }
+  // 重新渲染（如果有需要）
   if (typeof renderGame === "function") {
     renderGame();
   }
 }
 
-/** 🆕 v1.9.0 快捷行动 */
+/** 🆕 v1.9.0 快捷行动 — 桥接到 v1.7 真实提交 */
 function useQuickAction(action) {
-  const input = document.getElementById("action-input");
-  if (input) {
-    input.value = action;
-    submitAction();
-  }
+  submitAction(action);
 }
 
 // 🆕 v1.8.2 renderMenu：统一入口（4 板块）
 async function renderMenu() {
+  // 🆕 v1.9.5：退出游戏时去掉 game-mode + 恢复 sidebar 元素
+  const $layout = document.getElementById("app-layout");
+  if ($layout) $layout.classList.remove("game-mode");
+  // 恢复 sidebar 元素（renderGame 时被 remove）
+  if ($layout && !document.querySelector("#app-layout .sidebar")) {
+    const $sb = document.createElement("div");
+    $sb.className = "sidebar";
+    $sb.id = "sidebar";
+    $layout.appendChild($sb);
+  }
+  // main 清理 inline style
   const $main = document.getElementById("main");
+  if ($main) $main.style.cssText = "";
   if (!$main) return;
   // 调 /api/menu（无 account_id 后端自动建 guest）
   const menu = await api(`/api/menu?account_id=${encodeURIComponent(state.account_id || "")}`, "GET", null);
@@ -1215,6 +1286,25 @@ if (data.error) {
   return;
 }
 state.session_id = data.session_id;
+state.character = data.character || data.custom_character || {};  // 🆕 v1.9.5 同步
+state.game = state.game || {};
+// 把后端数据同步到 state.game（用于 v1.9.0 顶部 + 角色卡 + 大事记）
+if (data.round_number !== undefined) state.game.round_current = data.round_number;
+if (data.current_city) state.game.city = data.current_city;
+if (data.cash !== undefined) {
+  state.game.cash = data.cash;
+  state.game.rice = data.rice;
+  state.game.debt = data.debt;
+  state.game.monthly_burn = data.monthly_burn;
+}
+// 🆕 v1.9.5：同步 sidebar 财务/任务/还债日到 state.game.sidebar（让 renderTimeline 渲染）
+if (data.sidebar_data) {
+  state.game.sidebar = data.sidebar_data;
+}
+// 🆕 v1.9.5：同步 timeline 大事记到 state.game.timeline（让 renderTimeline 渲染）
+if (data.timeline) {
+  state.game.timeline = data.timeline;
+}
 renderGame(data);
 }
 
@@ -1318,6 +1408,23 @@ if (data.error) {
 state.session_id = session_id;
 state.gender = data.player_gender;
 state.identity = data.selected_identity;
+state.character = data.character || data.custom_character || {};  // 🆕 v1.9.5
+state.game = state.game || {};
+if (data.round_number !== undefined) state.game.round_current = data.round_number;
+if (data.current_city) state.game.city = data.current_city;
+if (data.cash !== undefined) {
+  state.game.cash = data.cash;
+  state.game.rice = data.rice;
+  state.game.debt = data.debt;
+  state.game.monthly_burn = data.monthly_burn;
+}
+// 🆕 v1.9.5：同步 sidebar/timeline
+if (data.sidebar_data) {
+  state.game.sidebar = data.sidebar_data;
+}
+if (data.timeline) {
+  state.game.timeline = data.timeline;
+}
 renderGame(data);
 }
 
@@ -1342,18 +1449,80 @@ if (window.visualViewport) {
 setupMobileKeyboardFix();
 
 function renderGame(data) {
-renderSidebar(data);
-$main.innerHTML = "";
-appendOpening(data);
-appendInputArea();
-// 🆕 v1.5.1 P0 Bug #2 修复：开局渲染 voice_options
-// 如果是加载存档且有 last_voice_options，复用它；否则用预定义开局选项
-if (data.last_voice_options && data.last_voice_options.length > 0) {
-  appendVoiceOptions(data.last_voice_options);
-} else {
-  appendOpeningVoiceOptions(data);
+  // 🆕 v1.9.5 App Shell 架构：
+  // - .app-layout 是 flex column
+  //   - .app-header  (sticky top,  永远可见)
+  //   - .app-main    (唯一滚动区)
+  //   - .app-footer  (sticky bottom, 永远可见, 包含输入区)
+  // 这样输入区永远在底部，不用滚到底才能输入
+
+  const $layout = document.getElementById("app-layout");
+  if ($layout) $layout.classList.add("game-mode");
+  const $mainEl = document.getElementById("main");
+  if ($mainEl) {
+    $mainEl.className = "app-main";
+    $mainEl.style.cssText = "";
+  }
+  // sidebar 元素如果存在就移除（兼容旧 DOM）
+  const $sidebar = document.querySelector("#app-layout .sidebar");
+  if ($sidebar) $sidebar.remove();
+
+  renderSidebar(data);
+
+  // 收集 narrative 内容
+  const narrativeHtml = buildNarrativeArea(data);
+
+  // App Shell 三段式
+  $mainEl.innerHTML = `
+    <div class="app-header">
+      ${renderGameHeader()}
+    </div>
+    <div class="app-main-inner">
+      <div class="game-layout">
+        <aside class="char-card">
+          ${renderCharacterCardInner()}
+        </aside>
+        <main class="narrative-area">
+          ${narrativeHtml}
+        </main>
+        <aside class="timeline">
+          ${renderTimelineInner()}
+        </aside>
+      </div>
+    </div>
+    <div class="app-footer">
+      <div id="game-input-slot"></div>
+    </div>
+  `;
+
+  // 把 v1.7 真实输入组件 + 3 声音挂到 footer 内的 #game-input-slot
+  appendInputArea();
+  if (data.last_voice_options && data.last_voice_options.length > 0) {
+    appendVoiceOptions(data.last_voice_options);
+  } else {
+    appendOpeningVoiceOptions(data);
+  }
 }
-// 🆕 v1.6.6 侧边栏内已集成剧情回顾按钮（不再用浮动按钮）
+
+/** 🆕 v1.9.5 收集 narrative 区域的内容 */
+function buildNarrativeArea(data) {
+  // 开局白：data.recent_narratives[0] 是 _print_opening 的输出
+  // 加载存档时可能有更多回合
+  const narrs = data.recent_narratives || [];
+  if (narrs.length === 0) {
+    return `<div class="narrative"><div class="round-tag">第1回合 · 开场</div><div class="narrative-body plain">开局中…</div></div>`;
+  }
+  // 用现有 appendNarrative 来渲染（保持术语高亮/折叠逻辑）
+  // 但因为是直接拼 HTML，改用简化渲染
+  return narrs.map(n => {
+    const text = typeof n === "string" ? n : (n.narrative || "");
+    const round = typeof n === "string" ? "?" : (n.round || "?");
+    const summary = typeof n === "string" ? "" : (n.summary || "");
+    return `<div class="narrative">
+      <div class="round-tag">第${round}回合${summary ? " · " + escapeHtmlInline(summary) : ""}</div>
+      <div class="narrative-body plain">${escapeHtmlInline(text).replace(/\n/g, "<br>")}</div>
+    </div>`;
+  }).join("");
 }
 
 async function openRecap() {
@@ -1956,6 +2125,7 @@ function appendInputArea() {
 // 🆕 v1.7.7 改：把 voice_options 容器嵌到 input-area 内部，统一为"行动区"
 // 玩家视觉上"声音选项 + 输入框"是一个整体
 // 🆕 v1.7.9 改：默认隐藏输入框（声音按钮优先），点"自由输入"才展开
+// 🆕 v1.9.5 改：append 到 #game-input-slot（game-container 内部），不再生挂到 #main 末尾
 const wrapper = document.createElement("div");
 wrapper.className = "action-area";
 wrapper.id = "action-area";
@@ -1973,8 +2143,15 @@ wrapper.innerHTML = `
     <div id="submit_msg"></div>
   </div>
 `;
-$main.appendChild(wrapper);
-document.getElementById("player_input").focus();
+// 🆕 v1.9.5 修复：优先挂到 #game-input-slot（renderGame 已预留槽位）
+const $slot = document.getElementById("game-input-slot");
+if ($slot) {
+  $slot.appendChild(wrapper);
+} else {
+  $main.appendChild(wrapper);
+}
+const $ta = document.getElementById("player_input");
+if ($ta) $ta.focus();
 // 🆕 v1.6.5 快捷键：
 // - Enter（裸键）       → 提交（移动端友好，没 Ctrl 键）
 // - Shift+Enter / Alt+Enter → 换行（多行输入）
@@ -2143,18 +2320,23 @@ const freetextButton = hasFreetext
 // 🆕 v1.7.30 修复：折叠态也保留「自由输入」入口（grid 外），避免死局
 const PREF_KEY = "hfe_voice_options_collapsed";
 const isMobile = window.matchMedia("(max-width: 768px)").matches;
-const storage = window.__VOICE_PREFS__ || JSON.parse(localStorage.getItem(PREF_KEY) || "null");
-let userPref = storage;
-// 没有偏好时：移动端默认折叠，桌面端默认展开
-if (userPref === null || userPref === undefined) {
-  userPref = isMobile;
+// 🆕 v1.9.5 修复：忽略 v1.7 时代的 localStorage 折叠偏好（用户没机会点过的"折叠"是 bug 残留）
+// 只有用户**主动点击过 toggle** 才用 localStorage 偏好
+let userPref = false;
+let initialCollapsed = false;
+if (window.__VOICE_PREFS_EXPLICIT) {
+  const storage = window.__VOICE_PREFS__ ?? JSON.parse(localStorage.getItem(PREF_KEY) || "null");
+  if (storage === true || storage === false) {
+    userPref = storage;
+    initialCollapsed = storage;
+  }
 }
 window.__VOICE_PREFS__ = userPref;
 const savePref = (collapsed) => {
   try { localStorage.setItem(PREF_KEY, JSON.stringify(collapsed)); } catch (_) {}
   window.__VOICE_PREFS__ = collapsed;
+  window.__VOICE_PREFS_EXPLICIT = true;  // 标记用户主动设置过
 };
-const initialCollapsed = userPref;
 // 当前回合数（用于高亮）；从 state.round 取不到时用 -1
 const currentRound = (typeof state !== "undefined" && state.round_number) || 0;
 const voiceCount = voiceOptions.filter(v => !v.is_freetext).length || 1;

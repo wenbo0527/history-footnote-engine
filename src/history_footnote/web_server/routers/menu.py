@@ -38,41 +38,40 @@ def handle_GET_menu(handler, query: str) -> bool:
         {
           "user": {"account_id", "username", "role"},
           "sections": [
-            {"id": "new_game", "title": "开始游戏", "icon": "🎮"},
-            {"id": "saves", "title": "我的存档", "icon": "📂"},
-            {"id": "settings", "title": "系统", "icon": "⚙️"},
-            {"id": "admin", "title": "管理员面板", "icon": "🛡️", "admin_only": true},
+            {"id": "new_game", "title": "开始新游戏", "icon": "/icons/nav/home.webp"},
+            {"id": "saves", "title": "我的存档", "icon": "/icons/nav/archive.webp"},
+            {"id": "settings", "title": "系统", "icon": "/icons/nav/settings.webp"},
+            {"id": "admin", "title": "管理员面板", "icon": "/icons/stats/reputation.webp", "admin_only": true},
           ],
           "stats": {"saves_count", "saves_max"}
         }
+
+    🆕 v2.7+ 持久化：cookie 优先（Signed HttpOnly），query 兜底
     """
-    from urllib.parse import parse_qs
-    params = parse_qs(query)
-    account_id = (params.get("account_id", [""])[0]).strip()
     sys_inst = _get_account_system_local()
 
-    # 🆕 v1.8.2: 无 account_id → 自动建 guest
-    if not account_id:
-        account = sys_inst.create_guest()
+    # 🆕 v2.7+: 优先从 cookie 拿 account_id（持久化身份）；fallback 到 query / 创建
+    account_id = handler._get_guest_id_from_cookie_or_query(query)
+
+    account = sys_inst.get_account(account_id)
+    # 找不到 account → 自动建 guest（不返 404）
+    if not account:
+        account = sys_inst.create_guest(account_id=account_id)
         account_id = account.account_id
-    else:
-        account = sys_inst.get_account(account_id)
-        # 🆕 v1.8.2: 找不到 account → 自动建 guest（不返 404）
-        if not account:
-            account = sys_inst.create_guest(account_id=account_id)
+
     # 4 板块
     sections = [
-        {"id": "new_game", "title": "开始新游戏", "icon": "🎮",
+        {"id": "new_game", "title": "开始新游戏", "icon": "/icons/nav/home.webp",
          "description": "选择时代和身份开始新游戏"},
-        {"id": "saves", "title": "我的存档", "icon": "📂",
+        {"id": "saves", "title": "我的存档", "icon": "/icons/nav/archive.webp",
          "description": "继续之前的游戏"},
-        {"id": "settings", "title": "系统", "icon": "⚙️",
+        {"id": "settings", "title": "系统", "icon": "/icons/nav/settings.webp",
          "description": "关于、反馈、退出登录"},
     ]
     is_admin = account.role == "admin"
     if is_admin:
         sections.append({
-            "id": "admin", "title": "管理员面板", "icon": "🛡️",
+            "id": "admin", "title": "管理员面板", "icon": "/icons/stats/reputation.webp",
             "description": "用户管理 / 存档管理 / 系统配置",
             "admin_only": True,
         })
@@ -94,7 +93,8 @@ def handle_GET_menu(handler, query: str) -> bool:
             "saves_max": 10,
         },
     }
-    handler._json(200, result)
+    # _get_guest_id_from_cookie_or_query 已自动处理 Set-Cookie
+    handler._json_with_cookies(200, result)
     return True
 
 
@@ -109,19 +109,16 @@ def handle_GET_saves_list(handler, query: str) -> bool:
           ],
           "total": int
         }
+
+    🆕 v2.7+: cookie 优先
     """
-    from urllib.parse import parse_qs
-    params = parse_qs(query)
-    account_id = (params.get("account_id", [""])[0]).strip()
     sys_inst = _get_account_system_local()
-    # 🆕 v1.8.2: 无 account_id / 找不到 account → 自动建 guest（不返 400/404）
-    if not account_id:
-        account = sys_inst.create_guest()
+    # 🆕 v2.7+: 优先 cookie
+    account_id = handler._get_guest_id_from_cookie_or_query(query)
+    account = sys_inst.get_account(account_id)
+    if not account:
+        account = sys_inst.create_guest(account_id=account_id)
         account_id = account.account_id
-    else:
-        account = sys_inst.get_account(account_id)
-        if not account:
-            account = sys_inst.create_guest(account_id=account_id)
     saves_dir = Path("saves") / account_id
     saves = []
     if saves_dir.exists():
@@ -146,5 +143,5 @@ def handle_GET_saves_list(handler, query: str) -> bool:
                 })
             except (json.JSONDecodeError, OSError):
                 continue
-    handler._json(200, {"saves": saves, "total": len(saves)})
+    handler._json_with_cookies(200, {"saves": saves, "total": len(saves)})
     return True

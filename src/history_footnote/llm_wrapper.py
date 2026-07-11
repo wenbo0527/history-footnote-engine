@@ -258,10 +258,16 @@ class LLMWrapper:
                         self._llm_cache[provider] = None
         return self._llm_cache[provider]
 
-    def bind_tools(self, tools: List[Any]) -> "LLMWrapper":
+    def bind_tools(self, tools: List[Any], **kwargs) -> "LLMWrapper":
         """🆕 绑定 tools（透明代理），返回新 wrapper
 
         新 wrapper 内部每个 provider 都 bind 了 tools
+
+        🆕 v2.7+：接受 **kwargs 透传给底层
+        - cache_control={"type": "ephemeral"} → tools 整体加 cache breakpoint
+        - 注意：当前 MiniMax-M3 端点**不支持** tools cache_control
+          （实测：HTTP 200 OK 但 LangChain parse 失败）
+        - 暂时不传 cache_control；如未来 MiniMax 修复，可通过 kwargs 启用
         """
         new_wrapper = LLMWrapper(
             primary_provider=self.primary_provider,
@@ -278,6 +284,8 @@ class LLMWrapper:
                 logger.warning(f"[LLMWrapper] Skipping {provider} (creation failed)")
                 continue
             if hasattr(base_llm, "bind_tools"):
+                # ⚠️ 当前禁用 cache_control kwargs 透传（MiniMax-M3 不支持）
+                # 如需启用：把下面改成 base_llm.bind_tools(tools, **kwargs) + try/except TypeError
                 new_wrapper._llm_cache[provider] = base_llm.bind_tools(tools)
                 logger.debug(f"[LLMWrapper] bind_tools on {provider}: {len(tools)} tools")
         return new_wrapper

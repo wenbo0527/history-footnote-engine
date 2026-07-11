@@ -128,6 +128,9 @@ def extract_json_from_text(text: str) -> Optional[str]:
     - 文本末尾 {...} 块
     - 纯 JSON 字符串
 
+    🆕 W32: 同时清洗 JSON 字符串内的 markdown 加粗污染（`**xxx**` → `xxx`）
+    背景：LLM 偶尔给 title/scene 等字符串加 markdown，破坏 JSON 解析。
+
     Args:
         text: LLM 输出
 
@@ -136,19 +139,41 @@ def extract_json_from_text(text: str) -> Optional[str]:
     """
     if not text:
         return None
+    raw = None
     # 优先尝试 markdown 包裹
     m = JSON_BLOCK_PATTERN.search(text)
     if m:
-        return m.group(1)
+        raw = m.group(1)
     # 尝试末尾的 {...}
-    m = JSON_TRAILING_PATTERN.search(text.strip())
-    if m:
-        return m.group(0)
+    if raw is None:
+        m = JSON_TRAILING_PATTERN.search(text.strip())
+        if m:
+            raw = m.group(0)
     # 整段就是 JSON
-    stripped = text.strip()
-    if stripped.startswith("{") and stripped.endswith("}"):
-        return stripped
-    return None
+    if raw is None:
+        stripped = text.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            raw = stripped
+    if raw is None:
+        return None
+
+    # 🆕 W32: 清洗 JSON 内的 markdown 加粗污染
+    # 模式："**" 在 JSON 字符串值里被错误生成（如 "**门槛之前**"）
+    # 解决：只在 JSON 字符串值内（被双引号包围的）剥 **。
+    # 简单做法：直接全文本剥 **（不在 key 名里所以安全）
+    cleaned = _strip_markdown_bold_in_json(raw)
+    return cleaned
+
+
+def _strip_markdown_bold_in_json(json_str: str) -> str:
+    """剥 JSON 字符串内的 markdown 加粗（**xxx** → xxx）
+
+    只在 JSON 字符串值内（被双引号包围），不在 key 名上。
+    LLM 偶尔给 title/scene 等字符串加 **，破坏 JSON 解析（引号不平衡）。
+    """
+    import re
+    # 模式："...**xxx**..." → "..."**xxx**"..."  剥 ** 即可
+    return re.sub(r"\*\*([^*]+)\*\*", r"\1", json_str)
 
 
 def strip_skill_metadata(text: str, min_length: int | None = None) -> str:

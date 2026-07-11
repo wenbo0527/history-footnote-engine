@@ -42,8 +42,14 @@ def build_chapter_tool_prompt(
     ctx = builder.build(meta)
 
     # 序列化为人类可读 prompt
+    # 🆕 W32: 加 4 条 prompt 硬约束（避免 LLM markdown + 重复 + 标题不一致）
     prompt = (
         "你是历史注脚引擎的章节蓝图生成助手。请按以下约束生成第 {chapter_id} 章的蓝图 JSON。\n\n"
+        "## 🆕 W32 硬约束（不可违反）\n"
+        "- **禁用 markdown 标记**：所有 JSON 字符串值内**不得**出现 `**`、`*`、`#`、反引号、链接语法\n"
+        "- **章节标题不得重复**：本章节 chapter_title 必须与上一章不同（防重复）\n"
+        "- **chapter_subtitle 不得为空**：必须 4-12 字文言短语\n"
+        "- **transition_hint 必填**：必为 season/relationship/identity 之一\n\n"
         "## 硬约束（不可改）\n"
         "- act: {act}\n"
         "- role: {role}\n"
@@ -55,18 +61,16 @@ def build_chapter_tool_prompt(
         "## 增量规则（focus_points）\n{focus}\n\n"
         "## 玩家画像\n- build: {build}\n- value_dimensions: {vd}\n- active_paths: {paths}\n\n"
         "## 可用资源\n- NPCs: {npcs}\n- 知识条目: {knowledge}\n\n"
-        "## 输出格式（严格 JSON）\n"
-        "```json\n"
+        "## 输出格式（严格 JSON，无任何 markdown 污染）\n"
         "{{\n"
-        '  "chapter_title": "...",\n'
-        '  "chapter_subtitle": "...",\n'
-        '  "transition_hint": "season|relationship|identity",\n'
+        '  "chapter_title": "古白话标题（4-8字，独特）",\n'
+        '  "chapter_subtitle": "副标题（4-12字文言）",\n'
+        '  "transition_hint": "season",\n'
         '  "nodes": [\n'
-        '    {{"index": 1, "role": "introduction", "scene": "...", "npc_ids": [...], "option_directions": [...], "completion_condition": "..."}},\n'
+        '    {{"index": 1, "role": "introduction", "scene": "纯古白话场景", "npc_ids": [...], "option_directions": [...], "completion_condition": "..."}},\n'
         "    ...\n"
         "  ]\n"
         "}}\n"
-        "```\n"
     ).format(
         chapter_id=chapter_id,
         act=ctx["chapter_meta"]["act"],

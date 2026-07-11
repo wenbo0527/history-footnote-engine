@@ -17,6 +17,11 @@ DM的三阶段行为模型（一次API调用内完成）：
    - 后校验
 """
 from __future__ import annotations
+import time  # 🆕 v2.7+ 性能剖析
+import logging  # 🆕 v2.7+ 性能剖析 logger
+
+# 🆕 v2.7+ DM-PROF 用 logger
+logger = logging.getLogger("history_footnote.dm_agent")
 
 import json
 from typing import Annotated, Any, TypedDict
@@ -468,10 +473,61 @@ def make_tools(
     return [get_state, recall_events, check_rules, query_knowledge, query_narrative_snippets, query_story_segments, get_random_segment, roll_dice, offer_identity_switch, save_event]
 
 
+# === 🆕 v2.7+ 关键词提取（预取用） ===
+
+# 中文常见停用词（短句过滤，避免过长的关键词列表）
+_STOP_WORDS = {
+    "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都", "一", "个", "上", "也",
+    "很", "到", "说", "要", "去", "你", "会", "着", "没有", "看", "好", "自己", "这", "那",
+    "把", "给", "让", "但", "又", "可", "并", "以", "及", "其", "之", "等", "于", "与",
+    "还", "才", "能", "只", "可", "吧", "呢", "啊", "哦", "嗯", "吗", "什么", "怎么",
+}
+
+
+def _extract_keywords(text: str, max_keywords: int = 5) -> list[str]:
+    """🆕 v2.7+ 轻量关键词提取（无 jieba 依赖）
+
+    策略：中文按 2-gram 切分（2 字常见词） + 停用词过滤 + 去重
+    - 输入 "我走进织坊检查织机" → ["织坊", "检查", "织机", "走进"]
+    - 输入 "我去街上走走" → ["街上", "走走"]
+    """
+    if not text:
+        return []
+    text = text.strip()
+    if not text:
+        return []
+
+    # 1) 单字（中文常用单字词，如"走"是常用字，但我们倾向 2 字词）
+    # 2) 2-gram 切分
+    keywords = []
+    for i in range(len(text) - 1):
+        bigram = text[i:i+2]
+        # 过滤：单字停用 + 双字都停用
+        if any(c in _STOP_WORDS for c in bigram):
+            continue
+        # 过滤：含标点
+        if any(not (c.isalnum() or '\u4e00' <= c <= '\u9fff') for c in bigram):
+            continue
+        if bigram not in keywords:
+            keywords.append(bigram)
+        if len(keywords) >= max_keywords:
+            break
+
+    # 2) 如果没找到（全是停用词），fallback 原始文本
+    if not keywords:
+        return [text[:max_keywords*2]]
+    return keywords
+
+
 # === StateGraph节点函数 ===
 
-def make_dm_nodes(llm_with_tools, state_ref):
-    """构造DM Agent的节点函数（闭包形式，绑定LLM和state_ref）"""
+def make_dm_nodes(llm_with_tools, state_ref, tools=None, player_input_getter=None):
+    """构造DM Agent的节点函数（闭包形式，绑定LLM和state_ref）
+
+    🆕 v2.7+ 新增参数：
+    - tools: DMAgent.tools（用于 pre_fetch 节点直接调本地 tool）
+    - player_input_getter: callable → str（拿当前 player_input）
+    """
 
     def skill_orchestration_node(state: DMState) -> dict:
         """v1.4.0 阶段0：DM 8 大公共 SKILL 编排
@@ -622,20 +678,171 @@ def make_dm_nodes(llm_with_tools, state_ref):
 
         DM调用LLM，让LLM自主决定调哪些Tool。
         LLM会返回一个带tool_calls的AIMessage，LangGraph会自动路由到ToolNode。
+
+        🆕 v2.7+ 实验结论：tool_calls 过滤**不**接入 workflow
+        - 实测 filter 后 LLM#1 立即放弃 tool_calls → 直接 narrative_fusion
+        - 但 LLM#2 context 暴增（prefetch 1-2KB message 累积）→ 5-33s 慢
+        - 加上 filter 会触发 BadRequestError（LLM 期望 tool_result 但被移除）
+        - 见 docs/design/archive/v2.7-DM-agent性能分析.md
         """
         # 每次调用前更新 llm._state_ref_slot_ref[0]（防止 model_copy 后丢失）
         if hasattr(llm_with_tools, "_state_ref_slot_ref"):
             llm_with_tools._state_ref_slot_ref[0] = state_ref
         # 调用LLM（绑定tools的版本）
+        # 🆕 v2.7+ 性能剖析
+        import time as _t
+        _t0 = _t.time()
         response = llm_with_tools.invoke(state["messages"])
+        _tc_names = [tc.get("name", "?") for tc in (response.tool_calls or [])]
+        logger.info(f"[DM-PROF]   LLM#1 (situation_assessment): {(_t.time()-_t0)*1000:.0f}ms (tool_calls={len(response.tool_calls) if response.tool_calls else 0} names={_tc_names})")
         return {"messages": [response]}
 
     def should_continue(state: DMState) -> str:
-        """判断是否继续Tool Calling循环"""
+        """判断是否继续Tool Calling循环
+
+        🆕 v2.7+ 性能剖析：保留该节点用于性能观测
+        实测 LLM 通常 1-2 轮 tool 后放弃，硬截断会破坏 LangGraph 上下文一致性
+        （已尝试 max=2 截断 → BadRequestError "tool call and result not match"）
+        真正的优化见 docs/design/archive/v2.7-DM-agent性能分析.md
+        """
         last_msg = state["messages"][-1]
         if isinstance(last_msg, AIMessage) and last_msg.tool_calls:
+            tool_call_rounds = sum(
+                1 for m in state["messages"]
+                if isinstance(m, AIMessage) and m.tool_calls
+            )
+            logger.info(
+                f"[DM-PROF]   should_continue: tool_call_rounds={tool_call_rounds}, "
+                f"last tool_calls={len(last_msg.tool_calls)}"
+            )
             return "call_tools"
         return "narrative_fusion"
+
+    def pre_fetch_tools_node(state: DMState) -> dict:
+        """🆕 v2.7+ 预取节点：批量调 6 个本地查询类 tool
+
+        设计：放在 situation_assessment **之前**。结果打包成 HumanMessage
+        注入到 messages 末尾，LLM#1 直接看到"已预取的全部信息"，
+        无需再调 tool 做"决策循环"。
+
+        🆕 v2.7+ 关键修复：用 HumanMessage（不是 SystemMessage）
+        - LangChain Anthropic 限制只有 1 条 system message 在最前
+        - 多条 system message 会被 LangChain 报 "non-consecutive system messages"
+        - HumanMessage 不会有此问题，LLM 也照样认
+
+        节省：消除 LLM#1 调 1-4 次 tool 的 3-30s 开销
+        风险：查询类 tool 仍然可被 LLM 主动调（决策类 tool 仍可调）
+        """
+        import time as _t
+        import json as _json
+        from langchain_core.messages import HumanMessage
+
+        if not tools:
+            # 没传 tools → 跳过预取（向后兼容）
+            return {"messages": []}
+
+        # 从 state 拿 player_input
+        if player_input_getter is not None:
+            player_input = player_input_getter()
+        else:
+            player_input = state.get("player_input", "")
+
+        # 调预取函数
+        _t0 = _t.time()
+        result = {}
+        try:
+            # 0: get_state
+            result["state"] = tools[0].invoke({})
+            # 1: recall_events
+            try:
+                result["events"] = tools[1].invoke({"query": player_input or "", "recent_n": 3})
+            except Exception:
+                result["events"] = []
+            # 2: check_rules
+            try:
+                result["rules"] = tools[2].invoke({"action": "", "check_type": "all"})
+            except Exception:
+                result["rules"] = {}
+            # 3: query_knowledge
+            try:
+                keywords = _extract_keywords(player_input or "")
+                result["knowledge"] = tools[3].invoke({
+                    "keywords": keywords,
+                    "scene": (state.get("view_state") or {}).get("current_location", ""),
+                })
+            except Exception:
+                result["knowledge"] = []
+            # 4: query_narrative_snippets
+            try:
+                keywords = _extract_keywords(player_input or "")
+                result["narrative_snippets"] = tools[4].invoke({
+                    "scene": (state.get("view_state") or {}).get("current_location", ""),
+                    "keywords": keywords,
+                    "top_k": 2,
+                    "player_gender": (state.get("view_state") or {}).get("player_gender", ""),
+                })
+            except Exception:
+                result["narrative_snippets"] = []
+            # 5: query_story_segments
+            try:
+                result["story_segments"] = tools[5].invoke({
+                    "scene": (state.get("view_state") or {}).get("current_location", ""),
+                    "top_k": 3,
+                })
+            except Exception:
+                result["story_segments"] = []
+        except Exception as e:
+            logger.warning(f"[v2.7 prefetch_node] failed: {e}")
+
+        dt = (_t.time() - _t0) * 1000
+        logger.info(
+            f"[DM-PROF]   pre_fetch_tools_node: {dt:.0f}ms "
+            f"(state={len(result.get('state', {}))} keys, "
+            f"events={len(result.get('events', []))}, "
+            f"knowledge={len(result.get('knowledge', []))}, "
+            f"snippets={len(result.get('narrative_snippets', []))})"
+        )
+
+        # 裁剪 + 打包
+        def _truncate(value: str, max_len: int = 200) -> str:
+            if not value or len(value) <= max_len:
+                return value
+            return value[:max_len] + "…"
+
+        def _clip_list(items, key, max_n, max_text_len=200):
+            clipped = []
+            for item in (items or [])[:max_n]:
+                if isinstance(item, dict):
+                    new_item = {}
+                    for k, v in item.items():
+                        if isinstance(v, str) and k in (
+                            "content", "snippet_text", "text", "title", "npc_use_case"
+                        ):
+                            new_item[k] = _truncate(v, max_text_len)
+                        else:
+                            new_item[k] = v
+                    clipped.append(new_item)
+                else:
+                    clipped.append(item)
+            return clipped
+
+        clipped = {
+            "state": result.get("state", {}),
+            "rules": result.get("rules", {}),
+            "events": (result.get("events") or [])[:5],
+            "knowledge": _clip_list(result.get("knowledge", []), "content", max_n=3),
+            "narrative_snippets": _clip_list(result.get("narrative_snippets", []), "snippet_text", max_n=2),
+            "story_segments": _clip_list(result.get("story_segments", []), "text", max_n=3, max_text_len=150),
+        }
+
+        content = (
+            "[__PRE_FETCHED_TOOLS__] 以下是已预先查询的本地工具结果（无需再调用这些查询类 tool）：\n"
+            "查询类工具: get_state / recall_events / check_rules / query_knowledge / query_narrative_snippets / query_story_segments\n"
+            "决策类工具: roll_dice / offer_identity_switch / save_event（这些仍可正常调用）\n\n"
+            f"```json\n{_json.dumps(clipped, ensure_ascii=False, indent=2)}\n```\n\n"
+            "请基于以上信息直接生成 narrative。"
+        )
+        return {"messages": [HumanMessage(content=content)]}
 
     def narrative_fusion_node(state: DMState) -> dict:
         """阶段2：叙事生成
@@ -710,7 +917,11 @@ def make_dm_nodes(llm_with_tools, state_ref):
             state_ref["identity_offer"] = offer
 
         # 第二次LLM调用，生成最终叙事
+        # 🆕 v2.7+ 性能剖析
+        import time as _t
+        _t0 = _t.time()
         response = llm_with_tools.invoke(state["messages"])
+        logger.info(f"[DM-PROF]   LLM#2 (narrative_fusion): {(_t.time()-_t0)*1000:.0f}ms")
         return {"messages": [response]}
 
     # 🆕 v1.7.6 修复：第 5 个嵌套节点（extract_narrative_node）
@@ -725,8 +936,10 @@ def make_dm_nodes(llm_with_tools, state_ref):
 
     # 🆕 v1.7.6 修复：返回 5 个节点元组
     # 之前 make_dm_nodes 没有 return → 返回 None → cannot unpack
+    # 🆕 v2.7+ 预取节点加在第 2 位
     return (
         skill_orchestration_node,
+        pre_fetch_tools_node,  # 🆕 v2.7+ 预取（替代 LLM#1 循环）
         situation_assessment_node,
         should_continue,
         narrative_fusion_node,
@@ -826,16 +1039,204 @@ class DMAgent(MockHelpersMixin):
         self.selected_identity = getattr(state, "selected_identity", "") or ""
         self.tools = make_tools(state, rule_engine, memory, knowledge_base, era_config)
 
-        # 绑定tools到LLM（真实LLM需要这一步）
+        # 🆕 v2.7+ Wiki Agent 拆分：把 10 个 tool 拆成两类
+        # - query_tools: 6 个查询类（get_state / recall_events / check_rules / query_knowledge / query_narrative_snippets / query_story_segments）
+        #   这些在 game_loop 阶段已预取（结果在 state_ref.wiki_hint 等）
+        #   LLM#1 看不到这些工具，自然不调
+        # - decision_tools: 4 个决策类（get_random_segment / roll_dice / offer_identity_switch / save_event）
+        #   这些必须 LLM 决策
+        # 节省：消除 LLM#1 反复调 6 个查询类 tool 的 3-30s 开销
+        _QUERY_TOOL_NAMES = {
+            "get_state", "recall_events", "check_rules", "query_knowledge",
+            "query_narrative_snippets", "query_story_segments",
+        }
+        self.query_tools = [t for t in self.tools if getattr(t, "name", "") in _QUERY_TOOL_NAMES]
+        self.decision_tools = [t for t in self.tools if getattr(t, "name", "") not in _QUERY_TOOL_NAMES]
+        logger.info(
+            f"[v2.7+ agent split] query_tools={len(self.query_tools)} (不 bind), "
+            f"decision_tools={len(self.decision_tools)} (bind 给 LLM)"
+        )
+
+        # ⚠️ 优化 A 实验结论：cache_control 在 MiniMax-M3 端点**不可用**
+        # 表现：HTTP 200 OK 但 LangChain parse 失败（TypeError: NoneType is not iterable）
+        # 原因：MiniMax-M3 走兼容协议，response_metadata 字段为 None
+        # 解决：等 MiniMax 修复，或直接传 raw extra_body
+        # 暂时禁用此优化（保留 _tools_cache_control 字段以备将来启用）
+        self._tools_cache_control = None
+        # self._tools_cache_control = {"type": "ephemeral"}  # 5min TTL（MiniMax 不支持）
+
+        # 绑定 tools 到 LLM（**只绑决策类**——LLM 看不到查询类，自然不调）
         # bind_tools 返回新模型，新模型会通过 model_copy 共享 _state_ref_slot_ref
         if hasattr(self.llm, "bind_tools"):
-            new_llm = self.llm.bind_tools(self.tools)
+            if self._tools_cache_control:
+                new_llm = self.llm.bind_tools(
+                    self.decision_tools,
+                    cache_control=self._tools_cache_control,
+                )
+            else:
+                new_llm = self.llm.bind_tools(self.decision_tools)
+            self._llm_with_tools = new_llm
+        else:
+            new_llm = self.llm
             self._llm_with_tools = new_llm
 
         # 构建StateGraph（一次性创建，复用）
         self.graph = self._build_graph()
         # 🆕 v1.6.2 P0 A4 优化：缓存 graph 引用，永久复用
         self._graph_compiled = self.graph
+
+    # === 🆕 v2.7+ 预取：批量本地查询，节省 LLM#1 决策循环 ===
+
+    def _prefetch_query_tools(self, player_input: str) -> dict:
+        """🆕 v2.7+ 预取 6 个本地查询类 tool，结果打包成 dict
+
+        设计目的：
+        - 替代 LLM#1 ReAct 循环（LLM 调 1-4 次 tool 浪费时间）
+        - 6 个查询类 tool 全是本地函数（< 5ms/each）
+        - 一次预取 + LLM#1 直接看结果决策"够不够" = 单轮 LLM#1
+
+        Returns:
+            dict: 各 tool 返回结果，key 是 tool 名
+            {"state": {...}, "rules": {...}, "knowledge": [...], "events": [...], ...}
+        """
+        if not self.tools:
+            return {}
+
+        import time as _t
+        _t0 = _t.time()
+
+        # tools 顺序（make_tools 返回）：
+        # 0: get_state, 1: recall_events, 2: check_rules, 3: query_knowledge,
+        # 4: query_narrative_snippets, 5: query_story_segments
+        result = {}
+        try:
+            # 1) get_state（必有）
+            result["state"] = self.tools[0].invoke({})
+
+            # 2) recall_events（基于 player_input 关键词查询 + 最近 3 回合）
+            try:
+                result["events"] = self.tools[1].invoke({
+                    "query": player_input or "",
+                    "recent_n": 3,
+                })
+            except Exception as e:
+                logger.debug(f"[v2.7 prefetch] recall_events failed: {e}")
+                result["events"] = []
+
+            # 3) check_rules（默认全检查）
+            try:
+                result["rules"] = self.tools[2].invoke({
+                    "action": "",
+                    "check_type": "all",
+                })
+            except Exception as e:
+                logger.debug(f"[v2.7 prefetch] check_rules failed: {e}")
+                result["rules"] = {}
+
+            # 4) query_knowledge（从 player_input 提取关键词）
+            keywords = _extract_keywords(player_input or "")
+            try:
+                result["knowledge"] = self.tools[3].invoke({
+                    "keywords": keywords,
+                    "scene": getattr(self.state, "current_location", "") or "",
+                })
+            except Exception as e:
+                logger.debug(f"[v2.7 prefetch] query_knowledge failed: {e}")
+                result["knowledge"] = []
+
+            # 5) query_narrative_snippets（基于当前场景 + 关键词）
+            try:
+                result["narrative_snippets"] = self.tools[4].invoke({
+                    "scene": getattr(self.state, "current_location", "") or "",
+                    "keywords": keywords,
+                    "top_k": 2,
+                    "player_gender": getattr(self.state, "player_gender", "") or "",
+                })
+            except Exception as e:
+                logger.debug(f"[v2.7 prefetch] query_narrative_snippets failed: {e}")
+                result["narrative_snippets"] = []
+
+            # 6) query_story_segments
+            try:
+                result["story_segments"] = self.tools[5].invoke({
+                    "scene": getattr(self.state, "current_location", "") or "",
+                    "top_k": 3,
+                })
+            except Exception as e:
+                logger.debug(f"[v2.7 prefetch] query_story_segments failed: {e}")
+                result["story_segments"] = []
+
+        except Exception as e:
+            logger.warning(f"[v2.7 prefetch] failed: {e}")
+
+        dt = (_t.time() - _t0) * 1000
+        logger.info(
+            f"[DM-PROF]   prefetch_query_tools: {dt:.0f}ms "
+            f"(state={len(result.get('state', {}))} keys, "
+            f"events={len(result.get('events', []))}, "
+            f"knowledge={len(result.get('knowledge', []))}, "
+            f"snippets={len(result.get('narrative_snippets', []))})"
+        )
+        return result
+
+    def _build_prefetch_message(self, prefetched: dict) -> "SystemMessage":
+        """把预取结果打包成 SystemMessage（注入到 LLM#1 的 messages 头部）
+
+        内容裁剪原则：
+        - state: 全部（关键决策依据）
+        - rules: 全部（命中条件）
+        - events: 最多 5 条（避免超长）
+        - knowledge: 最多 3 条，每条 title + content 截断 200 字
+        - narrative_snippets: 最多 2 条，snippet_text 截断 200 字
+        - story_segments: 最多 3 条，text 截断 150 字
+        """
+        from langchain_core.messages import SystemMessage
+        import json as _json
+
+        def _truncate(value: str, max_len: int = 200) -> str:
+            if not value or len(value) <= max_len:
+                return value
+            return value[:max_len] + "…"
+
+        def _clip_list(items: list, key: str, max_n: int, max_text_len: int = 200) -> list:
+            clipped = []
+            for item in (items or [])[:max_n]:
+                if isinstance(item, dict):
+                    new_item = {}
+                    for k, v in item.items():
+                        if isinstance(v, str) and k in (
+                            "content", "snippet_text", "text", "title", "npc_use_case"
+                        ):
+                            new_item[k] = _truncate(v, max_text_len)
+                        else:
+                            new_item[k] = v
+                    clipped.append(new_item)
+                else:
+                    clipped.append(item)
+            return clipped
+
+        clipped = {
+            "state": prefetched.get("state", {}),
+            "rules": prefetched.get("rules", {}),
+            "events": (prefetched.get("events") or [])[:5],
+            "knowledge": _clip_list(prefetched.get("knowledge", []), "content", max_n=3, max_text_len=200),
+            "narrative_snippets": _clip_list(
+                prefetched.get("narrative_snippets", []), "snippet_text", max_n=2, max_text_len=200
+            ),
+            "story_segments": _clip_list(
+                prefetched.get("story_segments", []), "text", max_n=3, max_text_len=150
+            ),
+        }
+
+        content = (
+            "\n\n[__PRE_FETCHED_TOOLS__] 以下是已预先查询的本地工具结果（无需再调用这些查询类 tool）：\n"
+            "查询类工具: get_state / recall_events / check_rules / query_knowledge / query_narrative_snippets / query_story_segments\n"
+            "决策类工具: roll_dice / offer_identity_switch / save_event（这些仍可正常调用）\n\n"
+            f"```json\n{_json.dumps(clipped, ensure_ascii=False, indent=2)}\n```\n\n"
+            "请基于以上信息直接生成 narrative。"
+            "如需调决策类 tool（roll_dice / offer_identity_switch / save_event）仍可正常调用。"
+        )
+        return SystemMessage(content=content)
 
     def _build_graph(self, state_ref: dict | None = None):
         """构建DM Agent的StateGraph
@@ -855,8 +1256,18 @@ class DMAgent(MockHelpersMixin):
         if state_ref is None:
             state_ref = {}
 
-        # 绑定tools到LLM
-        llm_with_tools = self.llm.bind_tools(self.tools) if hasattr(self.llm, "bind_tools") else self.llm
+        # 绑定tools到LLM（🆕 v2.7+ 只 bind 决策类，6 个查询类已预取）
+        # ⚠️ 优化 A（tools cache_control）当前**禁用**——MiniMax-M3 不支持
+        if hasattr(self.llm, "bind_tools"):
+            if self._tools_cache_control:
+                llm_with_tools = self.llm.bind_tools(
+                    self.decision_tools,
+                    cache_control=self._tools_cache_control,
+                )
+            else:
+                llm_with_tools = self.llm.bind_tools(self.decision_tools)
+        else:
+            llm_with_tools = self.llm
         # 把 state_ref 存到 llm_with_tools（Mock LLM会用）
         # 必须用 [0] = state_ref 修改列表内容，保持引用不断开
         if hasattr(llm_with_tools, "_state_ref_slot_ref"):
@@ -866,7 +1277,13 @@ class DMAgent(MockHelpersMixin):
                 llm_with_tools._state_ref_slot_ref = [state_ref]
 
         # 构造节点（闭包绑定llm_with_tools和state_ref）
-        skill_node, situation_node, should_continue, narrative_node, extract_node = make_dm_nodes(llm_with_tools, state_ref)
+        # 🆕 v2.7+ 实验结论：pre_fetch 接入 workflow 会让 LLM#2 慢 5-10x（context 暴增）
+        # pre_fetch_tools_node 仍存在（代码保留），但**不**接入 workflow
+        skill_node, pre_fetch_node, situation_node, should_continue, narrative_node, extract_node = make_dm_nodes(
+            llm_with_tools, state_ref,
+            tools=self.tools,
+            player_input_getter=lambda: getattr(self, "_last_player_input", "") or "",
+        )
 
         workflow = StateGraph(DMState)
 
@@ -876,11 +1293,11 @@ class DMAgent(MockHelpersMixin):
         workflow.add_node("narrative_fusion", narrative_node)
         workflow.add_node("extract_narrative", extract_node)
 
-        # Tool执行节点（LangGraph内置）
-        tool_node = ToolNode(self.tools)
+        # Tool执行节点（LangGraph内置）—— 🆕 v2.7+ 只执行决策类 tool
+        tool_node = ToolNode(self.decision_tools)
         workflow.add_node("call_tools", tool_node)
 
-        # 入口：先跑 DM skills
+        # 入口：先跑 DM skills → situation_assessment
         workflow.set_entry_point("skill_orchestration")
         workflow.add_edge("skill_orchestration", "situation_assessment")
 
@@ -1181,6 +1598,28 @@ class DMAgent(MockHelpersMixin):
                     for k, v in list(non_zero.items())[:5]:
                         lines.append(f"  - {k}: {v}")
 
+        # 🆕 v2.7.2 追加「结构化剧情事实锚点」段（替代贫瘠的 summary）
+        # 分级注入：人物/事实 必入，伏笔/未解 按场景选
+        facts = self.state.get_facts_for_prompt() if hasattr(self.state, "get_facts_for_prompt") else []
+        if facts:
+            try:
+                from history_footnote.narrative_facts_extractor import build_facts_injection
+                from history_footnote.narrative_facts_extractor import NarrativeFact
+                fact_objs = [NarrativeFact.from_dict(f) for f in facts]
+                # 拿最近一次 player_input（用于简单相关度匹配，目前 v1 只按 importance）
+                last_input = ""
+                if (self.state.event_log or []):
+                    for ev in reversed(self.state.event_log):
+                        if ev.get("player_action"):
+                            last_input = ev["player_action"]
+                            break
+                facts_md = build_facts_injection(fact_objs, player_input=last_input)
+                if facts_md:
+                    lines.append("")
+                    lines.append(facts_md)
+            except Exception as e:
+                logger.warning(f"[v2.7.2] fact 注入失败: {e}")
+
         return "\n".join(lines) + "\n"
 
     def run(self, player_input: str) -> dict:
@@ -1192,10 +1631,21 @@ class DMAgent(MockHelpersMixin):
         Returns:
             {"narrative": str, "state_changes": dict, "events_to_save": list, "updates": dict|None}
         """
+        # 🆕 v2.7+ 性能剖析：per-stage 计时
+        _prof_t0 = time.time()
+        _prof_stages = []
+
+        def _stage(name, t_start):
+            dt = (time.time() - t_start) * 1000
+            _prof_stages.append((name, dt))
+            logger.info(f"[DM-PROF] {name}: {dt:.0f}ms (total {(time.time()-_prof_t0)*1000:.0f}ms)")
+            return time.time()
+
         # 记录玩家输入到state（供check_rules的insight检查使用）
         self.state._last_player_input = player_input
         # 🐛 v1.6+ 修复：每次 run 同步 selected_identity（避免 selected_identity 不更新）
         self.selected_identity = self.state.selected_identity or ""
+        _t = time.time()
 
         # 构建最新的state_ref（用于Mock LLM实时读取状态）
         state_ref = {
@@ -1234,6 +1684,7 @@ class DMAgent(MockHelpersMixin):
         }
 
         # 准备输入state
+        _t = _stage("prep state_ref", _t)
         system_prompt = self._build_system_prompt()
 
         # 🆕 v1.6+ KV 缓存：在 system prompt 加 cache_control（ephemeral 5min TTL）
@@ -1261,6 +1712,7 @@ class DMAgent(MockHelpersMixin):
                 }
             ]
         )
+        _t = _stage("_build_system_prompt", _t)
 
         initial_state: DMState = {
             "messages": [
@@ -1306,7 +1758,10 @@ class DMAgent(MockHelpersMixin):
         self._last_state_ref = state_ref
 
         # 执行StateGraph
+        _t = _stage("build graph + initial_state", _t)
+        _t_graph = time.time()
         result = self.graph.invoke(initial_state)
+        _stage("graph.invoke", _t_graph)
 
         # 🆕 v1.7.23: narrative 短答重试机制
         # 🆕 v1.7.25: 扩到末尾问号检测（无问号也重试）

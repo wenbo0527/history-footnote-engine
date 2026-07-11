@@ -22,7 +22,13 @@ def handle_POST_start(handler, body) -> bool:
     gender = body.get("gender", "male")
     custom_character = body.get("character")
     # 🆕 v1.7.30: 接 account_id（账户隔离）
+    # 🆕 v2.7+: 优先从 cookie 拿（持久化），body 兜底
     account_id = body.get("account_id", "") or ""
+    if not account_id:
+        try:
+            account_id = handler._get_guest_id_from_cookie_or_query() or ""
+        except Exception:
+            pass
     game = new_session(era_id, identity, gender, custom_character=custom_character)
     # 把 account_id 绑定到 game.state（供 save 时持久化）
     if account_id and hasattr(game, 'state'):
@@ -80,6 +86,25 @@ def handle_POST_start(handler, body) -> bool:
     opening_text = buf.getvalue().strip()
     if opening_text:
         game.state.append_narrative(0, opening_text, "开场")
+        # 🆕 v2.7.2：开场也提取 fact，让第 1 回合能接上文
+        try:
+            from history_footnote.narrative_facts_extractor import extract_facts_from_narrative
+            llm_wrapper = getattr(game, "dm", None)
+            if llm_wrapper and hasattr(llm_wrapper, "llm"):
+                llm_wrapper = llm_wrapper.llm
+            opening_facts = extract_facts_from_narrative(
+                narrative=opening_text,
+                round_num=0,
+                llm_wrapper=llm_wrapper,
+                timeout=8.0,
+            )
+            if opening_facts:
+                game.state.append_facts([f.to_dict() for f in opening_facts])
+                logger.info(
+                    f"[v2.7.2] 开场提取 {len(opening_facts)} 条 fact"
+                )
+        except Exception as e:
+            logger.warning(f"[v2.7.2] 开场 fact 提取失败: {e}")
     # 🆕 v1.7.22: start 时不注入 freetext 占位
     state = format_state(game)
     state.pop("last_voice_options", None)
@@ -134,9 +159,15 @@ def handle_GET_archives(handler, query) -> bool:
     era_id = qs.get("era_id", [None])[0]
     # 🆕 v1.7.30: 接 account 过滤
     account = qs.get("account", [None])[0]
+    # 🆕 v2.7+: include_archived=1 显示冷存档（管理员面板用）
+    include_archived = qs.get("include_archived", ["0"])[0] in ("1", "true", "yes")
     try:
         save_manager = get_save_manager_cached()
-        sessions = save_manager.list_sessions(era_id=era_id, account_id=account)
+        sessions = save_manager.list_sessions(
+            era_id=era_id,
+            account_id=account,
+            include_archived=include_archived,
+        )
         out = []
         for s in sessions[:20]:  # 增加 limit 到 20
             out.append({
@@ -150,6 +181,9 @@ def handle_GET_archives(handler, query) -> bool:
                 "selected_identity": getattr(s, "selected_identity", ""),
                 "player_gender": getattr(s, "player_gender", ""),
                 "account_id": getattr(s, "account_id", ""),
+                # 🆕 v2.7+ 冷存档标记
+                "archived": getattr(s, "archived", False),
+                "archived_at": getattr(s, "archived_at", ""),
             })
         handler._json(200, {"archives": out})
     except Exception as e:

@@ -61,9 +61,32 @@ CHARACTER_GEN_PROMPT = """你是「历史注脚体验引擎」的人设生成器
     }}
   ],
 
-  "opening_paragraph": "以这个人为主角的开场白，150-250字。半文半白、具体感官细节。不要泛泛说'你出生在...'"
+  "opening_paragraph": "以这个人为主角的开场白，150-250字。半文半白、具体感官细节。不要泛泛说'你出生在...'",
+
+  "initial_state": {{
+    "cash": <数字, 现金两数, 例 1.2 表示一两二钱>,
+    "debt": <数字, 欠债两数, 例 3.0 表示欠三两>,
+    "rice": <数字, 存粮石数, 例 0.0>,
+    "monthly_burn": <数字, 每月基础开销两数, 例 0.42>,
+    "family_members": [
+      {{"id": "fm_wife", "name": "张氏", "relation": "wife", "age": 26, "location": "shengze", "alive": true, "notes": "..."}},
+      {{"id": "fm_son", "name": "大毛", "relation": "son", "age": 5, "location": "shengze", "alive": true, "notes": "..."}}
+    ],
+    "active_tasks": [
+      {{"title": "还牙行周二爷的账", "urgency": "high", "status": "pending"}},
+      {{"title": "大毛束脩续费", "urgency": "normal", "status": "pending"}}
+    ],
+    "upcoming_deadlines": [
+      {{"name": "春税折银", "date": "5月", "days_estimate": 60, "amount": "约0.42两", "status": "pending"}},
+      {{"name": "牙行欠债利息", "date": "30天后", "days_estimate": 30, "amount": "约0.09两/月", "status": "pending"}}
+    ]
+  }}
 }}
 ```
+
+> **重要**：你必须返回 `initial_state` 字段——这是系统用来在右侧栏显示玩家财务和家庭状态的**结构化数据**。
+> 数字必须与 `starting_situation` 文本中描述的金额一致（如"现银一两二钱"对应 `cash: 1.2`）。
+> `family_members` 必须包含 `starting_situation` 中提到的所有家人。
 
 ## 生成要求
 

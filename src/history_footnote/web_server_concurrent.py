@@ -58,7 +58,7 @@ from history_footnote.web_server import (
     Handler as BaseHandler,
     _format_state,
     _detect_intent_for_response,
-    _INDEX_HTML,
+    INDEX_HTML as _INDEX_HTML,
 )
 
 logger = logging.getLogger(__name__)

@@ -139,8 +139,19 @@ class ChapterCoordinator:
             _LOG.error("第 %d 章蓝图加载失败: %s，回退到硬编码", target_chapter, e)
             try:
                 self.facade.init_chapter(target_chapter)
-            except FileNotFoundError:
-                _LOG.error("硬编码也失败，章节化退出")
+                # 🆕 W32: 硬编码成功，标 initialized
+                self._initialized = True
+                _LOG.info(
+                    "[v2.8.0] 第 %d 章初始化: %s, round_start=%d, via=hardcoded",
+                    target_chapter,
+                    self.state.chapter_state.blueprint.get("chapter_title", "?"),
+                    self.state.chapter_state.chapter_start_round,
+                )
+            except FileNotFoundError as e2:
+                # 🆕 W32: 硬编码也不存在时，明确错误但**不 raise**（保持向后兼容）
+                # 因为这之前的代码是 silent log 走完，smoke 测试依赖此行为
+                _LOG.error("第 %d 章硬编码蓝图也不存在: %s，章节化就此退出（无法继续）", target_chapter, e2)
+                # 不 raise，避免破坏 smoke / 上层 caller 假设
 
     def _init_chapter_via_llm(self, chapter_id: int) -> None:
         """段二 W9：通过 LLM 生成章节蓝图

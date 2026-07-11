@@ -75,8 +75,9 @@ class ChapterMetaResolver:
         narrative = self.era_config.get("narrative", {}) or {}
         acts = narrative.get("hero_journey_acts")
         if not acts:
-            _LOG.warning(
-                "era.json 缺 narrative.hero_journey_acts，使用段二兜底配置"
+            # 🆕 W32: era.json 缺字段是常态（兜底本身有合理默认），降为 DEBUG 避免 log noise
+            _LOG.debug(
+                "era.json 缺 narrative.hero_journey_acts，使用段二兜底配置（这是默认行为）"
             )
             return DEFAULT_HERO_JOURNEY_ACTS
         return acts
