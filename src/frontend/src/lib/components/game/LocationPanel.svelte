@@ -76,6 +76,19 @@
     const cur = d.current_location.id;
     return [...d.visited, ...d.heard].filter(l => l.id !== cur);
   });
+
+  // 🆕 v2.7.1: 当前位置对应场景图（盛泽镇/苏州府/北京城）
+  // 三张图由 minimax image-01 重新生成（白底透明化）
+  const sceneImage = $derived.by(() => {
+    if (!data) return null;
+    const id = data.current_location.id;
+    const sceneMap: Record<string, string> = {
+      shengze: '/scenes/shengze.webp',
+      suzhou: '/scenes/suzhou.webp',
+      beijing: '/scenes/beijing.webp',
+    };
+    return sceneMap[id] ?? null;
+  });
 </script>
 
 {#if data}
@@ -89,6 +102,20 @@
       </span>
       <span class="location-tier">L{data.current_location.tier.replace('L', '')}</span>
     </div>
+
+    <!-- 🆕 v2.7.1 任务 3: 场景图（白底透明化的水墨画）-->
+    {#if sceneImage}
+      <div class="location-scene">
+        <img
+          src={sceneImage}
+          alt={data.current_location.name}
+          class="location-scene-img"
+          loading="lazy"
+          width="600"
+          height="356"
+        />
+      </div>
+    {/if}
 
     <!-- 🆕 v2.4.1: 该地 NPC -->
     {#if data.current_location.npcs_default && data.current_location.npcs_default.length > 0}
@@ -177,6 +204,29 @@
     gap: 6px;
     font-family: var(--font-display);
     font-size: var(--text-sm);
+  }
+
+  /* 🆕 v2.7.1 任务 3: 场景图（白底透明化，叠加在 paper 背景上）*/
+  .location-scene {
+    margin: 6px 0 8px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--color-paper, #faf6ed);
+    line-height: 0;
+  }
+
+  .location-scene-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 180px;
+    object-fit: cover;
+    object-position: center;
+    /* 关键：让透明背景显示底层 paper（"如墨在宣纸"效果）*/
+    mix-blend-mode: multiply;
+    opacity: 0.92;
+    /* 微妙的水墨淡雅 */
+    filter: saturate(0.85) contrast(1.05);
   }
 
   .location-pin {
