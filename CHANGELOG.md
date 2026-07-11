@@ -1704,6 +1704,79 @@ past  past  past  cur  future
 
 ---
 
+## [v2.9.x-W48] - 2026-07-11
+
+### 📊 W48: MetricsPanel 前端可视化组件（W48）
+
+> **范围**：把 W47 metrics API 接入前端可视化
+> **结果**：30s 轮询 + 4 概览卡 + 3 折叠区（端点/LLM/错误）
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/components/game/MetricsPanel.svelte`：
+  - 30s 轮询 /metrics（onMount + onDestroy 清理）
+  - 4 个概览卡：Uptime / 总端点 / 总 Token / LLM Provider
+  - 3 个折叠区：
+    - 🐢 最慢端点（按 p95 top 5）
+    - 🤖 LLM Provider 分布（调用 + 平均延迟 + token）
+    - ⚠️ 错误率热点（error_rate > 0 降序 top 5）
+- ✨ `src/frontend/src/lib/components/game/metricsPanel.test.ts`：6 个测试
+  - getMetrics → slowest → errorHotspots 数据流
+  - 总 token 累加
+  - 错误率 0 不出现在 hotspots
+  - 空 metrics 处理
+  - 30s 轮询常量
+  - 组件文件存在
+
+#### 视觉效果
+
+```
+📊 性能监控           更新于 22:33:23
+┌────────┬────────┬────────┬────────┐
+│Uptime  │总端点  │总Token │LLM     │
+│ 1.0h   │  3     │ 120K   │  1     │
+└────────┴────────┴────────┴────────┘
+🐢 最慢端点（p95）        [展开]
+   /api/input_stream    50    8000ms
+   /api/input          100    2500ms
+   /api/chapter/state  200     80ms
+🤖 LLM Provider          [折叠]
+⚠️ 错误率热点            [折叠]
+```
+
+#### 6 个 W48 测试
+
+| 类别 | 数量 |
+|---|---|
+| 完整数据流（slowest + hotspots）| 1 |
+| 总 token 累加 | 1 |
+| 错误率 0 不出现 | 1 |
+| 空 metrics | 1 |
+| 30s 轮询常量 | 1 |
+| 组件文件存在 | 1 |
+| **总计** | **6** ✅ |
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     112 PASSED (106 + 6 W48)
+```
+
+#### 未来用法
+
+```svelte
+<!-- 管理员面板 / 调试视图 -->
+<MetricsPanel />
+```
+
+#### 未来 W49 集成
+
+- GameView 加 admin 模式开关（?admin=true）
+- 嵌入 MetricsPanel + ChapterTimeline + PlateMap
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式

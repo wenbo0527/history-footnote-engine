@@ -26,6 +26,7 @@ export default defineConfig({
       'src/lib/components/game/plateMapGraph.test.ts',
       'src/lib/components/game/chapterHistory.test.ts',
       'src/lib/components/game/chapterTimelineApi.test.ts',
+      'src/lib/components/game/metricsPanel.test.ts',
     ],
     exclude: ['node_modules', '.svelte-kit', 'build', 'e2e', 'src/lib/components/**/*.svelte'],
     setupFiles: ['./vitest.setup.ts'],
