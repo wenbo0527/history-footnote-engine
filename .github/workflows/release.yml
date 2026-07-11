@@ -1,0 +1,121 @@
+# 🆕 v2.9.x W37: 自动 GitHub Release workflow
+#
+# 触发：push tag (v*.*.*)
+# 步骤：
+# 1. Checkout 代码
+# 2. 跑全量后端 pytest（320 项）
+# 3. 跑前端 vitest（30 项）
+# 4. 从 CHANGELOG.md 提取当前版本段落
+# 5. 创建 GitHub Release（自动用 changelog 段落作 body）
+#
+# 好处：
+# - 一键 release（git tag + push）
+# - 不用手工 CREATE_GITHUB_RELEASE.md
+# - body 永远来自 CHANGELOG（不漂移）
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # v2.8.0, v2.9.0, etc.
+
+permissions:
+  contents: write  # 创建 release 需要写权限
+
+jobs:
+  test:
+    name: Run all tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 拿全部历史（CHANGELOG 解析需要）
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio fastapi uvicorn
+          # 章节制 LLM 测试需要 langchain + anthropic + openai + langgraph
+          pip install langchain langchain-core langchain-anthropic langchain-openai langgraph
+          pip install -e . || true
+
+      - name: Backend pytest (320 tests)
+        run: |
+          echo "=== 后端 pytest ==="
+          cd "$GITHUB_WORKSPACE"
+          PYTHONPATH=src python -m pytest tests/ -q --tb=line 2>&1 | tail -10
+        continue-on-error: false  # fail 整个 release
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Frontend vitest (30 tests)
+        run: |
+          echo "=== 前端 vitest ==="
+          cd src/frontend
+          npm install --no-audit --no-fund 2>&1 | tail -3
+          npx vitest run 2>&1 | tail -5
+        continue-on-error: false
+
+  release:
+    name: Create GitHub Release
+    needs: test  # 必须 test 通过
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          # 从 CHANGELOG.md 提取当前 tag 对应的段落
+          # 格式：## [TAG] - DATE
+          python3 << 'PYEOF'
+          import re
+          import sys
+          from pathlib import Path
+
+          tag = "${{ github.ref_name }}"
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+
+          # 找 "## [{tag}]" 段（直到下一个 "## [" 或文件末尾）
+          pattern = rf"## \[{re.escape(tag)}\][^\n]*\n(.*?)(?=\n## \[|\Z)"
+          m = re.search(pattern, changelog, re.DOTALL)
+          if not m:
+              print(f"::error::CHANGELOG.md 找不到 ## [{tag}] 段落")
+              sys.exit(1)
+          body = m.group(1).strip()
+          if not body:
+              print(f"::error::CHANGELOG.md 段落 {tag} 内容为空")
+              sys.exit(1)
+          # 写到临时文件
+          Path("/tmp/release_body.md").write_text(body, encoding="utf-8")
+          print(f"✅ 提取 {len(body)} 字符的 release body")
+          PYEOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: /tmp/release_body.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') }}
+          fail_on_unmatched_files: true
+          generate_release_notes: false

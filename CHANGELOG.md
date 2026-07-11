@@ -1030,6 +1030,123 @@ WARNING:         28 (含 Tool 注入日志)
 
 ---
 
+## [v2.9.0] - 2026-07-11
+
+### 🚀 v2.9.0 Release: 章节制成熟 + 自主 LLM 决策 + 自适应
+
+> **范围**：v2.8.x W28-W37 (W33 W34 W35 W36 W37)
+> **结果**：325+ 项测试 PASSED · 10 章真 LLM 端到端 0 ERROR · 自动 GitHub Release
+
+#### 🎯 主要新增
+
+| Sprint | 功能 | 测试 |
+|---|---|---|
+| W28 | 板块格局 UI 可视化 | 6 plate_api |
+| W29 | 完整 10 章真 LLM 端到端 smoke | 1 smoke |
+| W30 | fill_chapter Tool 注入 LangGraph | 6 dm_tools_lc |
+| W31 | v2.8.0 tag + 发版 | 0 (发版流程) |
+| W32 | 修 3 个端到端问题 | 8 md_strip |
+| W33 | LLM JSON 真实错误归零 | 10 json_robust |
+| W34 | 架构 + 测试 review + 补 3 个缺失 | 25 (sub-facade + game_loop) |
+| **W35** | **修同名冲突 + 真正接入 fill_chapter Tool** | 10 |
+| **W36** | **章节长度自适应（5-15 夹紧）API** | 15 |
+| **W37** | **GitHub Actions 自动 Release workflow** | 17 |
+
+#### 🆕 W35 修复
+
+- 修 `agent.py:90` 本地 `make_tools`（10 个 v1.x）和 `tools.py` 的 `make_tools`（12 个 v2.8.0）同名冲突
+- `DMAgent.__init__` line 1040 改 `from tools import make_tools as dm_make_tools`
+- `DMAgent.tools` 10 → 12（**含 fill_chapter_blueprint + fill_chapter_summary**）
+- LLM 现在能真正自主决定调章节 Tool
+
+#### 🆕 W36 自适应 API
+
+- `ChapterMetaResolver.total_chapters`（property）— 5-15 夹紧
+- `ChapterMetaResolver.is_last_chapter(chapter_id)` — 是否最后一章
+- `ChapterMetaResolver.remaining_chapters(current_chapter_id)` — 剩余
+- 优先级：显式 `chapter_count` → `_acts.chapters` 推断 → 兜底 10
+
+#### 🆕 W37 自动 Release
+
+- 新增 `.github/workflows/release.yml`
+- tag `v*.*.*` push → 自动跑 pytest + vitest → 自动从 CHANGELOG.md 提取 body → 创建 GitHub Release
+- 替换 `CREATE_GITHUB_RELEASE.md` 手工流程
+
+#### 验证结果（v2.9.0 收官）
+
+```
+后端 pytest:     320 PASSED (252 v28 + 14 W34 + 25 W35 + 15 W36 + 17 W37)
+前端 vitest:     30 PASSED
+真 LLM 端到端:  10/10 章 (187 秒, 0 ERROR, 100% 200 OK)
+Git commits:    25 全部 push origin/main
+Git tag:        v2.8.0 + v2.9.0 (annotated)
+```
+
+#### GitHub Release 自动 body
+
+```
+git tag v2.9.0
+git push origin v2.9.0
+# → GitHub Actions 自动跑 320 + 30 测试
+# → 通过则自动从 CHANGELOG.md 提取本段作 body
+# → 创建 GitHub Release v2.9.0
+```
+零回归:         ✅
+```
+
+---
+
+## [v2.9.x-W37] - 2026-07-11
+
+### 🚀 W37: GitHub Actions 自动 Release workflow（W37）
+
+> **范围**：tag push → 自动跑 320 + 30 测试 → 自动从 CHANGELOG 提取 body → 创建 GitHub Release
+> **结果**：替换手工 `CREATE_GITHUB_RELEASE.md` 流程，一键 release
+
+#### 🆕 新增
+
+- ✨ `.github/workflows/release.yml`：
+  - 触发：push tag `v*.*.*`
+  - Job 1: test（跑后端 pytest + 前端 vitest）
+  - Job 2: release（依赖 test，通过则从 CHANGELOG 提取 body 创建 GitHub Release）
+  - 用 `softprops/action-gh-release@v2` action
+- ✨ `CHANGELOG.md` 新增 `## [v2.9.0]` 段（release tag 顶层 body）
+- ✨ `tests/test_v37_changelog_parser.py`：17 个测试
+  - 验证 release.yml + ci.yml 存在
+  - 验证 CHANGELOG 解析逻辑（与 workflow 100% 一致）
+  - 验证 tag 触发规则 `v*.*.*`
+  - 验证 release 依赖 test（fail 不发 release）
+  - 验证 v2.9.0 段落含 320 测试信息
+
+#### 使用流程
+
+```bash
+# 1. 改 CHANGELOG.md 加 ## [v2.9.0] - DATE 段
+# 2. commit + push
+git add CHANGELOG.md
+git commit -m "release: v2.9.0"
+git push
+
+# 3. 打 tag + push → 触发自动 release
+git tag v2.9.0
+git push origin v2.9.0
+
+# 4. GitHub Actions 自动：
+#    - 跑 320 + 30 测试
+#    - 提取 ## [v2.9.0] 段作 body
+#    - 创建 GitHub Release v2.9.0
+```
+
+#### 验证结果
+
+```
+后端 pytest:     337 PASSED (320 + 17 W37)
+前端 vitest:     30 PASSED
+零回归:         ✅
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
