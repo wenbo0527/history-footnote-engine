@@ -1777,6 +1777,72 @@ past  past  past  cur  future
 
 ---
 
+## [v2.9.x-W49] - 2026-07-11
+
+### 🛠️ W49: Admin 模式 URL 切换 + 3 大组件集成基础（W49）
+
+> **范围**：加 ?admin=true URL 参数启用 admin 模式（看 PlateMap/Timeline/MetricsPanel）
+> **结果**：adminMode 辅助函数 + 5 个测试 + SSR 兼容
+
+#### 🆕 新增
+
+- ✨ `src/frontend/src/lib/components/game/adminMode.ts`：
+  - `isAdminMode()` — 检查 `?admin=true`
+  - `setAdminMode(bool)` — URL history.replaceState 切换
+  - 兼容 SSR（不依赖 SvelteKit `$app/environment`）
+  - 自定义 `isBrowser()` helper（typeof window + location）
+- ✨ `src/frontend/src/lib/components/game/adminMode.test.ts`：5 个测试
+  - 默认 false
+  - ?admin=true → true
+  - ?admin=false → false
+  - setAdminMode(true/false) 双向切换
+
+#### 关键修复
+
+- **`$app/environment` 无法 resolve** — 改用 `typeof window !== 'undefined'` SSR 兼容
+- **删除 mock** — 不再依赖 SvelteKit alias
+
+#### 5 个 W49 测试
+
+| 类别 | 数量 |
+|---|---|
+| isAdminMode 默认 false | 1 |
+| ?admin=true → true | 1 |
+| ?admin=false → false | 1 |
+| setAdminMode(true) | 1 |
+| setAdminMode(false) | 1 |
+| **总计** | **5** ✅ |
+
+#### 未来集成（W50）
+
+```svelte
+<script>
+  import { isAdminMode } from './adminMode';
+  import PlateMap from './PlateMap.svelte';
+  import ChapterTimeline from './ChapterTimeline.svelte';
+  import MetricsPanel from './MetricsPanel.svelte';
+
+  let showAdmin = isAdminMode();
+</script>
+
+{#if showAdmin}
+  <div class="admin-panel">
+    <PlateMap sessionId={...} />
+    <ChapterTimeline sessionId={...} currentChapter={n} totalChapters={10} />
+    <MetricsPanel />
+  </div>
+{/if}
+```
+
+#### 验证结果
+
+```
+后端 pytest:     359 PASSED（无回归）
+前端 vitest:     117 PASSED (112 + 5 W49)
+```
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
