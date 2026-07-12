@@ -7,3 +7,5 @@ export { default as FeedbackModal } from './FeedbackModal.svelte';
 export { default as SettingsModal } from './SettingsModal.svelte';
 // 🆕 v2.10.1 W77: 城市变更确认
 export { default as CityChangeModal } from './CityChangeModal.svelte';
+// 🆕 v2.10.1 W80: 命运卡详情
+export { default as FateCardDetailModal } from './FateCardDetailModal.svelte';

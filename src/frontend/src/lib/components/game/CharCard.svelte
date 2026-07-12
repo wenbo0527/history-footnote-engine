@@ -10,6 +10,7 @@
   import type { Character, FamilyMember, Skill, FateCard } from '$lib/api/types';
   import { game } from '$lib/stores';
   import { fateEvents } from '$lib/stores/fate-events';
+  import FateCardDetailModal from '../modals/FateCardDetailModal.svelte';
 
   interface Props {
     character: Character;
@@ -29,13 +30,23 @@
   // 最多显示 3 张（剩余的折叠）
   const visibleFate = $derived(unusedFate.slice(0, 3));
 
-  // 🆕 v2.7 命运卡 chip 操作
-  function handleChipClick(cardId: string) {
-    fateEvents.scrollToCard(cardId);
+  // 🆕 v2.10.1 W80: 卡包模式 - 点击 chip 弹详情窗
+  let selectedCard = $state<FateCard | null>(null);
+  let detailOpen = $state(false);
+
+  function handleChipClick(card: FateCard) {
+    selectedCard = card;
+    detailOpen = true;
   }
 
+  function closeDetail() {
+    detailOpen = false;
+    setTimeout(() => { selectedCard = null; }, 200);
+  }
+
+  // 旧 API 保留（兼容 fateEvents 总线）
   function handleQuickUse(cardId: string, e: Event) {
-    e.stopPropagation();  // 不触发 chip click
+    e.stopPropagation();
     fateEvents.useCard(cardId);
   }
 </script>
@@ -111,20 +122,11 @@
                   type="button"
                   class="char-card-fate-chip"
                   style="--card-color: {c.color}"
-                  title={c.description + '（点击查看，一键使用）'}
-                  onclick={() => handleChipClick(c.id)}
+                  title={c.description + '（点击查看详情）'}
+                  onclick={() => handleChipClick(c)}
                 >
                   <span class="char-card-fate-icon" aria-hidden="true">{c.icon}</span>
                   <span class="char-card-fate-name">{c.name}</span>
-                  <!-- 🆕 一键使用角标 -->
-                  <span
-                    class="char-card-fate-quick"
-                    role="button"
-                    tabindex="-1"
-                    aria-label="一键使用"
-                    title="一键使用"
-                    onclick={(e) => handleQuickUse(c.id, e)}
-                  >▶</span>
                 </button>
               {/each}
               {#if unusedFate.length > 3}
@@ -147,6 +149,13 @@
     </div>
   {/if}
 </aside>
+
+<!-- 🆕 v2.10.1 W80: 命运卡详情弹窗 -->
+<FateCardDetailModal
+  open={detailOpen}
+  card={selectedCard}
+  onclose={closeDetail}
+/>
 
 <style>
   .char-card {
