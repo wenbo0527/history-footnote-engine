@@ -30,6 +30,14 @@
   - 调 LLM 分类玩家行为是否改变核心冲突
   - 仅在 Phase 1 未触发时调用（成本控制 ~0.3 次/回合）
   - 5 类安全检查 + 异常降级 + 模板非法忽略
+- **Phase 3 DM 参与判断（双判断架构）**：
+  - `_convergence_check` 收束检查（spec §4.3）
+    - 3 条规则：5 类模板验证 + 不能倒退 2+ 步 + must_resolve 软警告
+    - 拒绝时 fallback 到 Phase 1 行为（不触发）
+  - LLM prompt 升级（spec §4.2）：5 字段 → 7 字段
+    - 新增 `dm_creation_hint`（50 字创作指引）
+    - 新增 `convergence_anchors`（1-2 个历史铁轨汇合点）
+  - 路线历史注入（route_history 最近 3 条）
 
 - **数据结构扩展**：
   - `ChapterBlueprint` +5 字段（narrative_position / pace / hook_type / must_resolve / dm_instruction）
