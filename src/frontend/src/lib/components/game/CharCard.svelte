@@ -125,7 +125,13 @@
                   title={c.description + '（点击查看详情）'}
                   onclick={() => handleChipClick(c)}
                 >
-                  <span class="char-card-fate-icon" aria-hidden="true">{c.icon}</span>
+                  <!-- 🆕 v2.10.1 W81: 整卡缩略图 -->
+                  <img
+                    src={(c as any).image_url || `/fate/${c.id}.webp`}
+                    alt={c.name}
+                    class="char-card-fate-thumb"
+                    onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
                   <span class="char-card-fate-name">{c.name}</span>
                 </button>
               {/each}
@@ -279,11 +285,20 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    padding: 2px 6px;
+    padding: 2px 6px 2px 2px;  /* 🆕 W81: 左侧少 padding 给缩略图 */
     background: var(--color-paper);
     border: 1px solid var(--card-color, var(--color-bronze));
     border-radius: 10px;
     font-family: var(--font-body);
+    /* 🆕 W81: 缩略图尺寸 */
+  }
+  .char-card-fate-thumb {
+    width: 24px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: var(--color-paper-aged);
     /* 🆕 v2.7 自适应字号：窄屏更小，宽屏稍大 */
     font-size: clamp(9px, 2.4cqw, 11px);
     color: var(--color-ink);

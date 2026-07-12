@@ -179,6 +179,8 @@ export interface FateCard {
   use_type?: 'immediate' | 'round_start' | 'emergency' | 'any';
   use_constraints?: Record<string, any>;
   use_hint?: string;
+  // 🆕 v2.10.1 W81: 整卡图 URL（中国算命风，Trae 生成）
+  image_url?: string;
 }
 
 export interface FateHandResponse {

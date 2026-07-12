@@ -1,10 +1,11 @@
 <!--
-  🆕 v2.10.1 W80: 命运卡详情弹窗
+  🆕 v2.10.1 W80-W81: 命运卡详情弹窗（中国算命风·整卡图）
 
   点击 CharCard 命运卡 chip → 弹此窗
-  - 展示大图（emoji + 主题色背景）
-  - 完整描述 + 效果
-  - "使用" / "收起" 按钮
+  - 整卡图（mmx image generate 生成，中国算命风）
+  - 卡名 + 使用时机
+  - 描述 + 使用提示
+  - "启用此卡" / "收起" 按钮
 -->
 <script lang="ts">
   import ModalShell from './ModalShell.svelte';
@@ -23,11 +24,15 @@
   let { open, card, onclose }: Props = $props();
 
   let submitting = $state(false);
+  let imgError = $state(false);
 
-  // 关闭后清空 card
+  // 关闭后清空
   $effect(() => {
     if (!open) {
-      setTimeout(() => submitting = false, 200);
+      setTimeout(() => {
+        submitting = false;
+        imgError = false;
+      }, 200);
     }
   });
 
@@ -35,12 +40,10 @@
     if (!card || !$game) return;
     submitting = true;
     try {
-      // 🆕 v2.10.1 W80: 用 fateUse（兼容各种 use_type）
       const context = (card.use_type === 'round_start' ? 'round_start'
                     : card.use_type === 'emergency' ? 'emergency'
                     : 'immediate') as 'immediate' | 'round_start' | 'emergency';
       const res = await fateUse($game.session_id, card.id, context);
-      // 刷新 state（含新 cash/variables）
       if ((res as any).updated_state) {
         gameActions.set((res as any).updated_state);
       }
@@ -53,32 +56,66 @@
     }
   }
 
-  // 🆕 use_type 中文标签
+  // use_type 中文标签
   const USE_TYPE_LABEL: Record<string, string> = {
-    immediate: '即时',
+    immediate: '即时使用',
     round_start: '回合开始',
     emergency: '紧急',
     any: '任何时机',
   };
+
+  // 🆕 v2.10.1 W81: 解析 image_url
+  // 后端可能返完整 URL 或相对路径，统一处理
+  function getCardImageUrl(card: FateCard | null): string {
+    if (!card) return '/fate/card_back.svg';
+    // 后端在 image_url 字段（可能没有，用 fallback）
+    const url = (card as any).image_url || `/fate/${card.id}.webp`;
+    // 如果已经是完整 URL（http/https）直接用
+    if (url.startsWith('http')) return url;
+    // 相对路径 → 加上 / 前缀
+    if (!url.startsWith('/')) return `/${url}`;
+    return url;
+  }
 </script>
 
 <ModalShell {open} {onclose} title="命 运 卡" size="md">
   {#if card}
     <div class="fate-detail">
-      <!-- 大图区 -->
-      <div class="fate-detail-header" style="background: linear-gradient(135deg, {card.color}cc, {card.color}88);">
-        <div class="fate-detail-icon">{card.icon}</div>
-        <h2 class="fate-detail-name">{card.name}</h2>
-        {#if card.use_type}
-          <span class="fate-detail-tag">⏱ {USE_TYPE_LABEL[card.use_type] ?? card.use_type}</span>
+      <!-- 🆕 W81: 整卡图（中国算命风） -->
+      <div class="fate-detail-card">
+        {#if !imgError}
+          <img
+            src={getCardImageUrl(card)}
+            alt={card.name}
+            class="fate-detail-img"
+            onerror={() => { imgError = true; }}
+          />
+        {:else}
+          <!-- fallback: emoji 渐变 -->
+          <div class="fate-detail-fallback" style="background: linear-gradient(135deg, {card.color}cc, {card.color}88);">
+            <div class="fate-detail-icon">{card.icon}</div>
+          </div>
         {/if}
+        <!-- 使用时机角标（覆盖在卡上） -->
+        {#if card.use_type && !imgError}
+          <span class="fate-detail-time-badge">⏱ {USE_TYPE_LABEL[card.use_type] ?? card.use_type}</span>
+        {/if}
+        <!-- 已用蒙层 -->
+        {#if card.used}
+          <div class="fate-detail-used-overlay">已 使用</div>
+        {/if}
+      </div>
+
+      <!-- 卡名 -->
+      <div class="fate-detail-info">
+        <h2 class="fate-detail-name">{card.name}</h2>
+        <p class="fate-detail-id">id: {card.id}</p>
       </div>
 
       <!-- 描述 -->
       <div class="fate-detail-body">
         <p class="fate-detail-description">{card.description}</p>
 
-        <!-- 使用提示 -->
         {#if card.use_hint}
           <div class="fate-detail-hint">
             <span class="fate-detail-hint-icon">💡</span>
@@ -86,18 +123,10 @@
           </div>
         {/if}
 
-        <!-- 效果 -->
         <div class="fate-detail-effect">
           <span class="fate-detail-effect-label">效果类型</span>
           <code class="fate-detail-effect-code">{card.effect_type}</code>
         </div>
-
-        <!-- 已用 -->
-        {#if card.used}
-          <div class="fate-detail-used-banner">
-            ✓ 此卡已使用
-          </div>
-        {/if}
       </div>
 
       <!-- 操作按钮 -->
@@ -139,35 +168,84 @@
     min-width: 400px;
     max-width: 480px;
   }
-  .fate-detail-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-5) var(--space-4);
-    border-radius: var(--radius-md);
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  /* 🆕 W81: 整卡图容器（竖版 3:4） */
+  .fate-detail-card {
+    position: relative;
+    width: 240px;
+    height: 320px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.15),
+      0 8px 24px rgba(0,0,0,0.2);
+    background: var(--color-paper-aged);
+    border: 2px solid #6b5230;
   }
-  .fate-detail-icon {
-    font-size: 64px;
+  .fate-detail-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .fate-detail-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fate-detail-fallback .fate-detail-icon {
+    font-size: 96px;
     line-height: 1;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  }
+  .fate-detail-time-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 3px 10px;
+    background: rgba(0,0,0,0.6);
+    color: #f5ebd4;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    border-radius: 12px;
+    backdrop-filter: blur(4px);
+  }
+  .fate-detail-used-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    padding: 12px 24px;
+    background: rgba(165, 40, 40, 0.85);
+    color: #f5ebd4;
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    border-radius: 6px;
+    border: 3px solid #f5ebd4;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  /* 卡名 */
+  .fate-detail-info {
+    text-align: center;
   }
   .fate-detail-name {
     margin: 0;
     font-family: var(--font-display);
     font-size: var(--text-2xl);
     font-weight: 600;
-    color: white;
+    color: var(--color-ink);
   }
-  .fate-detail-tag {
-    padding: 2px 10px;
-    background: rgba(255,255,255,0.25);
-    border-radius: 12px;
+  .fate-detail-id {
+    margin: var(--space-1) 0 0;
     font-size: var(--text-xs);
-    font-weight: 500;
+    color: var(--color-ink-light);
+    font-family: var(--font-numeric);
+    opacity: 0.5;
   }
+  /* 描述区 */
   .fate-detail-body {
     display: flex;
     flex-direction: column;
@@ -215,15 +293,7 @@
     font-family: var(--font-numeric);
     font-weight: 600;
   }
-  .fate-detail-used-banner {
-    padding: var(--space-2) var(--space-3);
-    background: var(--color-paper);
-    border: 1px solid var(--color-ink-faint);
-    border-radius: var(--radius-sm);
-    text-align: center;
-    font-size: var(--text-sm);
-    color: var(--color-ink-light);
-  }
+  /* 操作按钮 */
   .fate-detail-actions {
     display: flex;
     gap: var(--space-3);

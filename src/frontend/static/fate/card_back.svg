@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  🆕 v2.10.1 W81: 命运卡卡背（中国算命风）
+  SVG 形式：中央太极 + 周围八卦 + 朱砂边框
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <radialGradient id="paperBg" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#f5ebd4"/>
+      <stop offset="100%" stop-color="#d8c39a"/>
+    </radialGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8b6f47"/>
+      <stop offset="50%" stop-color="#6b5230"/>
+      <stop offset="100%" stop-color="#8b6f47"/>
+    </linearGradient>
+    <pattern id="ricePaper" patternUnits="userSpaceOnUse" width="20" height="20">
+      <rect width="20" height="20" fill="url(#paperBg)"/>
+      <circle cx="3" cy="5" r="0.5" fill="#a08966" opacity="0.3"/>
+      <circle cx="13" cy="8" r="0.4" fill="#a08966" opacity="0.3"/>
+      <circle cx="8" cy="15" r="0.3" fill="#a08966" opacity="0.3"/>
+      <circle cx="17" cy="18" r="0.4" fill="#a08966" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- 宣纸底 -->
+  <rect width="600" height="800" fill="url(#ricePaper)"/>
+
+  <!-- 外框（朱砂描金） -->
+  <rect x="20" y="20" width="560" height="760" fill="none" stroke="url(#borderGrad)" stroke-width="6" rx="8"/>
+  <rect x="35" y="35" width="530" height="730" fill="none" stroke="#a52828" stroke-width="1.5" opacity="0.7"/>
+  <rect x="50" y="50" width="500" height="700" fill="none" stroke="#a52828" stroke-width="1" opacity="0.4"/>
+
+  <!-- 八卦圆环 -->
+  <g transform="translate(300, 400)">
+    <!-- 外圆 -->
+    <circle r="180" fill="none" stroke="#6b5230" stroke-width="2" opacity="0.6"/>
+    <circle r="160" fill="none" stroke="#6b5230" stroke-width="1" opacity="0.4"/>
+    <!-- 八个卦位（用圆点代替具体卦象）-->
+    <g fill="#a52828" font-family="serif" font-size="36" font-weight="bold" text-anchor="middle">
+      <!-- 乾 ☰ -->
+      <text x="0" y="-180" dy="12">☰</text>
+      <!-- 兑 ☱ -->
+      <text x="127" y="-127" dy="12">☱</text>
+      <!-- 离 ☲ -->
+      <text x="180" y="0" dy="12">☲</text>
+      <!-- 震 ☳ -->
+      <text x="127" y="127" dy="12">☳</text>
+      <!-- 巽 ☴ -->
+      <text x="0" y="180" dy="12">☴</text>
+      <!-- 坎 ☵ -->
+      <text x="-127" y="127" dy="12">☵</text>
+      <!-- 艮 ☶ -->
+      <text x="-180" y="0" dy="12">☶</text>
+      <!-- 坤 ☷ -->
+      <text x="-127" y="-127" dy="12">☷</text>
+    </g>
+  </g>
+
+  <!-- 中央太极（红黑） -->
+  <g transform="translate(300, 400)">
+    <circle r="90" fill="#f5ebd4" stroke="#6b5230" stroke-width="2"/>
+    <!-- 阳鱼（红） -->
+    <path d="M 0,-90 A 90,90 0 0,1 0,90 A 45,45 0 0,1 0,0 A 45,45 0 0,0 0,-90 Z" fill="#a52828"/>
+    <!-- 阴鱼（黑） -->
+    <path d="M 0,-90 A 90,90 0 0,0 0,90 A 45,45 0 0,0 0,0 A 45,45 0 0,1 0,-90 Z" fill="#1a1a1a"/>
+    <!-- 阳鱼眼（黑点） -->
+    <circle cx="0" cy="-45" r="9" fill="#1a1a1a"/>
+    <!-- 阴鱼眼（红点） -->
+    <circle cx="0" cy="45" r="9" fill="#a52828"/>
+  </g>
+
+  <!-- 顶部朱砂印章：命运 -->
+  <g transform="translate(300, 100)">
+    <rect x="-50" y="-25" width="100" height="50" fill="#a52828" stroke="#8b1f1f" stroke-width="2" rx="3"/>
+    <text x="0" y="10" font-family="serif" font-size="32" font-weight="bold" fill="#f5ebd4" text-anchor="middle" letter-spacing="6">命 运</text>
+  </g>
+
+  <!-- 底部铭文 -->
+  <text x="300" y="720" font-family="serif" font-size="18" fill="#6b5230" text-anchor="middle" letter-spacing="4" opacity="0.8">万 历 十 五 年 · 盛 泽</text>
+</svg>

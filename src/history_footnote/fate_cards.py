@@ -51,6 +51,8 @@ class FateCard:
     description: str         # 短描述
     effect_type: str         # effect 类别
     effect_params: dict      # effect 参数
+    # 🆕 v2.10.1 W81: 整卡图（中国算命风，Trae text_to_image 生成）
+    image_url: str = ""      # 整卡图 URL（前端 <img> 渲染）
     # 🆕 v2.6 主动使用字段
     use_type: str = "immediate"   # immediate / round_start / emergency / any
     use_constraints: dict = field(default_factory=dict)
@@ -66,6 +68,31 @@ class FateCard:
 # - 时间/AP 类：round_start（新回合开始时用）
 # - 路遇/buff 类：emergency（关键时刻用）
 # - 失败/危机：emergency
+
+# 🆕 v2.10.1 W81: 卡背 URL（所有卡默认共用）
+# 中国算命风卡背：使用项目内已有 /static/fate/ 资源
+# 注：之前 W60 已用 mmx image generate 生成 37 张命运卡图（存于 src/frontend/static/fate/）
+CARD_BACK_URL = "/fate/card_back.svg"
+
+# 卡牌图路径映射（项目内静态资源）
+# windfall = 招财 / debt_double = 负债 / rice_lost = 米缸 / li_friend = 贵人 / etc.
+FATE_CARD_IMAGES: dict[str, str] = {
+    "windfall":       "/fate/windfall.webp",       # 天降横财
+    "debt_double":    "/fate/debt_double.webp",    # 债上加债
+    "rice_lost":      "/fate/rice_lost.webp",      # 米缸见底
+    "price_drop":     "/fate/price_drop.webp",     # 丝价暴跌
+    "shen_loves_you": "/fate/shen_loves_you.webp", # 沈氏倾心
+    "wang_distrust":  "/fate/wang_distrust.webp",  # 王牙人警觉
+    "zhou_secret":    "/fate/zhou_secret.webp",    # 周大娘秘闻
+    "li_friend":      "/fate/li_friend.webp",      # 李秀才青睐
+    "dyeing_path":    "/fate/dyeing_path.webp",    # 染坊有路
+    "hengsheng_door": "/fate/hengsheng_door.webp", # 恒生典开门
+    "cangqiao_shortcut": "/fate/cangqiao_shortcut.webp",  # 仓桥捷径
+    "pause_time":     "/fate/pause_time.webp",     # 时光凝滞
+    "persuasion":     "/fate/persuasion.webp",     # 三寸不烂
+    # 默认 fallback：卡背
+    "_default":       CARD_BACK_URL,
+}
 
 FATE_CARDS_POOL: list[FateCard] = [
     # ============ 银钱类 (immediate) ============
@@ -275,13 +302,20 @@ def draw_fate_cards(session_id: str | None = None, n: int = 5) -> list[FateCard]
     """
     从池中抽 n 张命运卡（用 session seed，可重放）
 
+    🆕 v2.10.1 W81: 抽卡时注入 image_url（前端整卡渲染）
+
     Returns:
         抽中的命运卡列表（无重复）
     """
     rng = get_rng(session_id)
     pool = list(FATE_CARDS_POOL)
     n = min(n, len(pool))
-    return rng.sample(pool, n)
+    cards = rng.sample(pool, n)
+    # 注入 image_url（项目内 /static/fate/ 资源）
+    for card in cards:
+        if not card.image_url:
+            card.image_url = FATE_CARD_IMAGES.get(card.id, FATE_CARD_IMAGES["_default"])
+    return cards
 
 
 def can_use_card(card: dict, state, context: str = "immediate") -> tuple[bool, str]:
