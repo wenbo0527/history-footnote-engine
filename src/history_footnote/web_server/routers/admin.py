@@ -193,148 +193,7 @@ def _check_admin_token(handler, params: dict) -> bool:
 
 # ============= 路由 =============
 
-def handle_GET_admin_users(handler, query: str) -> bool:
-    """GET /api/admin/users?account_id=xxx
-    Returns: 完整账户列表
-    """
-    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
-        return True
-    admin_id = _admin_get_account_id(handler, query)
-    if not admin_id:
-        handler._json(400, {"error": "account_id 必填"})
-        return True
-    sys_inst = _get_account_system()
-    admin = sys_inst.get_account(admin_id)
-    if not admin or admin.role != "admin":
-        handler._json(403, {"error": "需要 admin 权限"})
-        return True
-    try:
-        users = sys_inst.list_accounts()
-        # 附加：每个用户的存档数
-        user_summaries = []
-        for u in users:
-            saves = sys_inst.list_saves(u.account_id)
-            user_summaries.append({
-                **u.to_dict(),
-                "saves_count": len(saves),
-            })
-        handler._json(200, {
-            "users": user_summaries,
-            "total": len(user_summaries),
-            "admins": sum(1 for u in users if u.role == "admin"),
-            "users_count": sum(1 for u in users if u.role == "user"),
-        })
-    except Exception as e:
-        logger.exception(f"[/api/admin/users] 失败: {e}")
-        handler._json(500, {"error": str(e)})
-    return True
 
-
-def handle_GET_admin_saves(handler, query: str) -> bool:
-    """GET /api/admin/saves?account_id=xxx[&target_account_id=yyy]
-    Returns: 存档列表（默认所有账户；可指定 target_account_id）
-    """
-    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
-        return True
-    admin_id = _admin_get_account_id(handler, query)
-    if not admin_id:
-        handler._json(400, {"error": "account_id 必填"})
-        return True
-    sys_inst = _get_account_system()
-    admin = sys_inst.get_account(admin_id)
-    if not admin or admin.role != "admin":
-        handler._json(403, {"error": "需要 admin 权限"})
-        return True
-    try:
-        qs = parse_qs(query)
-        target_id = qs.get("target_account_id", [None])[0]
-        if target_id:
-            saves = sys_inst.list_saves(target_id)
-            target_user = sys_inst.get_account(target_id)
-            result = {
-                "saves": saves,
-                "account_id": target_id,
-                "username": target_user.username if target_user else "未知",
-                "total": len(saves),
-            }
-        else:
-            # 所有账户的存档
-            all_saves = []
-            for u in sys_inst.list_accounts():
-                for s in sys_inst.list_saves(u.account_id):
-                    all_saves.append({**s, "username": u.username})
-            # 按 bound_at 倒序
-            all_saves.sort(key=lambda x: x.get("bound_at", ""), reverse=True)
-            result = {
-                "saves": all_saves,
-                "total": len(all_saves),
-            }
-        handler._json(200, result)
-    except Exception as e:
-        logger.exception(f"[/api/admin/saves] 失败: {e}")
-        handler._json(500, {"error": str(e)})
-    return True
-
-
-def handle_GET_admin_tokens(handler, query: str) -> bool:
-    """GET /api/admin/tokens?account_id=xxx[&recent_limit=20]
-    Returns: token 消耗统计（全局 + 近期调用）
-    """
-    if not _check_admin_token(handler, {"token": _admin_get_token(handler, query)}):
-        return True
-    admin_id = _admin_get_account_id(handler, query)
-    if not admin_id:
-        handler._json(400, {"error": "account_id 必填"})
-        return True
-    sys_inst = _get_account_system()
-    admin = sys_inst.get_account(admin_id)
-    if not admin or admin.role != "admin":
-        handler._json(403, {"error": "需要 admin 权限"})
-        return True
-    try:
-        qs = parse_qs(query)
-        recent_limit = int(qs.get("recent_limit", ["20"])[0])
-        from history_footnote.llm_wrapper import get_usage_logger
-        usage = get_usage_logger()
-        raw_stats = usage.get_stats()
-        recent = usage.get_recent(limit=recent_limit)
-        # 🆕 v1.7.47 字段对齐前端期望：
-        # 前端用 s.total_calls / s.total_tokens / s.total_prompt_tokens / s.total_completion_tokens / s.error_count
-        # 后端用 totals.calls / totals.tokens / totals.input_tokens / totals.output_tokens
-        totals = raw_stats.get("totals", {})
-        flat_stats = {
-            "total_calls": totals.get("calls", 0),
-            "total_tokens": totals.get("tokens", 0),
-            "total_prompt_tokens": totals.get("input_tokens", 0),
-            "total_completion_tokens": totals.get("output_tokens", 0),
-            "total_latency_ms": totals.get("latency_ms", 0),
-            "error_count": totals.get("fallback_count", 0) + totals.get("timeout_count", 0),
-            "fallback_count": totals.get("fallback_count", 0),
-            "timeout_count": totals.get("timeout_count", 0),
-        }
-        # 近期调用：每条改 prompt_tokens/completion_tokens
-        normalized_recent = []
-        for r in recent:
-            normalized_recent.append({
-                "model": r.get("model", ""),
-                "prompt_tokens": r.get("input_tokens", r.get("prompt_tokens", 0)),
-                "completion_tokens": r.get("output_tokens", r.get("completion_tokens", 0)),
-                "total_tokens": r.get("total_tokens", 0),
-                "latency_ms": r.get("latency_ms", 0),
-                "timestamp": r.get("timestamp", ""),
-                "fallback": r.get("fallback", False),
-                "timeout": r.get("timeout", False),
-            })
-        handler._json(200, {
-            "stats": flat_stats,  # 前端期望的扁平字段
-            "stats_raw": raw_stats,  # 完整原始数据（保留）
-            "recent": normalized_recent,
-            "recent_limit": recent_limit,
-        })
-    except Exception as e:
-        logger.exception(f"[/api/admin/tokens] 失败: {e}")
-        handler._json(500, {"error": str(e)})
-    return True
 
 
 def handle_GET_admin_config(handler, query: str) -> bool:
@@ -436,126 +295,9 @@ def handle_POST_admin_config(handler, body: dict) -> bool:
     return True
 
 
-def handle_POST_admin_user_role(handler, body: dict) -> bool:
-    """POST /api/admin/users/role
-    Body: {admin_id, target_account_id, new_role}
-    修改账户 role（admin/user/guest）
-    """
-    if not _check_admin_token(handler, body):
-        return True
-    admin_id = body.get("admin_id", "")
-    target_id = body.get("target_account_id", "")
-    new_role = body.get("new_role", "")
-    if not all([admin_id, target_id, new_role]):
-        handler._json(400, {"error": "admin_id / target_account_id / new_role 必填"})
-        return True
-    if new_role not in ("admin", "user", "guest"):
-        handler._json(400, {"error": "new_role 必须是 admin/user/guest"})
-        return True
-    sys_inst = _get_account_system()
-    admin = sys_inst.get_account(admin_id)
-    if not admin or admin.role != "admin":
-        handler._json(403, {"error": "需要 admin 权限"})
-        return True
-    target = sys_inst.get_account(target_id)
-    if not target:
-        handler._json(404, {"error": "目标账户不存在"})
-        return True
-    try:
-        target.role = new_role
-        # 重新保存
-        accounts = sys_inst._load_accounts()
-        for a in accounts:
-            if a.account_id == target_id:
-                a.role = new_role
-        sys_inst._save_accounts(accounts)
-        handler._json(200, {
-            "ok": True,
-            "account_id": target_id,
-            "username": target.username,
-            "new_role": new_role,
-        })
-    except Exception as e:
-        logger.exception(f"[/api/admin/users/role] 失败: {e}")
-        handler._json(500, {"error": str(e)})
-    return True
 
 
-def handle_DELETE_admin_user(handler, body: dict) -> bool:
-    """DELETE /api/admin/users
-    Body: {admin_id, target_account_id}
-    删除账户（不删存档）
-    """
-    if not _check_admin_token(handler, body):
-        return True
-    admin_id = body.get("admin_id", "")
-    target_id = body.get("target_account_id", "")
-    if not all([admin_id, target_id]):
-        handler._json(400, {"error": "admin_id / target_account_id 必填"})
-        return True
-    if admin_id == target_id:
-        handler._json(400, {"error": "不能删除自己"})
-        return True
-    sys_inst = _get_account_system()
-    admin = sys_inst.get_account(admin_id)
-    if not admin or admin.role != "admin":
-        handler._json(403, {"error": "需要 admin 权限"})
-        return True
-    target = sys_inst.get_account(target_id)
-    if not target:
-        handler._json(404, {"error": "目标账户不存在"})
-        return True
-    try:
-        accounts = sys_inst._load_accounts()
-        accounts = [a for a in accounts if a.account_id != target_id]
-        sys_inst._save_accounts(accounts)
-        handler._json(200, {
-            "ok": True,
-            "deleted": target_id,
-            "username": target.username,
-            "message": "账户已删除（存档保留）",
-        })
-    except Exception as e:
-        logger.exception(f"[/api/admin/users DELETE] 失败: {e}")
-        handler._json(500, {"error": str(e)})
-    return True
 
-
-def handle_DELETE_admin_save(handler, body: dict) -> bool:
-    """DELETE /api/admin/saves
-    Body: {admin_id, target_account_id, save_id}
-    删除指定存档（含 meta + 数据文件）
-    """
-    if not _check_admin_token(handler, body):
-        return True
-    admin_id = body.get("admin_id", "")
-    target_id = body.get("target_account_id", "")
-    save_id = body.get("save_id", "")
-    if not all([admin_id, target_id, save_id]):
-        handler._json(400, {"error": "admin_id / target_account_id / save_id 必填"})
-        return True
-    sys_inst = _get_account_system()
-    admin = sys_inst.get_account(admin_id)
-    if not admin or admin.role != "admin":
-        handler._json(403, {"error": "需要 admin 权限"})
-        return True
-    try:
-        save_path = sys_inst.get_save_path(target_id, save_id)
-        meta_path = save_path.parent / f"{save_id}.meta.json"
-        # 删文件
-        if save_path.exists():
-            save_path.unlink()
-        if meta_path.exists():
-            meta_path.unlink()
-        handler._json(200, {
-            "ok": True,
-            "deleted_save": save_id,
-            "deleted_account": target_id,
-        })
-    except Exception as e:
-        logger.exception(f"[/api/admin/saves DELETE] 失败: {e}")
-        handler._json(500, {"error": str(e)})
-    return True
 
 
 # ============= 🆕 v1.7.30 体验版管理 =============
@@ -817,4 +559,18 @@ from history_footnote.web_server.routers.admin_settings import (
     handle_GET_admin_settings,
     handle_POST_admin_settings,
     handle_POST_admin_settings_reset,
+)
+
+# 🆕 v2.10.1 W52 P1-3 followup: users/saves/tokens 模块已拆出,re-export 保证向后兼容
+from history_footnote.web_server.routers.admin_users import (
+    handle_GET_admin_users,
+    handle_POST_admin_user_role,
+    handle_DELETE_admin_user,
+)
+from history_footnote.web_server.routers.admin_saves import (
+    handle_GET_admin_saves,
+    handle_DELETE_admin_save,
+)
+from history_footnote.web_server.routers.admin_tokens import (
+    handle_GET_admin_tokens,
 )
