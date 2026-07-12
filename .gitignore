@@ -32,6 +32,12 @@ env/
 saves/
 *.json~
 
+# 历史脚本归档（v1.6.x 早期调试脚本，已废弃）
+scripts/_archive/
+
+# 运行时账号数据（本地开发产生，含测试账号/邀请码）
+runtime/accounts/
+
 # 测试覆盖
 .coverage
 htmlcov/
