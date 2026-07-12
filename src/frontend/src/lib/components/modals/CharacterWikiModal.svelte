@@ -36,6 +36,26 @@
   let fateNpcEffects: FateNpcEffect[] = $state([]);
   let activeBuffs: ActiveBuff[] = $state([]);
 
+  // 🆕 v2.10.2 fix: 关系详注派生（用 wiki.relationships 替代后端不存在的 wiki.markdown）
+  const relationshipNotes = $derived.by(() => {
+    if (!wiki) return [];
+    const notes: Array<{ key: string; name: string; value: string }> = [];
+    const rels = (wiki as any).relationships || {};
+    for (const [name, info] of Object.entries(rels)) {
+      if (typeof info === 'string') {
+        notes.push({ key: name, name, value: info });
+      } else if (info && typeof info === 'object') {
+        // info 可能是 {relation: '家人', level: 5, note: '...'}
+        const value = (info as any).note
+          || (info as any).relation
+          || (info as any).level
+          || JSON.stringify(info);
+        notes.push({ key: name, name, value: String(value) });
+      }
+    }
+    return notes;
+  });
+
   $effect(() => {
     const sid = $game?.session_id ?? null;
     if (open && sid) {
@@ -261,10 +281,18 @@
         </div>
       {/if}
 
-      <!-- 关系详注 -->
-      {#if wiki?.markdown && wiki.markdown.length > 50}
+      <!-- 🆕 v2.10.2 fix: 关系详注（用 wiki.relationships 派生，后端无 markdown 字段） -->
+      {#if relationshipNotes.length > 0}
         <Chapter title="关系详注" level={4} />
-        <pre class="wiki-markdown">{wiki.markdown}</pre>
+        <div class="wiki-relations">
+          {#each relationshipNotes as note (note.key)}
+            <div class="wiki-relation-item">
+              <span class="wiki-relation-name">{note.name}</span>
+              <span class="wiki-relation-sep">·</span>
+              <span class="wiki-relation-value">{note.value}</span>
+            </div>
+          {/each}
+        </div>
       {/if}
     </div>
   {/if}
@@ -667,5 +695,36 @@
     .wiki-char-card {
       padding: var(--space-2);
     }
+  }
+
+  /* 🆕 v2.10.2 fix: 关系详注样式 */
+  .wiki-relations {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--color-paper-aged);
+    border: 1px solid var(--color-ink-faint);
+    border-radius: var(--radius-md);
+  }
+  .wiki-relation-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
+  .wiki-relation-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--color-ink);
+    min-width: 60px;
+  }
+  .wiki-relation-sep {
+    color: var(--color-ink-faint);
+  }
+  .wiki-relation-value {
+    flex: 1 1 auto;
+    color: var(--color-ink-light);
   }
 </style>

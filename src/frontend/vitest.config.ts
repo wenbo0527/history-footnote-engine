@@ -33,6 +33,7 @@ export default defineConfig({
       'src/lib/components/game/adminMode.test.ts',
       'src/lib/components/game/gameViewAdmin.test.ts',
       'src/lib/components/home/archiveCardName.test.ts',  // 🆕 v2.10.2
+      'src/lib/components/modals/relationshipNotes.test.ts',  // 🆕 v2.10.2
     ],
     exclude: ['node_modules', '.svelte-kit', 'build', 'e2e', 'src/lib/components/**/*.svelte'],
     setupFiles: ['./vitest.setup.ts'],
