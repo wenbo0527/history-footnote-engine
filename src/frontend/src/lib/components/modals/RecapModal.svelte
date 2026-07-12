@@ -118,7 +118,7 @@
 
       <Tabs
         tabs={[
-          { id: 'chapter', label: `按章节 (${chapters.length})` },  <!-- 🆕 W83 -->
+          { id: 'chapter', label: `按章节 (${chapters.length})` },
           { id: 'archive', label: `存档 (${recap.archive.length})` }
         ]}
         value={activeTab}
