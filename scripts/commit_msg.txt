@@ -1,38 +1,45 @@
-v2.10.1 W82: 统一 Icon 组件 + 11 个中国风 SVG icon
+v2.10.1 W83: 回顾摘要按章节分目录（左侧 TOC + 主区内容）
 
-调研：项目已有 12 个 icon（nav/* 7个 + stats/* 5个）
-- nav: archive / choice / home / recap / settings / share / wiki
-- stats: action / cash / health / loom / reputation
+需求：
+1. 移除"DM 正在整理往事..."假 loading
+   → 后端实际是读已有 narrative（同步操作）
+   → 不应展示假 spinner
+2. 内容是游戏中实际生成过的 narrative（已实现）
+3. 按章节分目录
 
-新加 11 个 SVG icon（/static/icons/ui/，中国水墨风）：
-- search.svg 🔍 (放大镜 + 墨点)
-- sparkle.svg ✨ (光芒四射)
-- warning.svg ⚠ (惊堂木 + 朱砂)
-- hint.svg 💡 (油灯 + 火苗)
-- coin.svg 🪙 (铜钱外圆内方)
-- scroll.svg 📜 (卷轴)
-- chat.svg 💬 (书信 + 朱砂印章)
-- calendar.svg 🗓 (日历·农历)
-- walk.svg 🚶 (行路人 + 包袱)
-- gear.svg ⚙ (齿轮)
-- cards.svg 🎴 (牌组)
+实现：
 
-颜色统一：朱砂 #a52828 / 古铜 #6b5230 / 宣纸 #f5ebd4 / 描金 #c9a961
+后端（game_state.py:700+）：
+- get_recap 加 chapters 字段
+- _group_narratives_by_chapter: 按 current_date 月份分组
+- 每章 = 一个月度（"1587年3月"）
+- chapter title = "第一章 · 1587年3月"（中文数字）
 
-Icon 组件（Icon.svelte）：
-- 23 个 icon 名字（11 svg + 7 nav + 5 stats）
-- 自动路由：svg → /icons/ui/{name}.svg
-  nav → /icons/nav/{name}.webp
-  stats → /icons/stats/{name}.webp
-- <img> 渲染（浏览器原生 SVG 支持）
-- 失败回退：opacity 0.3
-- 任意 size
+前端类型（types.ts:398+）：
+- RecapResponse.chapters: RecapChapter[]
+- RecapChapter 字段：
+  chapter_id / title / date_label / year / month / index / narratives[]
 
-RecapModal 改造（demo）：
-- 搜索框 🔍 → <Icon name="search" />
-- 玩家选择 ⚙ → <Icon name="gear" />
+RecapModal 重写：
+- 移除"DM 整理..."假 loading（删除 Spinner + 文字）
+- 移除"⚠ 重试" → 已用 Icon 组件
+- Tabs: "最近" → "按章节" + "存档"
+- "按章节" 模式：
+  ┌─ 目录 ──┬─ 主区 ──────────────┐
+  │ 第1章  │ 第一章 · 1587年3月    │
+  │ 1587年3│  第1回合 ...          │
+  │  3节   │  第2回合 ...          │
+  │ ────  │                       │
+  │ 第2章  │ ──────────────────  │
+  │ 1587年4│ 第二章 · 1587年4月    │
+  └────────┴──────────────────────┘
+- 左侧 sticky TOC：180px 宽
+- 点击章节 → 平滑滚动到对应 section
+- active 章节高亮（朱砂边框）
 
-未来继续替换：EmergencyModal ⚠ / CityChangeModal 🚶 / 
-FateCardDetailModal ✨ / 等 16 个文件
+兼容：
+- "存档" tab 仍显示 flat list（按时间排）
+- 旧 sessions 无 chapter 字段 → "按章节" tab 显示"暂无章节"
 
 测试：173 PASSED 0 回归
+后端已重启（PID 94000）

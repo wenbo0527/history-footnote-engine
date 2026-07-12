@@ -159,12 +159,15 @@
                     <button
                       type="button"
                       class="recap-chapter-toc-item"
-                      class:active={ch.chapter_id === activeChapterId}
-                      onclick={() => scrollToChapter(ch.chapter_id)}
+                      class:active={String(ch.chapter_id) === activeChapterId}
+                      onclick={() => scrollToChapter(String(ch.chapter_id))}
                     >
-                      <span class="recap-chapter-toc-index">第{ch.index}章</span>
-                      <span class="recap-chapter-toc-date">{ch.date_label}</span>
-                      <span class="recap-chapter-toc-count">{ch.narratives.length} 节</span>
+                      <span class="recap-chapter-toc-index">
+                        {#if ch.is_current}<span class="recap-chapter-dot" title="当前进行中">●</span>{/if}
+                        {ch.chapter_id > 0 ? `第${ch.display_index}章` : '序章'}
+                      </span>
+                      <span class="recap-chapter-toc-title-text">{ch.title}</span>
+                      <span class="recap-chapter-toc-count">{ch.narratives.length} 回合</span>
                     </button>
                   </li>
                 {/each}
@@ -176,8 +179,22 @@
               {#each chapters as ch (ch.chapter_id)}
                 <section class="recap-chapter-section" id="chapter-{ch.chapter_id}">
                   <header class="recap-chapter-section-header">
-                    <h3 class="recap-chapter-section-title">{ch.title}</h3>
-                    <span class="recap-chapter-section-count">{ch.narratives.length} 回合</span>
+                    <div class="recap-chapter-section-title-wrap">
+                      <h3 class="recap-chapter-section-title">
+                        {ch.chapter_id > 0 ? `第${ch.display_index}章` : '序章'}
+                        · {ch.title}
+                        {#if ch.is_current}<span class="recap-chapter-current">（进行中）</span>{/if}
+                      </h3>
+                      {#if ch.subtitle && ch.is_settled}
+                        <p class="recap-chapter-section-subtitle">{ch.subtitle}</p>
+                      {/if}
+                      {#if ch.summary && ch.is_settled}
+                        <p class="recap-chapter-section-summary">{ch.summary}</p>
+                      {/if}
+                    </div>
+                    <span class="recap-chapter-section-count">
+                      {ch.narratives.length} 回合{#if ch.date_label} · {ch.date_label}{/if}
+                    </span>
                   </header>
                   <div class="recap-list">
                     {#each ch.narratives as item, idx (ch.chapter_id + '-' + item.round)}
@@ -569,11 +586,24 @@
     font-size: var(--text-sm);
     color: var(--color-cinnabar);
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
-  .recap-chapter-toc-date {
+  .recap-chapter-dot {
+    color: var(--color-cinnabar);
+    font-size: 10px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  .recap-chapter-toc-title-text {
     font-size: var(--text-xs);
     color: var(--color-ink);
     margin-top: 2px;
+    font-weight: 500;
   }
   .recap-chapter-toc-count {
     font-size: var(--text-xs);
@@ -594,11 +624,15 @@
   }
   .recap-chapter-section-header {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: var(--space-3);
     padding: var(--space-2) 0;
     margin-bottom: var(--space-2);
     border-bottom: 2px solid var(--color-bronze);
+  }
+  .recap-chapter-section-title-wrap {
+    flex: 1;
   }
   .recap-chapter-section-title {
     margin: 0;
@@ -607,6 +641,30 @@
     color: var(--color-cinnabar);
     font-weight: 600;
   }
+  .recap-chapter-current {
+    margin-left: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-bronze);
+    font-weight: 400;
+    font-style: italic;
+  }
+  .recap-chapter-section-subtitle {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-xs);
+    color: var(--color-bronze-dark);
+    font-style: italic;
+  }
+  .recap-chapter-section-summary {
+    margin: var(--space-2) 0 0;
+    padding: var(--space-2) var(--space-3);
+    background: rgba(143, 75, 40, 0.05);
+    border-left: 3px solid var(--color-bronze);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    color: var(--color-ink-light);
+    text-indent: 2em;
+  }
   .recap-chapter-section-count {
     font-family: var(--font-numeric);
     font-size: var(--text-xs);
@@ -614,5 +672,7 @@
     padding: 2px 8px;
     background: var(--color-paper-aged);
     border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 </style>

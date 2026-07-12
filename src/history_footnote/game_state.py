@@ -591,7 +591,7 @@ class GameState:
 
     def append_narrative(self, round_number: int, narrative: str, summary: str,
                           player_input: str = "", chosen_voice: str = "",
-                          current_date: str = "") -> None:
+                          current_date: str = "", chapter_id: int = 0) -> None:
         """追加一回合的叙事到历史
 
         🆕 v1.6.3 双层保留：
@@ -603,6 +603,10 @@ class GameState:
         - player_input: 玩家原始输入（"我去苏州" / "look around"）
         - chosen_voice: 选的 voice option 名（"起身上路"）
         - current_date: 回合日期（"1587年2月"），用于按月分组
+
+        🆕 v2.10.1 W84: 记录章节（按故事弧切分）
+        - chapter_id: 当前章节（来自 chapter_state.current_chapter）
+        - 前端按章节分目录（更符合故事结构）
         """
         entry = {
             "round": round_number,
@@ -611,6 +615,7 @@ class GameState:
             "player_input": player_input,
             "chosen_voice": chosen_voice,
             "current_date": current_date,
+            "chapter_id": chapter_id,  # 🆕 W84
         }
         self.narrative_recent.append(entry)
         self.narrative_history.append(entry)  # 兼容旧字段
@@ -626,6 +631,7 @@ class GameState:
                 "player_input": old.get("player_input", ""),
                 "chosen_voice": old.get("chosen_voice", ""),
                 "current_date": old.get("current_date", ""),
+                "chapter_id": old.get("chapter_id", 0),  # 🆕 W84
             }
             self.narrative_archive.append(archived)
             # 同步更新 narrative_history（旧字段不弹，保持兼容）
@@ -708,59 +714,116 @@ class GameState:
         }
 
     def _group_narratives_by_chapter(self, narratives: list[dict]) -> list[dict]:
-        """🆕 v2.10.1 W83: 按 current_date 的月份分组
+        """🆕 v2.10.1 W84: 按故事弧分章（不按月）
 
-        每条目 = 一个月度（"1587年3月"）
+        数据源：
+        - narrative.chapter_id：每回合的章节归属（来自 chapter_state.current_chapter）
+        - chapter_state.chapter_history[]：已结算章节的元数据
+          {chapter, summary, core_event, key_choice, ...}
+        - chapter_state.current_chapter：当前正在进行的章节
+
+        逻辑：
+        1. 先按 chapter_id 分组 narratives
+        2. 每个章节用 chapter_history 查 meta（summary / title / etc.）
+        3. 没结算的章节用 current_date 派生临时标题
+        4. 按 chapter_id 排序（1 → 2 → 3...）
+
         Returns: [
           {
-            "chapter_id": "ch_1587_03",
-            "title": "第三章 · 三月风波",
-            "date_label": "1587年3月",
-            "narratives": [...]  # 该月所有 narrative
+            "chapter_id": 1,
+            "title": "春蚕",
+            "subtitle": "且听下回分解",
+            "summary": "压缩版 200 字",
+            "core_event": "...",
+            "date_label": "1587年1月-3月",
+            "is_settled": true,   # 是否已结算
+            "index": 1,
+            "narratives": [...]
           },
           ...
         ]
         """
         if not narratives:
             return []
-        chapters_dict: dict[str, dict] = {}
-        chapter_order: list[str] = []
+
+        # 1. 按 chapter_id 分组
+        groups: dict[int, list[dict]] = {}
         for n in narratives:
-            date = n.get("current_date", "") or ""
-            if not date:
-                continue
-            # 提取月份部分（"1587年3月" → "ch_1587_03"）
-            # 兼容 "1587年3月"、"1587年10月" 等
-            import re
-            m = re.match(r'(\d+)年(\d+)月', date)
-            if not m:
-                continue
-            year, month = m.groups()
-            month_pad = month.zfill(2)
-            ch_id = f"ch_{year}_{month_pad}"
-            if ch_id not in chapters_dict:
-                chapters_dict[ch_id] = {
-                    "chapter_id": ch_id,
-                    "date_label": f"{year}年{int(month)}月",
-                    "year": int(year),
-                    "month": int(month),
-                    "narratives": []
-                }
-                chapter_order.append(ch_id)
-            chapters_dict[ch_id]["narratives"].append(n)
+            ch_id = n.get("chapter_id", 0) or 0
+            if ch_id == 0:
+                # 旧数据没 chapter_id → 放到虚拟 chapter 0
+                ch_id = 0
+            groups.setdefault(ch_id, []).append(n)
 
-        # 按 year/month 排序
-        chapters = [chapters_dict[ch] for ch in chapter_order]
-        chapters.sort(key=lambda c: (c["year"], c["month"]))
+        # 2. 查 chapter_history 拿元数据
+        cs = getattr(self, "chapter_state", None)
+        chapter_history = getattr(cs, "chapter_history", []) if cs else []
+        # 索引 by chapter_no
+        history_by_chapter: dict[int, dict] = {}
+        for h in chapter_history:
+            ch_no = h.get("chapter", 0)
+            if ch_no:
+                history_by_chapter[ch_no] = h
 
-        # 生成 chapter title（"第三章 · 三月风波"）
+        # 3. 当前章节
+        current_chapter = getattr(cs, "current_chapter", 0) if cs else 0
+
+        # 4. 组装每个章节
+        result = []
         chinese_nums = ['一','二','三','四','五','六','七','八','九','十']
-        for idx, ch in enumerate(chapters, 1):
-            num_str = chinese_nums[idx-1] if idx <= 10 else str(idx)
-            ch["title"] = f"第{num_str}章 · {ch['date_label']}"
-            ch["index"] = idx
+        for ch_id in sorted(groups.keys()):
+            ns = groups[ch_id]
+            history = history_by_chapter.get(ch_id, {})
+            is_settled = ch_id in history_by_chapter
 
-        return chapters
+            # 标题：优先用 chapter_history 里的，否则用 narrative 派生
+            title = history.get("chapter_title", "") or ""
+            if not title and is_settled:
+                # 截取 summary 前 8 字
+                sm = history.get("summary", "")
+                if sm:
+                    title = sm[:8] + ("…" if len(sm) > 8 else "")
+            if not title:
+                # 未结算章节：派生临时标题
+                dates = [n.get("current_date", "") for n in ns if n.get("current_date")]
+                if dates:
+                    title = f"进行中 · {dates[0]}"
+                else:
+                    title = f"第{ch_id}章" if ch_id > 0 else "序章"
+
+            # subtitle: transition hint
+            subtitle = history.get("transition", "") or ""
+            if not subtitle and not is_settled and ch_id == current_chapter:
+                subtitle = "（进行中）"
+
+            # date_label
+            dates = [n.get("current_date", "") for n in ns if n.get("current_date")]
+            if dates:
+                first_date = dates[0]
+                last_date = dates[-1]
+                date_label = first_date if first_date == last_date else f"{first_date} - {last_date}"
+            else:
+                date_label = ""
+
+            num_str = chinese_nums[ch_id-1] if 0 < ch_id <= 10 else str(ch_id)
+            result.append({
+                "chapter_id": ch_id,
+                "title": title,
+                "subtitle": subtitle,
+                "summary": history.get("summary", ""),
+                "core_event": history.get("core_event", ""),
+                "key_choice": history.get("key_choice", ""),
+                "rounds_in_chapter": history.get("rounds_in_chapter", len(ns)),
+                "ended_at_round": history.get("ended_at_round", 0),
+                "is_settled": is_settled,
+                "is_current": ch_id == current_chapter,
+                "date_label": date_label,
+                "index": ch_id if ch_id > 0 else 0,
+                "display_index": num_str,
+                "narratives": ns,
+            })
+
+        return result
 
     def get_visible_state(self) -> dict:
         """返回给玩家可见的状态（过滤敏感信息）"""

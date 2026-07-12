@@ -509,9 +509,11 @@ class GameLoop:
         # 🆕 v2.10.1 W78: 记录玩家选择 + 当前日期（用于 recap 显示）
         # player_input: 自由输入的原文 / voice intent
         # chosen_voice: 选的 voice 名（如果有）
+        # 🆕 v2.10.1 W84: 记录章节（按故事弧）
         chosen_voice_name = ""
         if chosen_voice and isinstance(chosen_voice, dict):
             chosen_voice_name = chosen_voice.get("voice_name", "") or ""
+        current_chapter_id = getattr(self.state.chapter_state, "current_chapter", 0) or 0
         self.state.append_narrative(
             self.state.round_number,
             narrative,
@@ -519,6 +521,7 @@ class GameLoop:
             player_input=player_input,
             chosen_voice=chosen_voice_name,
             current_date=self.state.current_date,
+            chapter_id=current_chapter_id,  # 🆕 W84
         )
 
         # 🆕 v2.7.2：从 narrative 提取 4 类结构化 fact（保持上下文连贯性）
