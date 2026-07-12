@@ -506,8 +506,10 @@ class GameLoop:
                 self.state.triggered_events.append(fe.event_id)
 
         # === 步骤8：保存事件到记忆 ===
+        # 🐛 fix: 用 game_memory.GameEvent（不是 event_bus.GameEvent — 后者字段为 id/type/data）
+        from history_footnote.game_memory import GameEvent as _MemoryEvent
         for summary in dm_response.get("events_to_save", []):
-            event = GameEvent(
+            event = _MemoryEvent(
                 round=self.state.round_number,
                 type="dm_narrative",
                 summary=summary,
@@ -527,6 +529,8 @@ class GameLoop:
         # player_input: 自由输入的原文 / voice intent
         # chosen_voice: 选的 voice 名（如果有）
         # 🆕 v2.10.1 W84: 记录章节（按故事弧）
+        # 🐛 fix: 初始化 chosen_voice（修复 undefined bug）
+        chosen_voice = None
         chosen_voice_name = ""
         if chosen_voice and isinstance(chosen_voice, dict):
             chosen_voice_name = chosen_voice.get("voice_name", "") or ""
