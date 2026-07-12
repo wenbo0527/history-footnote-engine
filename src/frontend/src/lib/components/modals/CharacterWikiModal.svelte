@@ -16,6 +16,7 @@
   import { getCharacterWiki } from '$lib/api/wiki';
   import { Chapter, Spinner, Button } from '$lib/components/design-system';
   import ModalShell from './ModalShell.svelte';
+  import CharacterCard from './CharacterCard.svelte';
   import type { WikiResponse, WikiCharacter, PlayerCharacter, FateNpcEffect, ActiveBuff } from '$lib/api/types';
 
   interface Props {
@@ -117,7 +118,7 @@
     return Array.from(map.values());
   });
 
-  // 🆕 按"认识时间"排序：先认识在前（first_met_round 升序）
+  // 按"认识时间"排序：先认识在前（first_met_round 升序）
   // 同回合按姓名拼音
   const sortedChars = $derived.by(() => {
     return [...allChars].sort((a, b) => {
@@ -127,33 +128,6 @@
       return a.name.localeCompare(b.name, 'zh-CN');
     });
   });
-
-  // affinity 颜色
-  function affinityColor(aff: number | undefined): string {
-    if (aff === undefined) return 'transparent';
-    if (aff >= 50) return '#6b8b5a';  // 绿
-    if (aff >= 0) return '#b8860b';   // 黄
-    if (aff >= -30) return '#a5703a'; // 橙
-    return '#a52828';                  // 红
-  }
-
-  function affinityLabel(aff: number | undefined): string {
-    if (aff === undefined) return '';
-    if (aff >= 80) return '至亲';
-    if (aff >= 50) return '亲近';
-    if (aff >= 20) return '友善';
-    if (aff >= -10) return '中立';
-    if (aff >= -30) return '戒备';
-    return '敌对';
-  }
-
-  // status 徽章
-  function statusBadge(s: WikiCharacter['status']): { label: string; color: string } | null {
-    if (!s || s === 'alive' || s === 'unknown') return null;
-    if (s === 'dead') return { label: '已故', color: '#4a4a4a' };
-    if (s === 'missing') return { label: '失踪', color: '#8b6f47' };
-    return null;
-  }
 </script>
 
 <ModalShell {open} {onclose} title="人 物 档 案" size="lg">
@@ -281,63 +255,7 @@
       {:else}
         <div class="wiki-characters">
           {#each sortedChars as c, i (i)}
-            {@const badge = statusBadge(c.status)}
-            {@const aff = c.affinity}
-            <article
-              class="wiki-char-card"
-              class:wiki-char-card-family={c.isFamily}
-              style={aff !== undefined ? `--aff-color: ${affinityColor(aff)}` : ''}
-            >
-              <!-- 头像位 -->
-              <div class="wiki-char-portrait" aria-hidden="true">
-                {#if c.portrait}
-                  <img src={c.portrait} alt={c.name} />
-                {:else}
-                  <span class="wiki-char-portrait-emoji">
-                    {c.isFamily ? '🏠' : '👤'}
-                  </span>
-                {/if}
-                <!-- 状态徽章 -->
-                {#if badge}
-                  <span class="wiki-char-status" style="background: {badge.color}">
-                    {badge.label}
-                  </span>
-                {/if}
-              </div>
-
-              <div class="wiki-char-body">
-                <header class="wiki-char-name">
-                  <span class="wiki-char-name-text">{c.name}</span>
-                  <span
-                    class="wiki-char-relation"
-                    class:wiki-char-relation-family={c.isFamily}
-                  >{c.relation}</span>
-                </header>
-                <p class="wiki-char-meta">
-                  {#if c.age}<span>{c.age}岁</span>{/if}
-                  {#if c.first_met_round !== undefined && c.first_met_round > 0}
-                    <span class="wiki-char-meta-sep">·</span>
-                    <span>第 {c.first_met_round} 回合相遇</span>
-                  {/if}
-                </p>
-                <!-- 🆕 BUG10: 描述为空时灰色提示 -->
-                <p class="wiki-char-desc" class:wiki-char-desc-empty={!c.description || c.description === '（暂无介绍）'}>
-                  {c.description && c.description !== '（暂无介绍）'
-                    ? c.description
-                    : '（未详细记录——继续互动以解锁）'}
-                </p>
-                <!-- 🆕 BUG12: affinity 标签 -->
-                {#if aff !== undefined}
-                  <div class="wiki-char-aff">
-                    <span
-                      class="wiki-char-aff-bar"
-                      style="background: {affinityColor(aff)}; width: {Math.min(Math.abs(aff), 100)}%"
-                    ></span>
-                    <span class="wiki-char-aff-label">{affinityLabel(aff)}</span>
-                  </div>
-                {/if}
-              </div>
-            </article>
+            <CharacterCard character={c} />
           {/each}
         </div>
       {/if}
