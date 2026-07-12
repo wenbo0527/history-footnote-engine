@@ -48,6 +48,11 @@ from history_footnote.game_loop_display import (
     has_persona_opening as _has_persona_opening_impl,
     get_persona_opening as _get_persona_opening_impl,
 )
+# 🆕 v2.10.1 W52 P1-2 PR#2: 随机事件逻辑拆到独立模块
+from history_footnote.game_loop_events import (
+    check_random_events as _check_random_events_impl,
+    apply_event_effects as _apply_event_effects_impl,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -885,83 +890,12 @@ class GameLoop:
     # === 随机事件机制（v1.2+ DND化） ===
 
     def _check_random_events(self, scene: str) -> list[dict]:
-        """检查并触发随机事件
-
-        Args:
-            scene: 当前场景名
-
-        Returns:
-            触发的随机事件列表（包含dice结果、效果等）
-        """
-        triggered = []
-        for event in self.random_events:
-            cond = event.get("trigger_condition", {})
-
-            # 场景匹配
-            if cond.get("scene") and cond.get("scene") != scene:
-                continue
-
-            # 回合数
-            if self.state.round_number < cond.get("min_round", 1):
-                continue
-
-            # 概率判定
-            if not self.dice.chance(event.get("probability", 0)):
-                continue
-
-            # 触发：加权选一个outcome
-            outcomes = event.get("outcomes", [])
-            if not outcomes:
-                continue
-
-            chosen = self.dice.weighted_choice(outcomes)
-
-            # 如果outcome需要dice判定
-            if chosen.get("requires_dice"):
-                dice_expr = chosen.get("dice", "d20")
-                dc = chosen.get("dc", 10)
-                check_result = self.dice.check(dc, dice_expr, purpose=chosen.get("description", ""))
-                chosen["dice_result"] = check_result
-
-            triggered.append({
-                "event_id": event["id"],
-                "outcome": chosen,
-            })
-
-        return triggered
+        """检查并触发随机事件——委托给 game_loop_events.check_random_events"""
+        return _check_random_events_impl(self.random_events, self.state, self.dice, scene)
 
     def _apply_event_effects(self, triggered_events: list[dict]) -> list[str]:
-        """应用随机事件的效果（更新state.variables）
-
-        Returns:
-            事件效果描述列表（用于打印给玩家）
-        """
-        messages = []
-        for ev in triggered_events:
-            outcome = ev["outcome"]
-            effect = outcome.get("effect", {})
-            for var_key, delta in effect.items():
-                # 解析"+0.5" "-0.3"
-                if isinstance(delta, str):
-                    if delta.startswith("+"):
-                        delta = float(delta[1:])
-                    elif delta.startswith("-"):
-                        delta = -float(delta[1:])
-                if var_key in self.state.variables:
-                    self.state.variables[var_key] += delta
-                    messages.append(f"  [随机事件效果] {var_key} {delta:+.1f}")
-
-            # 如果是dice判定
-            if "dice_result" in outcome:
-                dice_res = outcome["dice_result"]
-                roll = dice_res["result"]
-                crit = " 💥大成功" if roll.is_critical_success else (" 💀大失败" if roll.is_critical_fail else "")
-                if dice_res["success"]:
-                    messages.append(f"  [判定] {roll}{crit} vs DC{dice_res['dc']} → 成功！{outcome.get('success', '')}")
-                else:
-                    messages.append(f"  [判定] {roll}{crit} vs DC{dice_res['dc']} → 失败。{outcome.get('fail', '')}")
-
-        return messages
+        """应用随机事件的效果——委托给 game_loop_events.apply_event_effects"""
+        return _apply_event_effects_impl(triggered_events, self.state)
 
     def _bind_facade(self) -> None:
         """🆕 v1.7.38 把 facade 子系统映射到 self（保兼容）
