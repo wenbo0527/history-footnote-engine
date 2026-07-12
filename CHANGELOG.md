@@ -46,7 +46,10 @@
 #### 🔧 W52 P1 重构
 
 - **P1-1**：`dm_agent/agent.py` 2014 行拆分（**下个会话跟进**：方法深度耦合 LLM 接口，单独 PR 风险高）
-- **P1-2**：`game_loop.py` 1258 行拆分（**下个会话跟进**：35 个方法共享 `self.state`/`self.handler`，独立 PR 风险高）
+- **P1-2**：`game_loop.py` 1258 → 1039 行拆分（**已完成**）：3 个独立模块 + thin wrapper 模式
+  - PR#1：`game_loop_display.py`（156 行 + 13 测试）— 7 个纯显示函数
+  - PR#2：`game_loop_events.py`（104 行 + 12 测试）— 2 个事件逻辑
+  - PR#3：`game_loop_save.py`（92 行 + 16 测试）— 3 个存档/读档
 - **P1-3**：`admin.py` 978 → 808 行拆分（**已完成 Settings 段**）：新建 `admin_settings.py`，admin.py 末尾 re-export 3 个 handler，`router_registry.py` 0 改动。后续 users/saves/tokens/config 拆分跟进 PR
 - **P1-4B**：前端 modals 单独 chunk（已完成）— `vite.config.ts` 加 `manualChunks('modals')` + `modulePreload.polyfill: false`
 
