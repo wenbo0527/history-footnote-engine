@@ -17,6 +17,7 @@
   import { fateEvents } from '$lib/stores/fate-events';
   import { toast } from '$lib/components/design-system/Toast.svelte';
   import type { FateCard } from '$lib/api/types';
+  import FateCardButton from './FateCard.svelte';
 
   interface Props {
     hand: FateCard[];
@@ -232,41 +233,16 @@
                 {@const avail = availability[card.id]}
                 {@const canUse = !card.used && (avail?.can ?? true)}
                 {@const reason = avail?.reason ?? ''}
-                <button
-                  type="button"
-                  class="fate-card"
-                  class:fate-card-used={card.used}
-                  class:fate-card-disabled={!canUse && !card.used}
-                  class:fate-card-available={canUse}
-                  class:fate-card-emergency={card.use_type === 'emergency'}
-                  class:fate-card-round={card.use_type === 'round_start'}
-                  class:fate-card-highlighted={highlightedCardId === card.id}
-                  class:fate-card-using={highlightedUseId === card.id}
-                  disabled={!canUse || using === card.id}
-                  onclick={() => handleUse(card.id)}
-                  use:setCardRef
-                  data-card-id={card.id}
-                  style="--card-color: {card.color}"
-                  title={card.used ? '已使用' : (canUse ? card.description : reason)}
-                >
-                  <span class="fate-card-icon" aria-hidden="true">
-                    {#if /^[a-z_]+$/.test(card.icon)}
-                      <img src={`/fate/${card.icon}.webp`} alt="" class="fate-card-icon-img" />
-                    {:else}
-                      {card.icon}
-                    {/if}
-                  </span>
-                  <span class="fate-card-name">{card.name}</span>
-                  <span class="fate-card-desc">{card.description}</span>
-                  {#if card.use_hint}
-                    <span class="fate-card-hint">{card.use_hint}</span>
-                  {/if}
-                  {#if card.used}
-                    <span class="fate-card-mark">已用</span>
-                  {:else if !canUse && reason}
-                    <span class="fate-card-lock">🔒 {reason}</span>
-                  {/if}
-                </button>
+                <FateCardButton
+                  card={card}
+                  canUse={canUse}
+                  reason={reason}
+                  highlighted={highlightedCardId === card.id}
+                  using={using === card.id}
+                  highlightedUse={highlightedUseId === card.id}
+                  onuse={handleUse}
+                  setref={setCardRef}
+                />
               {/each}
             </div>
           </div>
