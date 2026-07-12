@@ -1,27 +1,12 @@
-v2.10.1 W66: 优化清单 5 项真问题修复（9 个文档问题分类）
+v2.10.1 W67: 首页默认强制登录（删除访客跳过逻辑）
 
-基于 docs/log/2026-07-12-HFE-W52-优化清单-v1.0.md 验证：
++page.svelte 改动：
+- 删除访客模式跳过（isGuest() 检查）
+- 删除 skip_login 自动跳过（除 ?skip_login=1 调试参数）
+- 未登录默认 goto('/login?next=/')
 
-修复（5 项）：
-- P0-2: LLM JSON 多重容错（4 层：strict → lenient → partial → fallback）
-  + 14 单元测试 PASS
-- P1-4: vite lazy modal — 5 modal 改 dynamic import
-- P2-1: git tag v2.10.0 (W51-W65 收官)
-- P2-3: deploy-pre-start.sh — 防止 git reset 丢失版本号对齐
-- P2-6: i18n LanguageSwitcher 组件 + 接入 StartMenu
+保留：
+- isLoggedIn() → 直接进 StartMenu
+- ?skip_login=1 URL 参数 → 调试用
 
-验证（5 项真问题）：
-- P0-1: wanli1587/ 整个目录不存在（比文档说的更严重）
-  但蓝图走 LLM 实时生成（不是文件机制）→ 当前行为
-  推荐 B（代码修复）暂缓，因为 LLM 实时生成已是设计
-- P1-1/1-2/1-3: agent.py 2014 / game_loop.py 1243 / admin.py 978
-  大改动 2-3h 拆 5-9 函数 → 暂缓（不影响功能）
-- P1-3 admin.py 17 handler 拆 4 文件 → 1h 暂缓
-- P2-5: TODO/FIXME 实际 2 个（接近文档 0）
-- P2-2: CHANGELOG 7/12 已更新（文档说的 7/5 已过期）
-
-未触发 P2-4（cold start 53.9s，需真实流量数据再评估）
-
-测试：
-- 后端 398 PASSED（359+14 W66+25 v210x）
-- 前端 173 PASSED 0 回归
+验证：前端 173 PASSED 0 回归

@@ -104,9 +104,11 @@ export function logout(): void {
   localStorage.removeItem(GUEST_KEY);
 }
 
-/** 是否已登录 */
+/** 是否已登录（仅真登录 · 访客不算） */
 export function isLoggedIn(): boolean {
-  return !!getCurrentAccountId();
+  if (typeof window === 'undefined') return false;
+  // 必须有 SESSION_KEY（真正登录态）· 不能是访客
+  return !!localStorage.getItem(SESSION_KEY);
 }
 
 /** 访客模式 */
