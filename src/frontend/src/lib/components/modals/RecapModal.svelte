@@ -11,7 +11,7 @@
    */
   import { game } from '$lib/stores';
   import { getRecap, type RecapResponse, type RecapNarrativeItem } from '$lib/api/recap';
-  import { Chapter, Spinner, Button, Tabs } from '$lib/components/design-system';
+  import { Chapter, Spinner, Button, Tabs, Icon } from '$lib/components/design-system';
   import ModalShell from './ModalShell.svelte';
   import type { RecapNarrativeItem as Item } from '$lib/api/types';
 
@@ -102,9 +102,9 @@
         onchange={(id) => activeTab = id as 'recent' | 'archive'}
       />
 
-      <!-- 🆕 v1.7.32: 关键词搜索（按 narrative/summary 全文匹配） -->
+      <!-- 🆕 v2.10.1 W82: 用 Icon 组件（不用 emoji） -->
       <div class="recap-search">
-        <span class="recap-search-icon" aria-hidden="true">🔍</span>
+        <Icon name="search" size={16} class="recap-search-icon" />
         <input
           type="text"
           bind:value={searchKeyword}
@@ -147,7 +147,7 @@
                 <!-- 🆕 W78: 玩家选择（自由输入 或 voice 名） -->
                 {#if item.player_input || item.chosen_voice}
                   <div class="recap-choice">
-                    <span class="recap-choice-icon">⚙</span>
+                    <Icon name="gear" size={14} class="recap-choice-icon" />
                     <span class="recap-choice-text">
                       {#if item.chosen_voice}
                         你的选择：<strong>{item.chosen_voice}</strong>

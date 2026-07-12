@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 💬 反馈 / 书信 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <path d="M3 5 L21 5 L21 17 L13 17 L9 21 L9 17 L3 17 Z" fill="#f5ebd4" stroke="#6b5230" stroke-width="1.5" stroke-linejoin="round"/>
+  <line x1="6" y1="9" x2="18" y2="9" stroke="#6b5230" stroke-width="1"/>
+  <line x1="6" y1="12" x2="14" y2="12" stroke="#6b5230" stroke-width="1"/>
+  <!-- 朱砂印章 -->
+  <rect x="16" y="13" width="3" height="3" fill="#a52828"/>
+</svg>

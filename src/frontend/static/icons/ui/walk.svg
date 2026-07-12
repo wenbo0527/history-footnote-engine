@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 🚶 出行 / 行路 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- 头 -->
+  <circle cx="14" cy="4" r="2" fill="#6b5230"/>
+  <!-- 身体 -->
+  <path d="M14 6 L11 12 L8 18" stroke="#6b5230" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- 手臂 -->
+  <path d="M14 9 L17 8" stroke="#6b5230" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M11 11 L8 12" stroke="#6b5230" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- 腿 -->
+  <path d="M11 12 L13 18 L16 20" stroke="#6b5230" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- 包袱 -->
+  <rect x="17" y="6" width="3" height="3" fill="#a52828" rx="0.5"/>
+</svg>

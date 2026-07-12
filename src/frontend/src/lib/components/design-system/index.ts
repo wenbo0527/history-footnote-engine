@@ -12,3 +12,5 @@ export { default as Tabs } from './Tabs.svelte';
 export { default as Reveal } from './Reveal.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
 export { default as SkipLink } from './SkipLink.svelte';
+// 🆕 v2.10.1 W82: Icon 组件
+export { default as Icon } from './Icon.svelte';

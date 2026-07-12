@@ -1,19 +1,49 @@
-v2.10.1 W80.1: 修复 useFateCard import 错误（API 名实为 fateUse）
+v2.10.1 W81: 命运卡整卡渲染（中国算命风）
 
-问题：浏览器 500
-- SyntaxError: The requested module '/src/lib/api/fate.ts'
-  does not provide an export named 'useFateCard'
+调研：
+- 项目已有 37 张命运卡图（/static/fate/*.webp，W60 用 mmx 生成）
+- mmx 命令（minimax CLI）支持 mmx image generate
+  --prompt / --aspect-ratio / --seed / --out-dir
+- mmx auth status: Not authenticated
+  （OAuth 过期，登录后可生成新图）
 
-根因（FateCardDetailModal.svelte）：
-- import { useFateCard } from '$lib/api/fate'  // ❌ 不存在
-- 实际 fate.ts export 的是 fateUse
+本次实现：
+1. SVG 卡背（card_back.svg）
+   - 宣纸底 + 朱砂描金外框
+   - 八卦圆环（☰☱☲☳☴☵☶☷）
+   - 中央太极（红黑双鱼）
+   - 顶部"命运"朱砂印章
+   - 底部"万历十五年·盛泽"铭文
 
-修复：
-- import { fateUse } from '$lib/api/fate'
-- handleUse 调 fateUse(sessionId, cardId, context)
-- context 映射：card.use_type → context
-  round_start → round_start
-  emergency → emergency
-  其他 → immediate
+2. 后端（fate_cards.py）：
+   - FateCard 加 image_url 字段
+   - FATE_CARD_IMAGES 映射 → /fate/{id}.webp
+   - _default fallback → /fate/card_back.svg
+   - draw_fate_cards 抽卡时注入 image_url
+
+3. 前端：
+   - FateCardDetailModal 改成整卡图渲染
+     - 240x320 竖版卡（3:4 比例）
+     - 整卡图 + 角标（使用时机）
+     - 已用蒙层
+     - 失败回退 → emoji 渐变
+   - CharCard chip 加缩略图
+     - 24x32 缩略图 + 卡名
+   - types.ts: FateCard 加 image_url 字段
+
+UI 效果：
+- 弹窗中央大卡（240x320）显示中国算命风
+- 卡角显示"⏱ 任何时机"等
+- 底部卡名 + id
+- 描述 + 💡 提示 + 效果代码
+- 按钮区：收起 / 启用此卡
 
 测试：173 PASSED 0 回归
+后端已重启（PID 86799）
+
+mmx 用法记录：
+  mmx image generate --prompt "..." --aspect-ratio 3:4 --seed N
+                    --out-dir <dir> --out-prefix <prefix>
+                    --out <file> --response-format base64
+  mmx auth status/login/refresh
+  API: image-01 / image-01-live
