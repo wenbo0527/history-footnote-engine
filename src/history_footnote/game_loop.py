@@ -53,6 +53,12 @@ from history_footnote.game_loop_events import (
     check_random_events as _check_random_events_impl,
     apply_event_effects as _apply_event_effects_impl,
 )
+# 🆕 v2.10.1 W52 P1-2 PR#3: 存档/读档拆到独立模块
+from history_footnote.game_loop_save import (
+    save_to_slot as _save_to_slot_impl,
+    load_from_slot as _load_from_slot_impl,
+    auto_save as _auto_save_impl,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -805,87 +811,16 @@ class GameLoop:
             return False
 
     def _save_to_slot(self, slot: str) -> None:
-        """保存到指定slot
-
-        slot支持：
-        - "default" / 不传 → 存到 slot1（首次手动存档）
-        - "1" / "2" / "3" → 存到 slot1/slot2/slot3
-        - "auto" → 存到 auto（一般不手动）
-        """
-        if slot == "default":
-            # 找第一个空的slot，否则覆盖slot1
-            target = "slot1"
-            if self.session.slots.get("slot1") is None:
-                target = "slot1"
-            else:
-                target = "slot1"  # 默认覆盖slot1
-        elif slot in ("1", "slot1"):
-            target = "slot1"
-        elif slot in ("2", "slot2"):
-            target = "slot2"
-        elif slot in ("3", "slot3"):
-            target = "slot3"
-        elif slot == "auto":
-            target = "auto"
-        else:
-            print(f"[ERROR] 非法slot名: {slot}（支持 1/2/3/auto）")
-            return
-
-        # 构造state_data
-        state_data = self.state.to_dict()
-        # 同步event_log
-        state_data["event_log"] = [e.to_dict() for e in self.memory.events]
-        # 摘要
-        summary = f"第{self.state.round_number}回合 {self.state.current_date}"
-        if self.state.event_log:
-            summary += f" - {self.state.event_log[-1].get('summary', '')[:30]}"
-
-        slot_info = self.save_manager.save_state(self.session, target, state_data, summary)
-        print(f"[INFO] 已存档到 {target}（回合{slot_info.round_number} {slot_info.current_date}）")
+        """保存到指定slot——委托给 game_loop_save.save_to_slot"""
+        _save_to_slot_impl(slot, self.session, self.save_manager, self.state, self.memory)
 
     def _load_from_slot(self, slot: str) -> bool:
-        """从指定slot读档
-
-        Returns:
-            True=成功读档（需要重启游戏循环）
-            False=失败
-        """
-        if slot in ("1", "slot1"):
-            target = "slot1"
-        elif slot in ("2", "slot2"):
-            target = "slot2"
-        elif slot in ("3", "slot3"):
-            target = "slot3"
-        elif slot in ("auto", "default"):
-            target = "auto"
-        else:
-            print(f"[ERROR] 非法slot名: {slot}")
-            return False
-
-        if target not in self.session.slots:
-            print(f"[ERROR] {target} 没有存档")
-            return False
-
-        loaded = self.save_manager.load_state(self.session, target)
-        if not loaded:
-            print(f"[ERROR] 读取{target}失败")
-            return False
-
-        print(f"[INFO] 从 {target} 读档成功（回合{loaded.get('round_number')} {loaded.get('current_date')}）")
-        print("[INFO] 读档需要重启游戏，请在外部重新运行：")
-        print(f"       python -m history_footnote load {self.session.session_id} --slot {target}")
-        return True
+        """从指定slot读档——委托给 game_loop_save.load_from_slot"""
+        return _load_from_slot_impl(slot, self.session, self.save_manager)
 
     def _auto_save(self) -> None:
-        """每回合自动存档到auto.json"""
-        state_data = self.state.to_dict()
-        state_data["event_log"] = [e.to_dict() for e in self.memory.events]
-        self.save_manager.save_state(
-            self.session,
-            "auto",
-            state_data,
-            summary=f"自动存档 - 回合{self.state.round_number}",
-        )
+        """每回合自动存档到auto.json——委托给 game_loop_save.auto_save"""
+        _auto_save_impl(self.session, self.save_manager, self.state, self.memory)
 
     # === 随机事件机制（v1.2+ DND化） ===
 
