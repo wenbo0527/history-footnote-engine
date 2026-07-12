@@ -31,6 +31,7 @@
   import EmergencyModal from './EmergencyModal.svelte';
   import ChapterProgressBar from './ChapterProgressBar.svelte';
   import ChapterHistoryDrawer from './ChapterHistoryDrawer.svelte';
+  import ChapterIntro from './ChapterIntro.svelte';
   // 🆕 v2.9.x W50: admin 模式组件（?admin=true 时显示）
   import PlateMap from './PlateMap.svelte';
   import ChapterTimeline from './ChapterTimeline.svelte';
@@ -40,6 +41,35 @@
 
   // 🆕 v2.9.x W50: admin 模式开关（URL ?admin=true）
   const showAdminTools = isAdminMode();
+
+  // 🆕 v2.10.1 W69: 章节开场遮罩
+  // 后端 /api/state 返：round_number + recent_narratives[0].round (0=开场)
+  // 检测策略：最近一条 narrative 的 round === 0 → 显示开场遮罩
+  let showChapterIntro = $state(true);
+  let introShownKey = $state<string | null>(null);
+
+  $effect(() => {
+    if (!$game) return;
+    const recent = ($game as any).recent_narratives as Array<{round: number; summary: string; narrative: string}> | undefined;
+    const lastRound = recent && recent.length > 0 ? recent[recent.length - 1].round : 0;
+    const stateKey = `${$game.session_id}-${lastRound}`;
+    // 第一条 narrative round=0 → 开场
+    if (lastRound === 0) {
+      showChapterIntro = true;
+    } else if (introShownKey !== stateKey) {
+      // 后续章节变化（lastRound 不同）
+      showChapterIntro = true;
+    } else {
+      showChapterIntro = false;
+    }
+  });
+
+  function handleStartChapter() {
+    showChapterIntro = false;
+    const recent = ($game as any).recent_narratives;
+    const lastRound = recent && recent.length > 0 ? recent[recent.length - 1].round : 0;
+    introShownKey = `${$game?.session_id}-${lastRound}`;
+  }
 
   async function handleSelectVoice(voice: { voice_id: string; voice_name: string; intent_text?: string }) {
     if (!$game || $isLoading) return;
@@ -141,6 +171,19 @@
 </script>
 
 {#if $game}
+  <!-- 🆕 v2.10.1 W69: 章节开场遮罩（开场 narrative round=0 时显示） -->
+  {#if showChapterIntro}
+    {@const firstNarrative = ($game as any)?.recent_narratives?.[0] ?? null}
+    <ChapterIntro
+      chapterTitle={firstNarrative?.summary ?? '万历十五年'}
+      chapterNumber={1}
+      totalChapters={($game as any)?.total_chapters ?? 10}
+      summary={firstNarrative?.narrative?.slice(0, 200) ?? ''}
+      eraName={$game?.era_name ?? $game?.era_id ?? ''}
+      onStart={handleStartChapter}
+    />
+  {/if}
+
   <div class="game-view" data-loading={$isLoading}>
     <!-- 左栏：档案 + 任务 + 备忘（豆包式侧栏） -->
     <aside class="game-sidebar">

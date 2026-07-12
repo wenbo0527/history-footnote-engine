@@ -302,6 +302,22 @@ def strip_skill_metadata(text: str, min_length: int | None = None) -> str:
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip()
 
+    # 🆕 v2.10.1 W69: 清洗 LLM 幻觉的 Jinja 占位符
+    # 背景：LLM 看到 prompt 中的 {{...}} 模式会"模仿"产生新占位符
+    #       （如 {{user_avatar_url}}、{{npc.name}}）→ 玩家看到裸 {{...}}
+    # 修复：把所有 `{{...}}` `{%...%}` `{#...#}` 替换为「...」
+    import re as _re2
+    def _strip_brace(m: "re.Match[str]") -> str:
+        body = m.group(0)[2:-2].strip()
+        if not body or body[0] in "{%#":
+            return "…"
+        if len(body) > 20:
+            return body[:20] + "…"
+        return body
+    cleaned = _re2.sub(r"\{\{[^}]{1,80}\}\}", _strip_brace, cleaned)
+    cleaned = _re2.sub(r"\{%[^%]{1,80}%\}", "…", cleaned)
+    cleaned = _re2.sub(r"\{#[^#]{1,80}#\}", "…", cleaned)
+
     # 🆕 v1.7.25: 末尾问号兜底（保证玩家永远有决策引导）
     # 背景：v1.7.24 prompt 强化 4 段结构 + 末尾问号，但 LLM 不一定遵循
     # 现象：5/5 narrative 末尾无问号（玩家不知道要决策什么）
