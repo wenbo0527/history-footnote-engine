@@ -45,7 +45,8 @@
 
 #### 🔧 W52 P1 重构
 
-- **P1-1**：`dm_agent/agent.py` 2014 行拆分（**下个会话跟进**：方法深度耦合 LLM 接口，单独 PR 风险高）
+- **P1-1**：`dm_agent/agent.py` 2014 → 1042 行清理（**PR#1 完成**）：删除 v1.7.30 拆出后残留的 dead code（make_tools / make_dm_nodes / extract_narrative_node / state_confirmation_node / DMState 全部 dead），把 _extract_keywords 迁到 tools.py
+  - 后续 PR#2：拆 _build_system_prompt / _build_* 系列到 dm_agent_prompts.py（-500 行）
 - **P1-2**：`game_loop.py` 1258 → 1039 行拆分（**已完成**）：3 个独立模块 + thin wrapper 模式
   - PR#1：`game_loop_display.py`（156 行 + 13 测试）— 7 个纯显示函数
   - PR#2：`game_loop_events.py`（104 行 + 12 测试）— 2 个事件逻辑
