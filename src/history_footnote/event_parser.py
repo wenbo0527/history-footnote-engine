@@ -122,12 +122,29 @@ def _apply_fin_event(state, event: dict, logger=None) -> bool:
 
 
 def _apply_city_event(state, event: dict, logger=None) -> bool:
+    """应用城市事件（arrive/leave）
+    
+    🆕 v2.10.1 W74: city 改变需叙事锚定
+    - LLM 输 arrive.X 会改 state.current_city → 玩家看到"突然到苏州"
+    - 修复：必须 narrative 含 "船" 或 "行至/到/去 X" 才生效
+    - 否则 log warning + return False（不改 city）
+    """
     parts = event["id"].split(".")
     if len(parts) < 3:
         return False
     action = parts[1]  # arrive / leave
     city_id = parts[2]
     if action == "arrive" and city_id in CITY_IDS:
+        # 🆕 W74: 检查 narrative 是否描述了"行至/到/船"等移动行为
+        narrative = (event.get("narrative") or event.get("note") or "").strip()
+        # 移动关键词：船 / 行至 / 到了 / 去了 / 来到 / 路过 / 进城
+        travel_keywords = ["船", "行至", "到了", "去了", "来到", "进城", "路过", "坐船", "坐车", "行路", "赶路", "启程", "离开", "动身", "赶去", "抵达"]
+        has_travel = any(kw in narrative for kw in travel_keywords)
+        if not has_travel:
+            if logger:
+                logger.warning(f"[W74] city 突变被拦截：narrative 无移动关键词（id={event.get('id')}, narrative 前 50 字={narrative[:50]!r}）")
+            # 仍标记事件"已处理"（避免 LLM 重复触发），但不改 state
+            return True
         state.current_city = city_id
         return True
     if action == "leave":

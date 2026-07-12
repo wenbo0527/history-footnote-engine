@@ -179,10 +179,21 @@ def mark_settled(state) -> None:
 
 
 def format_settlement_narrative(log: list[dict]) -> str:
-    """把结算日志格式化成 narrative 文案（玩家可见）"""
+    """把结算日志格式化成 narrative 文案（玩家可见）
+
+    🆕 v2.10.1 W76: 加"时光流逝"过渡段（避免月末结算突兀）
+    之前：直接 "📅 月末结算 → -0.42 两" → 玩家感觉突然
+    现在：先讲一段时光流逝（"月底到了"）→ 再列扣费
+    """
     if not log:
         return ""
-    lines = ["📅 **月末结算**"]
+    # 🆕 W76: 加"月底到了"过渡
+    lines = [
+        "---",
+        "*月底到了。你盘了盘这个月的账——*",
+        "",
+        "📅 **月末结算**",
+    ]
     for entry in log:
         if entry.get("type") == "error":
             lines.append(f"  ⚠️  {entry['rule']} 结算失败：{entry['error']}")
@@ -200,4 +211,7 @@ def format_settlement_narrative(log: list[dict]) -> str:
             "rice_consumption": "🍚",
         }.get(type_, "📌")
         lines.append(f"  {type_emoji} {sign}{amount:.2f} 两 · {note}")
+    lines.append("")
+    lines.append("*新的一月开始了。*")
+    lines.append("---")
     return "\n".join(lines)

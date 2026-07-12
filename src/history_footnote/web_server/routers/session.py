@@ -21,6 +21,25 @@ def handle_POST_start(handler, body) -> bool:
     identity = body.get("identity", "weaving_male")
     gender = body.get("gender", "male")
     custom_character = body.get("character")
+    # 🆕 v2.10.1 W75: 补全 LLM 需要的字段（personality / opening_paragraph / tics / starting_situation）
+    # 之前前端只传 4 字段，LLM 收到的 custom_character 大量为空 → narrative 缺色彩
+    if custom_character and isinstance(custom_character, dict):
+        # 默认 personality 模板（按身份不同）
+        DEFAULT_PERSONALITY_BY_IDENTITY = {
+            "weaving_male":   "谨慎持家，顾念家人；手艺娴熟但不事张扬，习惯用沉默表达态度。",
+            "weaving_female": "勤快持家，善待邻里；性子绵里带刚，遇大事能咬牙撑住。",
+            "merchant_male":  "精于算计，嘴上活络；与人为善但账目分毫必争。",
+            "merchant_female":"精明干练，能言善辩；邻里关系好但买卖场上不让步。",
+        }
+        default_p = DEFAULT_PERSONALITY_BY_IDENTITY.get(identity, "勤勉本分；与人为善，遇事三思而后行。")
+        custom_character.setdefault("personality", default_p)
+        custom_character.setdefault("tics", "说话时常用'嗯''这个'起头；笑时眼睛眯成一条缝。")
+        custom_character.setdefault("starting_situation", f"今早推开家门，{custom_character.get('occupation', '做工')}的活计照旧，但心里总有些不安。")
+        custom_character.setdefault("opening_paragraph", "")
+        custom_character.setdefault("background", "")
+        custom_character.setdefault("voices", [])
+        custom_character.setdefault("skills", [])
+        custom_character.setdefault("family", {})
     # 🆕 v1.7.30: 接 account_id（账户隔离）
     # 🆕 v2.7+: 优先从 cookie 拿（持久化），body 兜底
     account_id = body.get("account_id", "") or ""

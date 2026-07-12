@@ -22,7 +22,8 @@
       bind:value={wizard.state.name}
     />
     <div class="name-hint">
-      <span>姓氏 + 称呼，如「沈织户」「张氏」「李半仙」</span>
+      <!-- 🆕 v2.10.1 W75: 提示用"职业+姓"形式（更符合明朝惯例）· 去掉"半仙"误导 -->
+      <span>姓氏 + 称呼，如「沈织户」「张氏」「李老九」「王大娘」</span>
       <span class="name-count">{wizard.state.name.length} / 12</span>
     </div>
   </div>

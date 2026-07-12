@@ -1,23 +1,24 @@
-v2.10.1 W72: 修复章节开场遮罩在每回合都重复显示
+v2.10.1 W73: 修复 5 个 modal 不可用（恢复静态 import）
 
-问题：wanli1587_20260712_155758 session 在玩家输入后
-章节开场遮罩又重新出现。
+问题：玩家点 GameHeader 工具栏的 档案/回顾/词条/反馈/设置
+按钮没反应。
 
-根因（GameView.svelte:46-65）：
-- 原检测：用 recent_narratives[lastIndex].round 作为 stateKey
-- 玩家输入 → 后端追加新 narrative round=2
-- stateKey 从 session_id-1 变 session_id-2
-- → 触发 showChapterIntro = true → 重新显示章节页
+根因（routes/game/+page.svelte）：
+- W66 dynamic import 改成：
+  let CharacterWikiModal: typeof X | null = $state(null);
+- 模板中 <CharacterWikiModal /> 引用的是局部 null 变量
+  （不是 import 的组件）→ 渲染 null
+- loadModal() 函数定义了但 wikiOpen 变化时从未调用
+- 5 个 modal 全部不可用
 
-修复（GameView.svelte:46+）：
-- 改用 round_number === 1 作为唯一条件
-- 首次进入（round_number === 1）→ 显示开场
-- 之后（round_number > 1）→ 不再显示
-- stateKey 简化为 session_id（每 session 一次性）
+修复：
+- 恢复静态 import：
+  import { CharacterWikiModal, RecapModal, ... } from '...'
+- 删除动态 import 逻辑
+- 模板 <CharacterWikiModal /> 现在引用 import 的真实组件
+- modal 立即可用
+
+权衡：5 个 modal 总 size < 30KB，静态 import 影响极小
+（路由级 code-split 仍生效，modal 不会阻塞首屏）
 
 测试：173 PASSED 0 回归
-
-影响：
-- 新 session round=1 → 显示章节开场（首次）
-- 旧 session（已 round > 1）→ 不显示开场
-- 玩家输入后 → 不再弹章节页
