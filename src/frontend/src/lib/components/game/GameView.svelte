@@ -43,21 +43,19 @@
   const showAdminTools = isAdminMode();
 
   // 🆕 v2.10.1 W69: 章节开场遮罩
-  // 后端 /api/state 返：round_number + recent_narratives[0].round (0=开场)
-  // 检测策略：最近一条 narrative 的 round === 0 → 显示开场遮罩
+  // 后端 /api/state 返：round_number（总回合）+ recent_narratives[0].round (0=开场)
+  // 检测策略：仅在 round_number === 1 时显示开场（之后不再显示）
+  // 这样避免：每次新回合 round 变化再次触发开场
   let showChapterIntro = $state(true);
   let introShownKey = $state<string | null>(null);
 
   $effect(() => {
     if (!$game) return;
-    const recent = ($game as any).recent_narratives as Array<{round: number; summary: string; narrative: string}> | undefined;
-    const lastRound = recent && recent.length > 0 ? recent[recent.length - 1].round : 0;
-    const stateKey = `${$game.session_id}-${lastRound}`;
-    // 第一条 narrative round=0 → 开场
-    if (lastRound === 0) {
-      showChapterIntro = true;
-    } else if (introShownKey !== stateKey) {
-      // 后续章节变化（lastRound 不同）
+    const round = ($game as any).round_number ?? 0;
+    const stateKey = `${$game.session_id}`;
+    // 仅在 round_number === 1（即首次进入）显示开场
+    // round > 1 表示之前已游玩过，不应再显示
+    if (round === 1 && introShownKey !== stateKey) {
       showChapterIntro = true;
     } else {
       showChapterIntro = false;
@@ -66,9 +64,7 @@
 
   function handleStartChapter() {
     showChapterIntro = false;
-    const recent = ($game as any).recent_narratives;
-    const lastRound = recent && recent.length > 0 ? recent[recent.length - 1].round : 0;
-    introShownKey = `${$game?.session_id}-${lastRound}`;
+    introShownKey = $game?.session_id ?? null;
   }
 
   async function handleSelectVoice(voice: { voice_id: string; voice_name: string; intent_text?: string }) {

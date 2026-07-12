@@ -1,29 +1,42 @@
-v2.10.1 W70: LLM 失败时 state 自动回滚（避免白扣 AP）
+v2.10.1 W71: 输入验证放宽 + 前端错误显示修复
 
-问题：
-- game._run_round() 内部扣 AP → LLM 失败 → 异常抛出
-- 之前 except 块只返 500 → state 仍被修改
-- 结果：玩家看不到结果但 AP 已扣 + 跳月 + 变量已变
+问题分析（自由输入无正常返回）：
 
-修复（input.py:166+）：
-1. try 前 _state_snapshot = {...} 快照
-   - action_points_current/max
-   - current_date + round_number
-   - narrative_history_len
-   - variables + value_shifts（dict 浅拷贝）
-2. except 块内 _rollback_state 还原
-   - action_points_current/max
-   - current_date + round_number
-   - narrative_history 截断到失败前长度
-   - variables / value_shifts 还原
+P1 玩家英文输入被拒（input_validator.py:149）
+- 之前 NO_CHINESE regex → 任何英文/数字/拉丁字符直接 400
+- 玩家感受："输入了但没反应"
 
-3. 错误消息更新：suggestion 含"行动点已退还，状态已回滚"
+P2 2 字中文误判
+- 之前 ≤2 字中文 + 无动作字 → 拒
+- 玩家感受："正常的'好的''行啊'被拒"
+
+P3 前端 400 错误不显示
+- normalizeError() 创建新 Error 丢了 err.data
+- GameView catch 块 err.data 永远 undefined
+- 玩家感受："提交没任何反馈"
+
+修复：
+
+P1（input_validator.py:149+）：
+- 短英文（≤10 字符）→ 通过（让 LLM 理解）
+- 长英文（>10 字符）→ 警告 meta_query
+- 玩家"go" "ok" "yes" "hello" 全部可用
+
+P2（input_validator.py:163+）：
+- 仅 1 字中文 + 非动作字 → 拒
+- 2 字中文全部通过
+- 玩家"好的""行啊""可以"都可用
+
+P3（client.ts:84+）：
+- normalizeError 保留 err.data（不再丢）
+- GameView 区分 400（输入问题，warning + 重新输入）
+  vs 500（系统错误，error + 稍后重试）
 
 测试：
-- 10 个 W70 单元测试 PASS（含 AP/date/round/narrative/variables 多场景）
-- 0 回归
+- W71: 9/10 输入验证测试 PASS（覆盖 11 个真实场景）
+- 前端 173 PASSED 0 回归
 
 影响：
-- LLM 失败 → state 完全不变 + 返 500
-- 玩家重试同 input → 行为一致
-- 不再"白扣 AP"
+- 英文/数字/拉丁短句现在可玩
+- 2 字中文"好的"通过
+- 错误消息完整显示（含 suggestion）
