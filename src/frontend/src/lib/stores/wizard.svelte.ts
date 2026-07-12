@@ -97,17 +97,17 @@ class WizardStore {
 
   // 派生：身份对应的性别
   inferredGender = $derived(
-    this.state.identity ? IDENTITY_PRESETS[this.state.identity].gender : null
+    this.state.identity ? (IDENTITY_PRESETS[this.state.identity]?.gender ?? null) : null
   );
 
   // 派生：身份对应的预设信息
   inferredProfile = $derived(
-    this.state.identity ? IDENTITY_PRESETS[this.state.identity].profile : null
+    this.state.identity ? (IDENTITY_PRESETS[this.state.identity]?.profile ?? null) : null
   );
 
   // 派生：身份显示名
   identityName = $derived(
-    this.state.identity ? IDENTITY_PRESETS[this.state.identity].name : '?'
+    this.state.identity ? (IDENTITY_PRESETS[this.state.identity]?.name ?? null) : null
   );
 
   next() {
@@ -144,7 +144,8 @@ class WizardStore {
 export const wizard = new WizardStore();
 
 // 身份列表（4 个）
-export const IDENTITIES = (Object.entries(IDENTITY_PRESETS) as [Identity, typeof IDENTITY_PRESETS[Identity]][])
+export const IDENTITIES = (Object.entries(IDENTITY_PRESETS) as [Identity, NonNullable<(typeof IDENTITY_PRESETS)[Identity]>][])
+  .filter(([_, data]) => data != null)  // 🆕 v2.10.2: 过滤 undefined
   .map(([id, data]) => ({
     id,
     name: data.name,

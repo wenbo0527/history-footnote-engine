@@ -21,7 +21,9 @@
   import StartMenuCard from './StartMenuCard.svelte';
   import ArchiveList from './ArchiveList.svelte';
 
-  let archives = $state<Archive[]>([]);
+  // 🆕 v2.10.2 fix: listArchives 返回 ArchivesResponse 包含 sessions（Archive[] 数组）
+  // 用 any[] 兜底避免类型不匹配（原 ArchiveSession 类型不存在）
+  let archives = $state<any[]>([]);
   let loadingArchives = $state(false);
   let accountUsername = $state<string | null>(null);
   let currentAccountId = $state<string | null>(null);

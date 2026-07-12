@@ -23,17 +23,18 @@
 
   let { sessionId, onHistoryClick }: Props = $props();
 
-  let state: ChapterStateResponse | null = $state(null);
+  // 🆕 v2.10.2 fix: rename state → chapterState（避免与 Svelte 5 $state rune 冲突）
+  let chapterState: ChapterStateResponse | null = $state(null);
   let error: string | null = $state(null);
 
   async function refresh() {
     if (!sessionId) return;
     try {
       error = null;
-      state = await getChapterState(sessionId);
+      chapterState = await getChapterState(sessionId);
     } catch (e) {
       // 老存档可能没 chapter_state，容错：active=false
-      state = {
+      chapterState = {
         active: false,
         current_chapter: 0,
         current_node: 1,
@@ -59,32 +60,31 @@
   });
 
   // 节点序号 1..N
-  const totalNodes = $derived(state?.node_count || 4);
-  const currentNode = $derived(state?.current_node || 1);
+  // 🆕 v2.10.2 fix: Svelte 5 推断 chapterState 为 never，加 (as ChapterStateResponse | null) 显式类型
+  const totalNodes = $derived((chapterState as ChapterStateResponse | null)?.node_count || 4);
+  const currentNode = $derived((chapterState as ChapterStateResponse | null)?.current_node || 1);
   const nodes = $derived(Array.from({ length: totalNodes }, (_, i) => i + 1));
 
   // 当前章节标题
-  const chapterLabel = $derived(() => {
-    if (!state?.active) return null;
-    return `第 ${state.current_chapter} 章 · 节点 ${state.current_node}/${state.node_count}`;
+  const chapterLabel = $derived.by(() => {
+    const cs = chapterState as ChapterStateResponse | null;
+    if (!cs?.active) return null;
+    return `第 ${cs.current_chapter} 章 · 节点 ${cs.current_node}/${cs.node_count}`;
   });
 
-  // Build 标签
-  const buildLabel = $derived(state?.player_build && state.player_build.trim() ? `Build: ${state.player_build}` : '');
-
-  // 路径标签
-  const pathLabel = $derived(state?.main_path_focus && state.main_path_focus.trim() ? `🎯 ${state.main_path_focus}` : '');
-
-  // 板块标签
-  const plateLabel = $derived(state?.active_plate && state.active_plate.trim() ? `板块: ${state.active_plate}` : '');
+  const cs = $derived(chapterState as ChapterStateResponse | null);
+  const buildLabel = $derived(cs?.player_build && cs.player_build.trim() ? `Build: ${cs.player_build}` : '');
+  const pathLabel = $derived(cs?.main_path_focus && cs.main_path_focus.trim() ? `🎯 ${cs.main_path_focus}` : '');
+  const plateLabel = $derived(cs?.active_plate && cs.active_plate.trim() ? `板块: ${cs.active_plate}` : '');
 </script>
 
-{#if state}
-  <div class="chapter-bar" class:inactive={!state.active}>
-    {#if state.active}
+{#if chapterState}
+  <div class="chapter-bar" class:inactive={!chapterState.active}>
+    {#if chapterState.active}
       <div class="chapter-bar-row">
         <span class="chapter-bar-icon" aria-hidden="true">📖</span>
-        <span class="chapter-bar-title">{chapterLabel()}</span>
+        <!-- 🆕 v2.10.2 fix: chapterLabel 是 $derived 值，不是函数 -->
+        <span class="chapter-bar-title">{chapterLabel}</span>
         <span class="chapter-bar-meta">
           {#if buildLabel}<span class="chapter-bar-tag build">{buildLabel}</span>{/if}
           {#if pathLabel}<span class="chapter-bar-tag path">{pathLabel}</span>{/if}
@@ -102,7 +102,7 @@
         {/if}
       </div>
       <div class="chapter-bar-row progress-row">
-        <div class="chapter-bar-nodes" role="progressbar" aria-valuenow={state.progress_pct} aria-valuemin="0" aria-valuemax="100">
+        <div class="chapter-bar-nodes" role="progressbar" aria-valuenow={chapterState.progress_pct} aria-valuemin="0" aria-valuemax="100">
           {#each nodes as idx (`node-${idx}`)}
             <span
               class="chapter-bar-node"
@@ -114,7 +114,7 @@
           {/each}
         </div>
         <div class="chapter-bar-progress-text">
-          {state.progress_pct.toFixed(0)}% · 第 {state.round_number} 回合
+          {chapterState.progress_pct.toFixed(0)}% · 第 {chapterState.round_number} 回合
         </div>
       </div>
     {:else}

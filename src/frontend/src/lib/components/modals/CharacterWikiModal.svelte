@@ -120,8 +120,8 @@
     }))
   );
 
-  // NPC（来自 wiki）
-  const npcs = $derived(wiki?.characters ?? []);
+  // NPC（来自 wiki）—— 🆕 v2.10.2 fix: WikiResponse union 类型没有 characters 字段
+  const npcs = $derived(((wiki as any)?.characters ?? []) as WikiCharacter[]);
 
   // 合并去重：家人优先（按 name + identity 标识）
   const allChars = $derived.by(() => {

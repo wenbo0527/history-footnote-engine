@@ -27,7 +27,8 @@
     {#each IDENTITIES as item (item.id)}
       {@const selected = wizard.state.identity === item.id}
       {@const p = preset(item.id)}
-      {@const genderLabel = p.gender === 'male' ? '男' : '女'}
+      <!-- 🆕 v2.10.2 fix: p 可能 undefined（IDENTITY_PRESETS[id] 为空时） -->
+      {@const genderLabel = p?.gender === 'male' ? '男' : '女'}
       <button
         type="button"
         class="identity-card"
@@ -41,7 +42,7 @@
         <span class="identity-gender">{genderLabel}</span>
         <span class="identity-desc">{item.desc}</span>
         <span class="identity-preset">
-          {p.profile.age}岁 · {p.profile.occupation}
+          {p?.profile.age ?? 30}岁 · {p?.profile.occupation ?? '织工'}
         </span>
       </button>
     {/each}

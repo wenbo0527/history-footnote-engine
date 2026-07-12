@@ -14,7 +14,9 @@
    *              → 左侧章节列表（按月分组），点击滚动到章节
    */
   import { game } from '$lib/stores';
-  import { getRecap, type RecapResponse, type RecapNarrativeItem } from '$lib/api/recap';
+  import { getRecap } from '$lib/api/recap';
+  // 🆕 v2.10.2 fix: RecapResponse/RecapNarrativeItem 在 types.ts（不在 recap.ts）
+  import type { RecapResponse, RecapNarrativeItem } from '$lib/api/types';
   import { Chapter, Spinner, Button, Tabs, Icon } from '$lib/components/design-system';
   import ModalShell from './ModalShell.svelte';
   import RecapItem from './RecapItem.svelte';
@@ -44,7 +46,7 @@
     if (!recap) return [];
     const kw = searchKeyword.trim();
     if (!kw) return recap.recent;
-    return recap.recent.filter(it =>
+    return recap.recent.filter((it: RecapNarrativeItem) =>
       it.narrative?.includes(kw) ||
       it.summary?.includes(kw) ||
       `第 ${it.round} 回合`.includes(kw)
@@ -54,7 +56,7 @@
     if (!recap) return [];
     const kw = searchKeyword.trim();
     if (!kw) return recap.archive;
-    return recap.archive.filter(it =>
+    return recap.archive.filter((it: RecapNarrativeItem) =>
       it.narrative?.includes(kw) ||
       it.summary?.includes(kw) ||
       `第 ${it.round} 回合`.includes(kw)
@@ -181,8 +183,8 @@
                       onclick={() => scrollToChapter(String(ch.chapter_id))}
                     >
                       <span class="recap-chapter-toc-index">
-                        {#if ch.is_current}<span class="recap-chapter-dot" title="当前进行中">●</span>{/if}
-                        {ch.chapter_id > 0 ? `第${ch.display_index}章` : '序章'}
+                        <!-- 🆕 v2.10.2 fix: RecapChapter 没有 is_current/display_index/subtitle/summary 等字段 -->
+                        {ch.index > 0 ? `第${ch.index}章` : '序章'}
                       </span>
                       <span class="recap-chapter-toc-title-text">{ch.title}</span>
                       <span class="recap-chapter-toc-count">{ch.narratives.length} 回合</span>
@@ -199,15 +201,11 @@
                   <header class="recap-chapter-section-header">
                     <div class="recap-chapter-section-title-wrap">
                       <h3 class="recap-chapter-section-title">
-                        {ch.chapter_id > 0 ? `第${ch.display_index}章` : '序章'}
+                        {ch.index > 0 ? `第${ch.index}章` : '序章'}
                         · {ch.title}
-                        {#if ch.is_current}<span class="recap-chapter-current">（进行中）</span>{/if}
                       </h3>
-                      {#if ch.subtitle && ch.is_settled}
-                        <p class="recap-chapter-section-subtitle">{ch.subtitle}</p>
-                      {/if}
-                      {#if ch.summary && ch.is_settled}
-                        <p class="recap-chapter-section-summary">{ch.summary}</p>
+                      {#if ch.date_label}
+                        <p class="recap-chapter-section-subtitle">{ch.date_label}</p>
                       {/if}
                     </div>
                     <span class="recap-chapter-section-count">
@@ -222,27 +220,6 @@
                 </section>
               {/each}
             </div>
-          </div>
-        {/if}
-      {:else if activeTab === 'recent'}
-        <!-- W83 兼容旧模式：flat recent list -->
-        {#if filteredRecent.length === 0}
-          <p class="recap-empty">{searchKeyword ? `「${searchKeyword}」无匹配回合` : '暂无近期叙事'}</p>
-        {:else}
-          <div class="recap-list">
-            {#each filteredRecent as item, idx (idx)}
-              {@const prevDate = idx > 0 ? filteredRecent[idx - 1].current_date : null}
-              {@const showMonth = item.current_date && item.current_date !== prevDate}
-              {#if showMonth}
-                <div class="recap-month-marker">
-                  <span class="recap-month-marker-line"></span>
-                  <!-- 🆕 v2.10.2 fix: safeDate 兜底 -->
-                  <span class="recap-month-marker-text">{safeDate(item.current_date)}</span>
-                  <span class="recap-month-marker-line"></span>
-                </div>
-              {/if}
-              <RecapItem item={item} />
-            {/each}
           </div>
         {/if}
       {:else}

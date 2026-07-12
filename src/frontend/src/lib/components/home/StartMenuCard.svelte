@@ -30,10 +30,13 @@
   {/if}
   <h2 class="start-menu-card-title">{title}</h2>
   <p class="start-menu-card-desc">
-    {#if typeof description === 'string'}
-      {description}
-    {:else}
-      {@render description()}
+    <!-- 🆕 v2.10.2 fix: description 是 optional，未传时跳过 -->
+    {#if description !== undefined}
+      {#if typeof description === 'string'}
+        {description}
+      {:else}
+        {@render description()}
+      {/if}
     {/if}
   </p>
   {#if action}

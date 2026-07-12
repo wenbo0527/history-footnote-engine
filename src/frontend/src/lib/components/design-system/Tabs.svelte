@@ -17,7 +17,8 @@
     tabs: TabItem[];
     value: string;          // 绑定当前 tab id
     onchange?: (id: string) => void;
-    children: Snippet;      // 当前 tab 的内容（外部用 {#if value === tab.id} 渲染）
+    children?: Snippet;     // 当前 tab 的内容（外部用 {#if value === tab.id} 渲染）
+                            // 🆕 v2.10.2: 改为 optional（一些 Modal 只用 Tabs 当标题头不传 content）
   }
 
   let { tabs, value = $bindable(), onchange, children }: Props = $props();
