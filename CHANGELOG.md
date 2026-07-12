@@ -45,10 +45,10 @@
 
 #### 🔧 W52 P1 重构
 
-- **P1-1**：`dm_agent/agent.py` 2014 行拆分（待实施，本版未含）
-- **P1-2**：`game_loop.py` 1243 行拆分（待实施，本版未含）
-- **P1-3**：`admin.py` 978 行拆分（待实施，本版未含）
-- **P1-4B**：前端 .svelte 懒加载（待实施，本版未含）
+- **P1-1**：`dm_agent/agent.py` 2014 行拆分（**下个会话跟进**：方法深度耦合 LLM 接口，单独 PR 风险高）
+- **P1-2**：`game_loop.py` 1258 行拆分（**下个会话跟进**：35 个方法共享 `self.state`/`self.handler`，独立 PR 风险高）
+- **P1-3**：`admin.py` 978 → 808 行拆分（**已完成 Settings 段**）：新建 `admin_settings.py`，admin.py 末尾 re-export 3 个 handler，`router_registry.py` 0 改动。后续 users/saves/tokens/config 拆分跟进 PR
+- **P1-4B**：前端 modals 单独 chunk（已完成）— `vite.config.ts` 加 `manualChunks('modals')` + `modulePreload.polyfill: false`
 
 #### 📦 W52 P2 工具/流程
 
