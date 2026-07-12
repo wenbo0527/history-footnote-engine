@@ -12,6 +12,7 @@
   import { queryGlossary, getTerm, type TermDetail } from '$lib/api/glossary';
   import { Chapter, Spinner, Button, Divider } from '$lib/components/design-system';
   import ModalShell from './ModalShell.svelte';
+  import GlossaryTermItem from './GlossaryTermItem.svelte';
   import type { GlossaryResponse } from '$lib/api/types';
 
   interface Props {
@@ -148,18 +149,11 @@
         <ul class="glossary-terms-list">
           {#each searchResult.terms as t (t.key)}
             <li>
-              <button
-                type="button"
-                class="glossary-term-item"
-                onclick={() => handleSelectTerm(t.key)}
+              <GlossaryTermItem
+                term={t}
                 disabled={loading}
-              >
-                <div class="glossary-term-header">
-                  <span class="glossary-term-key">{t.key}</span>
-                  <span class="glossary-term-category">{t.category}</span>
-                </div>
-                <p class="glossary-term-def">{t.definition}</p>
-              </button>
+                onselect={handleSelectTerm}
+              />
             </li>
           {/each}
         </ul>
