@@ -127,6 +127,9 @@ class ChapterCoordinator:
                 # 段一硬编码路径
                 self.facade.init_chapter(target_chapter)
 
+            # 🆕 v2.10.1 W85: 蓝图加载后注入 5 字段默认值
+            self._inject_w85_blueprint_defaults()
+
             self._initialized = True
             _LOG.info(
                 "[v2.8.0] 第 %d 章初始化: %s, round_start=%d, via=%s",
@@ -140,6 +143,7 @@ class ChapterCoordinator:
             try:
                 self.facade.init_chapter(target_chapter)
                 # 🆕 W32: 硬编码成功，标 initialized
+                self._inject_w85_blueprint_defaults()
                 self._initialized = True
                 _LOG.info(
                     "[v2.8.0] 第 %d 章初始化: %s, round_start=%d, via=hardcoded",
@@ -148,10 +152,114 @@ class ChapterCoordinator:
                     self.state.chapter_state.chapter_start_round,
                 )
             except FileNotFoundError as e2:
-                # 🆕 W32: 硬编码也不存在时，明确错误但**不 raise**（保持向后兼容）
-                # 因为这之前的代码是 silent log 走完，smoke 测试依赖此行为
-                _LOG.error("第 %d 章硬编码蓝图也不存在: %s，章节化就此退出（无法继续）", target_chapter, e2)
-                # 不 raise，避免破坏 smoke / 上层 caller 假设
+                # 🆕 W32 + W85-P0-1: 硬编码蓝图缺失时的 3 层 fallback
+                # 1) LLM 实时生成
+                # 2) 静态最小可用 blueprint（不依赖任何外部文件）
+                # 3) 放弃（保持原 silent log，不 raise）
+                _LOG.warning(
+                    "[W85-P0-1] 第 %d 章硬编码蓝图缺失，尝试 LLM fallback: %s",
+                    target_chapter, e2,
+                )
+                if self._llm is not None:
+                    try:
+                        self._init_chapter_via_llm(target_chapter)
+                        self._inject_w85_blueprint_defaults()
+                        self._initialized = True
+                        _LOG.info(
+                            "[W85-P0-1] 第 %d 章 LLM fallback 成功",
+                            target_chapter,
+                        )
+                        return
+                    except Exception as e3:
+                        _LOG.error(
+                            "[W85-P0-1] LLM fallback 也失败: %s",
+                            e3,
+                        )
+                # 2) 静态 fallback（不依赖文件）
+                if self._static_fallback_init(target_chapter):
+                    return
+                # 3) 彻底放弃（不 raise，保留向后兼容）
+                _LOG.error(
+                    "[W85-P0-1] 所有 fallback 都失败，章节化就此退出（无法继续）",
+                )
+
+    def _inject_w85_blueprint_defaults(self) -> None:
+        """🆕 v2.10.1 W85: 为已加载蓝图注入 W85 5 字段默认值
+
+        行为：
+        - 不覆盖已有值（LLM 生成的蓝图如果带 W85 字段，保留之）
+        - 缺哪个字段补哪个（向后兼容旧蓝图文件）
+        - must_resolve 缺则补空 list（避免 KeyError）
+        """
+        cs = self.state.chapter_state
+        bp = cs.blueprint
+        if not bp:
+            return
+        bp.setdefault("narrative_position", "opening")
+        bp.setdefault("pace", "slow")
+        bp.setdefault("hook_type", "none")
+        bp.setdefault("must_resolve", [])
+        bp.setdefault("dm_instruction", "铺陈日常，暗示即将到来的变故")
+
+    def _static_fallback_init(self, chapter_id: int) -> bool:
+        """🆕 W85-P0-1: 静态 fallback blueprint
+
+        当 LLM 和硬编码蓝图都不可用时,直接构造最小可用 blueprint dict
+        让章节化叙事能继续,玩家不至于卡死。
+
+        Returns:
+            bool: True=成功初始化, False=彻底失败
+        """
+        try:
+            cs = self.state.chapter_state
+            cs.current_chapter = chapter_id
+            cs.current_node = 1
+            cs.chapter_start_round = self.state.round_number
+            cs.blueprint = {
+                "chapter_id": chapter_id,
+                "chapter_title": f"第 {chapter_id} 章",
+                "chapter_subtitle": "章节蓝图缺失,启用应急模式",
+                "nodes": [
+                    {
+                        "index": 1,
+                        "role": "introduction",
+                        "scene": "应急场景：DM 实时叙事",
+                        "npc_ids": [],
+                        "option_directions": [],
+                        "knowledge_ids": [],
+                        "completion_condition": "round_4_reached",
+                    }
+                ],
+                "transition_hint": "season",
+                "meta": None,
+                # 🆕 W85 5 字段(直接填,免得后面再注入一次)
+                "narrative_position": "opening",
+                "pace": "slow",
+                "hook_type": "none",
+                "must_resolve": [],
+                "dm_instruction": "应急模式：铺陈日常，等待玩家后续行为",
+            }
+            cs.last_closure_status = "INIT"
+            cs.just_initialized = True
+            # 🆕 W85: 路线也重置为 opening
+            from history_footnote.chapter.types import DEFAULT_CURRENT_ROUTE
+            cs.current_route = dict(DEFAULT_CURRENT_ROUTE)
+            cs.current_route["entered_at_round"] = self.state.round_number
+            cs.route_history.append({
+                "round": self.state.round_number,
+                "from_template": "none",
+                "to_template": "opening",
+                "trigger": "static_fallback",
+            })
+            self._initialized = True
+            _LOG.info(
+                "[W85-P0-1] 静态 fallback 初始化成功: chapter=%d",
+                chapter_id,
+            )
+            return True
+        except Exception as e:
+            _LOG.error("[W85-P0-1] 静态 fallback 失败: %s", e)
+            return False
 
     def _init_chapter_via_llm(self, chapter_id: int) -> None:
         """段二 W9：通过 LLM 生成章节蓝图
@@ -237,8 +345,72 @@ class ChapterCoordinator:
             raise RuntimeError("fill_chapter_blueprint_via_llm 返回 None")
         return blueprint.to_dict()
 
+    def detect_route_change(
+        self,
+        player_input: str,
+        value_shifts: dict,
+        historical_anchors_triggered: Optional[list] = None,
+    ) -> dict:
+        """🆕 v2.10.1 W85: 调 RouteDetector 检测路线变化
+
+        Returns:
+            RouteDetector.detect() 的原始结果 dict（含 route_change/suggested_template/trigger/confidence/dm_instruction）
+        """
+        from history_footnote.chapter.route_detector import RouteDetector
+        detector = RouteDetector()
+        cs = self.state.chapter_state
+        # current_chapter 可以是 dict（blueprint 存储形式）
+        current = cs.blueprint or {}
+        return detector.detect(
+            player_input=player_input,
+            value_shifts=value_shifts,
+            current_chapter=current,
+            historical_anchors_triggered=historical_anchors_triggered,
+        )
+
+    def apply_route_change(self, detection: dict) -> None:
+        """🆕 v2.10.1 W85: 应用路线变更到 state
+
+        行为：
+        1. 写 current_route（template / trigger / entered_at_round / dm_instruction）
+        2. 追加 route_history
+        3. 不立即改章节（让 DM 先按新路线创作，下一节点再结算）
+
+        Args:
+            detection: RouteDetector.detect() 返回的 dict
+        """
+        if not detection.get("route_change"):
+            return
+        cs = self.state.chapter_state
+        new_template = detection["suggested_template"]
+        from_template = (cs.current_route or {}).get("template", "opening")
+        # 写 current_route
+        cs.current_route = {
+            "template": new_template,
+            "trigger": detection["trigger"],
+            "entered_at_round": self.state.round_number,
+            "dm_instruction": detection.get("dm_instruction", ""),
+        }
+        # 追加 route_history
+        cs.route_history.append({
+            "round": self.state.round_number,
+            "from_template": from_template,
+            "to_template": new_template,
+            "trigger": detection["trigger"],
+        })
+        _LOG.info(
+            "[W85] 路线变更: round=%d, %s → %s, trigger=%s",
+            self.state.round_number,
+            from_template,
+            new_template,
+            detection["trigger"],
+        )
+
     def _maybe_advance_node(self) -> None:
-        """检查是否推进节点（段一硬编码：每 4 回合推进一个）"""
+        """检查并推进节点
+
+        规则：每 NODES_ADVANCE_ROUNDS 回合推进一个节点
+        """
         cs = self.state.chapter_state
         if cs.current_chapter == 0 or cs.current_node >= DEFAULT_NODES_PER_CHAPTER:
             return  # 已到末节点
@@ -257,7 +429,17 @@ class ChapterCoordinator:
                 cs.current_chapter, old_node, expected_node, self.state.round_number,
             )
 
-    # ============= 钩子 2：每回合结束 =============
+        # 🆕 v2.10.1 W85: 推进节点时,如果 current_route 有新模板,
+        # 同步更新 blueprint 的 narrative_position
+        if cs.current_route and cs.blueprint:
+            new_template = cs.current_route.get("template")
+            old_template = cs.blueprint.get("narrative_position")
+            if new_template and new_template != old_template:
+                cs.blueprint["narrative_position"] = new_template
+                _LOG.info(
+                    "[W85] narrative_position 同步: %s → %s (round=%d)",
+                    old_template, new_template, self.state.round_number,
+                )
 
     def post_step(self) -> None:
         """每回合结束时调用
@@ -283,6 +465,19 @@ class ChapterCoordinator:
         # 段三 W13：清空 just_initialized（只触发一次）
         if self.state.chapter_state.just_initialized:
             self.state.chapter_state.just_initialized = False
+
+        # 🆕 v2.10.1 W85: 路线检测（关键词 / 价值偏移 / 历史铁轨）
+        try:
+            last_input = getattr(self.state, "last_player_input", "") or ""
+            last_value_shifts = getattr(self.state, "value_shifts", {}) or {}
+            detection = self.detect_route_change(
+                player_input=last_input,
+                value_shifts=last_value_shifts,
+                historical_anchors_triggered=None,  # Phase 1 默认 None
+            )
+            self.apply_route_change(detection)
+        except Exception as e:
+            _LOG.warning("[W85] 路线检测跑失败: %s", e)
 
     # ============= 钩子 3：条件触发结算 =============
 

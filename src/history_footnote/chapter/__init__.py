@@ -22,6 +22,12 @@ from history_footnote.chapter.types import (
 from history_footnote.chapter.paths import PathStatus, PathState
 from history_footnote.chapter.plates import PlateStatus, PlateState
 from history_footnote.chapter.coordinator import ChapterCoordinator
+from history_footnote.chapter.route_detector import (
+    RouteDetector,
+    DEFAULT_ROUTE_KEYWORDS,
+    VALUE_SHIFT_THRESHOLD,
+    HISTORICAL_ANCHOR_KEYWORDS,
+)
 from history_footnote.chapter.meta_resolver import ChapterMetaResolver, DEFAULT_HERO_JOURNEY_ACTS
 from history_footnote.chapter.plates import PlateRegistry, Plate, Corridor, PlateType, TransmissionRule
 from history_footnote.chapter.plate_engine import PlateEngine
@@ -80,6 +86,11 @@ __all__ = [
     "ChapterCoordinator",
     "ChapterMetaResolver",
     "DEFAULT_HERO_JOURNEY_ACTS",
+    # 🆕 v2.10.1 W85: 路线检测
+    "RouteDetector",
+    "DEFAULT_ROUTE_KEYWORDS",
+    "VALUE_SHIFT_THRESHOLD",
+    "HISTORICAL_ANCHOR_KEYWORDS",
     # 🆕 W36: 自适应 API 在 ChapterMetaResolver 实例上（total_chapters/is_last_chapter/remaining_chapters）
     "PlateEngine",
     "PathSwitcher",

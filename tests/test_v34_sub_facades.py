@@ -206,12 +206,16 @@ def test_W34_012_all_facades_instantiable():
 def test_W34_013_chapter_init_public_api():
     """🆕 W34: chapter.__init__.py 公共 API 暴露"""
     import history_footnote.chapter as ch
-    # 36 个公共 API
-    assert len(ch.__all__) == 36
+    # 🆕 v2.10.1 W85: +4 (RouteDetector + DEFAULT_ROUTE_KEYWORDS + VALUE_SHIFT_THRESHOLD + HISTORICAL_ANCHOR_KEYWORDS)
+    # 36 → 40
+    assert len(ch.__all__) == 40
     # 关键 API
     assert "ChapterCoordinator" in ch.__all__
     assert "extract_json_from_text" in ch.__all__
     assert "make_chapter_dm_tools" in ch.__all__
+    # 🆕 W85: 新增 API
+    assert "RouteDetector" in ch.__all__
+    assert "VALUE_SHIFT_THRESHOLD" in ch.__all__
     assert "fallback_chapter_blueprint" in ch.__all__
     assert "_HAS_LC_TOOLS" in ch.__all__
     return True

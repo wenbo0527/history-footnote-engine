@@ -54,6 +54,7 @@ class ChapterPromptBuilder:
                 "focus_points": [...],          # 增量规则（最多 5 条）
                 "player": {...},                # 玩家画像
                 "available_*": {...},           # 时代包资源
+                "current_route": {...},         # 🆕 v2.10.1 W85: 当前涌现路线
             }
         """
         return {
@@ -64,6 +65,8 @@ class ChapterPromptBuilder:
             "available_npcs": self._list_npcs(),
             "available_knowledge": self._list_knowledge(),
             "available_paths": self._list_paths(),
+            # 🆕 v2.10.1 W85: 当前涌现路线（让 LLM 知道章节处于哪个叙事骨架）
+            "current_route": self._build_current_route_context(),
         }
 
     # ============= 区 1：硬约束 =============
@@ -200,6 +203,33 @@ class ChapterPromptBuilder:
             return 0.5
         affinities = getattr(ps, "path_affinity", {}) or {}
         return float(affinities.get(path_id, 0.5))
+
+    # ============= 🆕 v2.10.1 W85: 当前涌现路线 =============
+
+    def _build_current_route_context(self) -> dict:
+        """注入当前涌现路线状态到 DM context
+
+        设计意图：
+        - DM 看到 current_route 后,会按 dm_instruction 指引调整叙事骨架
+        - template 5 类之一(opening/rising_conflict/crisis/convergence/resolution)
+        - route_history 取最近 3 条,避免 prompt 过长
+        - 旧 state 没 current_route → 返回空 dict（LLM 不会崩）
+        """
+        cs = getattr(self.state, "chapter_state", None)
+        if cs is None:
+            return {}
+        current_route = getattr(cs, "current_route", None) or {}
+        route_history = getattr(cs, "route_history", []) or []
+        if not current_route:
+            return {}
+        return {
+            "template": current_route.get("template", "opening"),
+            "trigger": current_route.get("trigger"),
+            "entered_at_round": current_route.get("entered_at_round"),
+            "dm_instruction": current_route.get("dm_instruction", ""),
+            # 最近 3 次路线变更(全文给 LLM 看)
+            "route_history": route_history[-3:],
+        }
 
 
 def build_chapter_prompt_context(
