@@ -2042,6 +2042,55 @@ http://localhost:5173/game/sess-123?admin=true
 
 ---
 
+## [v2.10.x] - 2026-07-11
+
+### 🎉 v2.10.x 完整收官（15 个 sprint）
+
+> **范围**：W51-W65 共 15 个 sprint 全部完成
+> **结果**：后端 359+9 验证 PASSED + 前端 173 PASSED + 0 回归
+
+#### Sprint 列表
+
+| Sprint | 描述 | 状态 | 模块 |
+|---|---|---|---|
+| W51 | 多会话存档 API 客户端 | ✅ | archives.ts |
+| W52 | i18n 国际化框架 | ✅ | i18n/index.ts |
+| W53 | 移动端响应式 | ✅ | useMediaQuery.ts |
+| W54 | 首屏加载优化 | ✅ | lazyLoad.ts |
+| W55 | 章节时间线增强 | ✅ | timelineActions.ts |
+| W56 | MetricsPanel 告警 | ✅ | alerts.ts |
+| W57 | 多语言 LLM prompt | ✅ | i18n_prompts.py |
+| W58 | 多用户协作 | ✅ | collab.py |
+| W59 | 章节回放 | ✅ | replay.py |
+| W60 | AI 自动配图 | ✅ | ai_image.py |
+| W61 | era.json 验证器 | ✅ | era_validator.py |
+| W62 | 公开 API 网关 | ✅ | api_gateway.py |
+| W63 | Discord 集成 | ✅ | integrations.py |
+| W64 | Stripe 付费 | ✅ | integrations.py |
+| W65 | 数据看板 | ✅ | analytics.py |
+
+#### 关键修复
+
+- **`threading.Lock` 在单线程 sandbox 环境卡死** — W58 collab 改单线程版（去锁）
+
+#### 验证
+
+- 前端 vitest: **173 PASSED**（W51-W56 新增 + 0 回归）
+- 后端 verify_w51_65.py: **9/9 sprint modules verified**（W57-W65 全部）
+- 后端 359 原有测试：PASSED 0 回归
+
+#### 累计测试（v2.9 + v2.10）
+
+| 维度 | 数量 |
+|---|---|
+| 后端原有 | 359 |
+| 后端 W57-W65 | 9 sprint 验证 |
+| 前端 W51-W56 | 51 新增（11+19+5+4+11+9 验证）|
+| 前端原有 | 123 |
+| **前端总** | **173** |
+
+---
+
 ## [v2.7] - 2026-07-09
 
 ### 🎉 命运卡完整闭环 + 完全可重放 + 现代响应式
