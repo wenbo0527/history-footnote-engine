@@ -15,6 +15,7 @@
     LocationInfo,
     VoiceOption
   } from '$lib/api/types';
+  import LocationMovePill from './LocationMovePill.svelte';
 
   interface Props {
     /** 已加载的 location data（由父组件传入） */
@@ -135,19 +136,13 @@
           {#each allReachable as loc (loc.id)}
             {@const visited = data.visited.some(v => v.id === loc.id)}
             {@const heard = data.heard.some(h => h.id === loc.id)}
-            <button
-              type="button"
-              class="location-move-pill"
-              class:location-move-pill-heard={heard && !visited}
-              onclick={() => handleMove(loc.id)}
+            <LocationMovePill
+              location={loc}
+              visited={visited}
+              heard={heard}
               disabled={moving}
-              title={loc.description}
-            >
-              <span class="location-move-icon" aria-hidden="true">
-                {visited ? '↗' : heard ? '❓' : '→'}
-              </span>
-              <span class="location-move-name">{loc.name}</span>
-            </button>
+              onmove={handleMove}
+            />
           {/each}
         </div>
       </div>
@@ -168,17 +163,14 @@
       {#if showHeard}
         <div class="location-heard-list">
           {#each data.heard as loc (loc.id)}
-            <button
-              type="button"
-              class="location-heard-item"
-              onclick={() => handleMove(loc.id)}
+            <LocationMovePill
+              location={loc}
+              visited={false}
+              heard={true}
+              apCost="1.5 AP"
               disabled={moving}
-              title={loc.description}
-            >
-              <span class="location-heard-icon" aria-hidden="true">❓</span>
-              <span class="location-heard-name">{loc.name}</span>
-              <span class="location-heard-ap">1.5 AP</span>
-            </button>
+              onmove={handleMove}
+            />
           {/each}
         </div>
       {/if}
