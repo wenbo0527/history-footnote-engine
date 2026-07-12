@@ -17,6 +17,7 @@
   import { getRecap, type RecapResponse, type RecapNarrativeItem } from '$lib/api/recap';
   import { Chapter, Spinner, Button, Tabs, Icon } from '$lib/components/design-system';
   import ModalShell from './ModalShell.svelte';
+  import RecapItem from './RecapItem.svelte';
   import type { RecapNarrativeItem as Item, RecapChapter } from '$lib/api/types';
 
   interface Props {
@@ -198,30 +199,7 @@
                   </header>
                   <div class="recap-list">
                     {#each ch.narratives as item, idx (ch.chapter_id + '-' + item.round)}
-                      <article class="recap-item">
-                        <header class="recap-item-header">
-                          <span class="recap-round">第 {item.round} 回合</span>
-                          {#if item.summary}
-                            <span class="recap-summary">{item.summary}</span>
-                          {/if}
-                        </header>
-                        {#if item.player_input || item.chosen_voice}
-                          <div class="recap-choice">
-                            <Icon name="gear" size={14} class="recap-choice-icon" />
-                            <span class="recap-choice-text">
-                              {#if item.chosen_voice}
-                                你的选择：<strong>{item.chosen_voice}</strong>
-                                {#if item.player_input && item.player_input !== item.chosen_voice}
-                                  （原话：<em>「{item.player_input}」</em>）
-                                {/if}
-                              {:else}
-                                你的行动：<em>「{item.player_input}」</em>
-                              {/if}
-                            </span>
-                          </div>
-                        {/if}
-                        <p class="recap-narrative">{item.narrative}</p>
-                      </article>
+                      <RecapItem item={item} />
                     {/each}
                   </div>
                 </section>
@@ -245,30 +223,7 @@
                   <span class="recap-month-marker-line"></span>
                 </div>
               {/if}
-              <article class="recap-item">
-                <header class="recap-item-header">
-                  <span class="recap-round">第 {item.round} 回合</span>
-                  {#if item.summary}
-                    <span class="recap-summary">{item.summary}</span>
-                  {/if}
-                </header>
-                {#if item.player_input || item.chosen_voice}
-                  <div class="recap-choice">
-                    <Icon name="gear" size={14} class="recap-choice-icon" />
-                    <span class="recap-choice-text">
-                      {#if item.chosen_voice}
-                        你的选择：<strong>{item.chosen_voice}</strong>
-                        {#if item.player_input && item.player_input !== item.chosen_voice}
-                          （原话：<em>「{item.player_input}」</em>）
-                        {/if}
-                      {:else}
-                        你的行动：<em>「{item.player_input}」</em>
-                      {/if}
-                    </span>
-                  </div>
-                {/if}
-                <p class="recap-narrative">{item.narrative}</p>
-              </article>
+              <RecapItem item={item} />
             {/each}
           </div>
         {/if}
