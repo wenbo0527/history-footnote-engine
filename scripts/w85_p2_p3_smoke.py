@@ -36,8 +36,6 @@ def make_llm(provider: str = "minimax-anthropic"):
             content = result
         else:
             content = json.dumps(result, ensure_ascii=False)
-        # 调试:打印原始 LLM 返回,排查 route_change=False 的原因
-        print(f"  [DEBUG] LLM 原始返回:\n{content}\n")
         return content
     return llm
 
