@@ -1,11 +1,25 @@
-v2.10.1 W67.1: 修复 isLoggedIn（仅真登录，不算访客）
+v2.10.1 W69: 章节开场遮罩 + LLM 幻觉占位符清洗
 
-account.ts: isLoggedIn() 原本检查 getCurrentAccountId()
-- 但访客模式有 hfe_guest_account_id 也算'登录'
-- 导致首页不跳 /login
+问题：
+1. 进入 session 直接是回合 1，没有"章节名开场"画面
+2. LLM 模仿 prompt 上下文产生 {{user_avatar_url}} 幻觉占位符
 
-修复：isLoggedIn() 改为检查 SESSION_KEY（真登录态）
-- 访客 hfe_guest_account_id 不再算登录
-- 强制走 /login
+P1 章节开场（前端）：
+- 新 ChapterIntro.svelte 组件
+- 检测：recent_narratives[0].round === 0 → 显示开场
+- 显示章节名（recent_narratives[0].summary）+
+  简介（recent_narratives[0].narrative[:200]）+
+  era_name + "开始本章节" 按钮
+- 按 Enter/空格也直接开始
+- GameView 集成：仅开场回合触发
 
-验证：173 PASSED 0 回归
+P2 占位符清洗（后端）：
+- narrative_sanitizer.py 加 Jinja 占位符清洗
+- {{...}} → 提取内容（短保留，长截断）
+- {%...%} {#...#} → "…"
+- 11 个 W69 测试 PASS（含 user_avatar_url 真实案例）
+
+测试：
+- 前端 173 PASSED 0 回归
+- 后端 narrative_sanitizer 11 个新测试 PASS
+- 0 回归

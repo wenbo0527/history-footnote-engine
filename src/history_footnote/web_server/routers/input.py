@@ -165,6 +165,16 @@ def handle_POST_input(handler, body) -> bool:
         pre = game._preprocess_input(inp)
         ap_before = game.state.action_points_current
         date_before = game.state.current_date
+        # 🆕 v2.10.1 W70: 快照 state（LLM 失败时回滚 — 避免白扣 AP）
+        _state_snapshot = {
+            "action_points_current": game.state.action_points_current,
+            "action_points_max": game.state.action_points_max,
+            "current_date": game.state.current_date,
+            "round_number": game.state.round_number,
+            "narrative_history_len": len(game.state.narrative_history or []),
+            "variables": dict(game.state.variables or {}),
+            "value_shifts": dict(game.state.value_shifts or {}),
+        }
         buf = io.StringIO()
         try:
             with redirect_stdout(buf):
@@ -172,12 +182,31 @@ def handle_POST_input(handler, body) -> bool:
         except Exception as e:
             error_id = safe_error_id()
             logger.exception(f"[input] {error_id} failed during _run_round: {e}")
+            # 🆕 v2.10.1 W70: 回滚 state（避免 LLM 失败白扣 AP / 跳月 / 改变量）
+            try:
+                game.state.action_points_current = _state_snapshot["action_points_current"]
+                game.state.action_points_max = _state_snapshot["action_points_max"]
+                game.state.current_date = _state_snapshot["current_date"]
+                game.state.round_number = _state_snapshot["round_number"]
+                # 截断 narrative_history 到失败前长度
+                cur_len = len(game.state.narrative_history or [])
+                target_len = _state_snapshot["narrative_history_len"]
+                if cur_len > target_len and hasattr(game.state, "narrative_history"):
+                    game.state.narrative_history = (game.state.narrative_history or [])[:target_len]
+                # 还原 variables / value_shifts（如有变更）
+                if hasattr(game.state, "variables"):
+                    game.state.variables = _state_snapshot["variables"]
+                if hasattr(game.state, "value_shifts"):
+                    game.state.value_shifts = _state_snapshot["value_shifts"]
+                logger.info(f"[input] {error_id} 已回滚 state (ap {ap_before}→{game.state.action_points_current}, narrative {target_len}→{cur_len})")
+            except Exception as rb_e:
+                logger.exception(f"[input] {error_id} state rollback failed: {rb_e}")
             # 🆕 v2.7+ 给玩家友好提示（前端 client.ts 优先用 suggestion）
             handler._json(500, {
                 "error": "game error",
                 "error_id": error_id,
                 "message": "游戏流程异常",
-                "suggestion": "⚙️ DM 推理出错，请稍后重试（如持续失败请截图反馈）",
+                "suggestion": "⚙️ DM 推理出错，请稍后重试（行动点已退还，状态已回滚）",
             })
             return True
         dm_output = buf.getvalue()
