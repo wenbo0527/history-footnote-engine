@@ -10,15 +10,13 @@
    */
   import { game, gameActions, isLoading } from '$lib/stores';
   import { GameView, GameHeader } from '$lib/components/game';
-  // 🆕 v2.10.1 W66: Modal 懒加载（5 modal 一次性下完 → 拆 dynamic import）
-  // - 静态部分用 type-only import（运行时不动）
-  // - 实际渲染时 dynamic import modal
-  import type {
-    CharacterWikiModal as CharacterWikiModalT,
-    RecapModal as RecapModalT,
-    GlossaryModal as GlossaryModalT,
-    FeedbackModal as FeedbackModalT,
-    SettingsModal as SettingsModalT,
+  // 🆕 v2.10.1 W73: 恢复静态 import（W66 dynamic import 导致 modal 不可用）
+  import {
+    CharacterWikiModal,
+    RecapModal,
+    GlossaryModal,
+    FeedbackModal,
+    SettingsModal,
   } from '$lib/components/modals';
   import { getSessionId } from '$lib/api/start';
   import { getState } from '$lib/api/state';
@@ -26,22 +24,6 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { Spinner, toast } from '$lib/components/design-system';
-
-  // 🆕 W66: Modal 懒加载 helpers
-  let CharacterWikiModal: typeof CharacterWikiModalT | null = $state(null);
-  let RecapModal: typeof RecapModalT | null = $state(null);
-  let GlossaryModal: typeof GlossaryModalT | null = $state(null);
-  let FeedbackModal: typeof FeedbackModalT | null = $state(null);
-  let SettingsModal: typeof SettingsModalT | null = $state(null);
-
-  async function loadModal(name: 'character' | 'recap' | 'glossary' | 'feedback' | 'settings') {
-    const mod = await import('$lib/components/modals');
-    if (name === 'character') CharacterWikiModal = mod.CharacterWikiModal;
-    else if (name === 'recap') RecapModal = mod.RecapModal;
-    else if (name === 'glossary') GlossaryModal = mod.GlossaryModal;
-    else if (name === 'feedback') FeedbackModal = mod.FeedbackModal;
-    else if (name === 'settings') SettingsModal = mod.SettingsModal;
-  }
 
   // Mock 数据（仅 demo=1 QA 截图用）
   const MOCK_GAME = {
