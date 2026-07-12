@@ -355,9 +355,12 @@ class ChapterCoordinator:
 
         Returns:
             RouteDetector.detect() 的原始结果 dict（含 route_change/suggested_template/trigger/confidence/dm_instruction）
+
+        Phase 2: 把 coordinator 的 _llm 注入 RouteDetector,实现未预设路线的 LLM 识别
         """
         from history_footnote.chapter.route_detector import RouteDetector
-        detector = RouteDetector()
+        # 🆕 W85-Phase 2: 把 self._llm 传给 RouteDetector
+        detector = RouteDetector(llm_callable=self._llm)
         cs = self.state.chapter_state
         # current_chapter 可以是 dict（blueprint 存储形式）
         current = cs.blueprint or {}
