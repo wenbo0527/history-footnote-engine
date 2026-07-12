@@ -1,44 +1,35 @@
 <script lang="ts">
   /**
-   * 首页 - StartMenu 入口
+   * 首页 - 默认强制登录（v2.10.1+）
    *
-   * 🆕 v1.7.30: 可选登录
+   * 🆕 v2.10.1 W67: 强制登录体验
+   * - 默认 → 跳 /login?next=/（必须登录/访客/注册）
    * - 已登录 → 直接显示 StartMenu
-   * - 未登录 → 跳 /login（但 URL 参数 ?skip_login=1 可跳过）
-   * - 访客模式：未登录也能进首页（localStorage 存访客标记）
+   * - ?skip_login=1 → 调试用（跳过）
    */
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { StartMenu } from '$lib/components/home';
-  import { isLoggedIn, isGuest, setGuest, ensureGuestAccountId } from '$lib/api/account';
+  import { isLoggedIn } from '$lib/api/account';
   import { Spinner } from '$lib/components/design-system';
 
   let checking = $state(true);
 
-  onMount(async () => {
-    // URL 参数 ?skip_login=1 → 直接进首页（调试用）
+  onMount(() => {
+    // 调试用：?skip_login=1 → 跳过登录检查
     if ($page.url.searchParams.get('skip_login') === '1') {
-      // 🆕 v2.7+ 即使跳过登录也要给一个 guest_id，否则 StartMenu 拉不到存档
-      try { await ensureGuestAccountId(); } catch { /* 静默 */ }
       checking = false;
       return;
     }
 
+    // 已登录 → 直接进 StartMenu
     if (isLoggedIn()) {
       checking = false;
       return;
     }
 
-    // 访客模式：localStorage 标记（用户在 /login 点"以访客身份进入"）
-    if (isGuest()) {
-      // 🆕 v2.7+ 兜底：保证 guest_id 存在（之前可能因网络失败没拿到）
-      try { await ensureGuestAccountId(); } catch { /* 静默 */ }
-      checking = false;
-      return;
-    }
-
-    // 第一次来 → 跳登录页（?next=/）
+    // 默认：未登录 → 强制跳登录页（访客/注册入口都在 /login）
     goto('/login?next=/');
   });
 </script>
