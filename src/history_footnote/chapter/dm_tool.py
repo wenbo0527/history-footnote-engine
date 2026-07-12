@@ -136,10 +136,10 @@ def fill_chapter_blueprint_via_llm(
         if json_str is None:
             _LOG.error("LLM 输出无法提取 JSON: %s", raw_text[:100])
             return chapter_facade.init_chapter(chapter_id)
-        try:
-            llm_output = json.loads(json_str)
-        except json.JSONDecodeError as e:
-            _LOG.error("LLM JSON 解析失败: %s", e)
+        # 🆕 v2.10.1 W66: 多重容错（strict → lenient → partial → fallback）
+        llm_output = _parse_llm_json_with_retry(json_str)
+        if llm_output is None:
+            _LOG.error("LLM JSON 解析失败（多重容错也救不了）: %s", json_str[:200])
             return chapter_facade.init_chapter(chapter_id)
         if not isinstance(llm_output, dict):
             _LOG.error("LLM 输出不是 dict: %s", type(llm_output).__name__)
@@ -158,6 +158,104 @@ def fill_chapter_blueprint_via_llm(
     except Exception as e:
         _LOG.error("fill_chapter_blueprint_via_llm 失败: %s，回退硬编码", e)
         return chapter_facade.init_chapter(chapter_id)
+
+
+# ============= 🆕 v2.10.1 W66: JSON 多重容错 =============
+
+def _parse_llm_json_with_retry(json_str: str, max_retries: int = 2) -> dict | None:
+    """LLM JSON 解析：4 层容错
+
+    1. 严格解析 (json.loads)
+    2. 宽松解析（处理未转义引号、尾逗号、注释）
+    3. 部分提取（提取第一个完整 {} 块）
+    4. 修复尝试（去除尾随逗号、补全引号）
+
+    Returns:
+        dict: 解析成功
+        None: 全部失败
+    """
+    if not json_str:
+        return None
+
+    # 1. 严格解析
+    try:
+        result = json.loads(json_str)
+        if isinstance(result, dict):
+            return result
+    except json.JSONDecodeError:
+        pass
+
+    # 2. 宽松解析（尝试移除常见问题）
+    for attempt in range(max_retries):
+        try:
+            cleaned = _clean_json_string(json_str)
+            result = json.loads(cleaned)
+            if isinstance(result, dict):
+                _LOG.info("LLM JSON 第 %d 次容错成功", attempt + 1)
+                return result
+        except (json.JSONDecodeError, Exception):
+            continue
+
+    # 3. 部分提取：找第一个 { 到匹配的 }
+    try:
+        extracted = _extract_first_json_object(json_str)
+        if extracted:
+            result = json.loads(extracted)
+            if isinstance(result, dict):
+                _LOG.info("LLM JSON 部分提取成功")
+                return result
+    except (json.JSONDecodeError, Exception):
+        pass
+
+    return None
+
+
+def _clean_json_string(s: str) -> str:
+    """清理 JSON 字符串（处理 LLM 常见错误）"""
+    import re
+    # 移除 // 单行注释
+    s = re.sub(r"//[^\n]*", "", s)
+    # 移除 /* */ 多行注释
+    s = re.sub(r"/\*.*?\*/", "", s, flags=re.DOTALL)
+    # 移除尾随逗号（, } 或 , ]）
+    s = re.sub(r",(\s*[}\]])", r"\1", s)
+    # 替换单引号为双引号（key 周围）
+    s = re.sub(r"'(\w+)'\s*:", r'"\1":', s)
+    return s
+
+
+def _extract_first_json_object(s: str) -> str | None:
+    """提取第一个完整的 JSON object"""
+    start = s.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    quote_char = None
+    for i in range(start, len(s)):
+        c = s[i]
+        if escape:
+            escape = False
+            continue
+        if c == "\\":
+            escape = True
+            continue
+        if in_string:
+            if c == quote_char:
+                in_string = False
+            continue
+        if c in ('"', "'"):
+            in_string = True
+            quote_char = c
+            continue
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return s[start : i + 1]
+    return None
 
 
 # ============= 🆕 v2.8.0 段六+ W20 章节摘要 LLM =============
