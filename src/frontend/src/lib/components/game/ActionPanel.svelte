@@ -20,6 +20,7 @@
   import type { VoiceOption, ValueDimension } from '$lib/api/types';
   import { VALUE_DIMENSION_META } from '$lib/api/types';
   import { toast } from '$lib/components/design-system/Toast.svelte';
+  import VoicePill from './VoicePill.svelte';
 
   interface Props {
     voices: VoiceOption[];
@@ -212,49 +213,13 @@
         </div>
       {:else}
         {#each voices as v (v.voice_id)}
-          {@const dimMeta = v.value_dimension ? VALUE_DIMENSION_META[v.value_dimension] : null}
-          {@const lv = v.value_level ?? 0}
-          <button
-            type="button"
-            class="voice-pill"
-            class:voice-pill-freetext={v.is_freetext}
-            class:voice-pill-loud={lv >= 4}
-            style={dimMeta ? `--pill-color: ${dimMeta.color}` : ''}
-            onmouseenter={() => (hoveredId = v.voice_id)}
-            onmouseleave={() => (hoveredId = null)}
-            onclick={() => onselect(v)}
-            disabled={loading}
-            title={v.intent_text}
-          >
-            <!-- 左侧色条 -->
-            {#if dimMeta}
-              <span class="voice-pill-bar" style="background: {dimMeta.color}" aria-hidden="true"></span>
-            {/if}
-
-            <!-- 声音名 + intent 缩略 -->
-            <span class="voice-pill-main">
-              <span class="voice-pill-name">{v.voice_name}</span>
-              <span class="voice-pill-intent">{v.intent_text}</span>
-            </span>
-
-            <!-- 等级星（仅在 loud 时显示） -->
-            {#if dimMeta && lv > 0}
-              <span class="voice-pill-stars" style="color: {dimMeta.color}">
-                {'★'.repeat(lv)}
-              </span>
-            {/if}
-
-            <!-- hover 浮层：内心独白 -->
-            {#if v.inner_voice && hoveredId === v.voice_id}
-              <span
-                class="voice-pill-popover"
-                style={dimMeta ? `border-left-color: ${dimMeta.color}` : ''}
-              >
-                <span class="voice-pill-popover-mark" aria-hidden="true">💭</span>
-                {v.inner_voice}
-              </span>
-            {/if}
-          </button>
+          <VoicePill
+            voice={v}
+            hoveredId={hoveredId}
+            loading={loading}
+            onselect={onselect}
+            onhover={(id) => (hoveredId = id)}
+          />
         {/each}
       {/if}
     </div>
