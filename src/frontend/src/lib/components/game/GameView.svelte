@@ -22,6 +22,8 @@
   import { game, isLoading, gameActions } from '$lib/stores';
   import { submitInput } from '$lib/api/input';
   import { fateEmergencyCheck } from '$lib/api/fate';
+  import { confirmCityChange, rejectCityChange } from '$lib/api/state';
+  import CityChangeModal from './CityChangeModal.svelte';
   import { Toast, toast } from '$lib/components/design-system';
   import CharCard from './CharCard.svelte';
   import SidebarPanel from './SidebarPanel.svelte';
@@ -65,6 +67,39 @@
   function handleStartChapter() {
     showChapterIntro = false;
     introShownKey = $game?.session_id ?? null;
+  }
+
+  // 🆕 v2.10.1 W77: 城市变更确认
+  $effect(() => {
+    if (!$game) return;
+    const pending = ($game as any).pending_city_change;
+    if (pending) {
+      // 自动弹出确认（避免被遮罩）
+    }
+  });
+
+  async function handleConfirmCity() {
+    if (!$game) return;
+    try {
+      const updated = await confirmCityChange($game.session_id);
+      gameActions.set(updated);
+      toast.success('已到达新城市');
+    } catch (e) {
+      const err = e as Error;
+      toast.error(err.message || '确认失败');
+    }
+  }
+
+  async function handleRejectCity() {
+    if (!$game) return;
+    try {
+      const updated = await rejectCityChange($game.session_id);
+      gameActions.set(updated);
+      toast.info('已留下，原地不动');
+    } catch (e) {
+      const err = e as Error;
+      toast.error(err.message || '操作失败');
+    }
   }
 
   async function handleSelectVoice(voice: { voice_id: string; voice_name: string; intent_text?: string }) {
@@ -182,6 +217,18 @@
       summary={firstNarrative?.narrative?.slice(0, 200) ?? ''}
       eraName={$game?.era_name ?? $game?.era_id ?? ''}
       onStart={handleStartChapter}
+    />
+  {/if}
+
+  <!-- 🆕 v2.10.1 W77: 城市变更确认弹窗 -->
+  {#if ($game as any)?.pending_city_change}
+    <CityChangeModal
+      open={true}
+      fromCity={($game as any).pending_city_change.from_city}
+      toCity={($game as any).pending_city_change.to_city}
+      narrative={($game as any).pending_city_change.narrative ?? ''}
+      onConfirm={handleConfirmCity}
+      onReject={handleRejectCity}
     />
   {/if}
 

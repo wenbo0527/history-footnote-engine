@@ -122,6 +122,8 @@ def format_state(game) -> dict:
         # 🆕 v1.9.5：把 custom_character 的关键字段也铺平到顶层（前端兼容用）
         # 这样 sidebar/character-card 不需要深嵌套取 cc.background / cc.name
         "character": _flatten_custom_character(getattr(s, "custom_character", {})),
+        # 🆕 v2.10.1 W77: 待确认的城市变更
+        "pending_city_change": getattr(s, "pending_city_change", None),
         # 🐛 v1.5.1 P1 Issue 5 修复：暴露 last_voice_options 给前端
         "last_voice_options": list(getattr(s, "last_voice_options", []) or []),
         # 🆕 v1.7.26 侧边栏固化面板数据

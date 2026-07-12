@@ -124,6 +124,9 @@ POST_ROUTES = {
     "/api/character_wiki_update": _character.handle_POST_character_wiki_update,
     "/api/input": _input.handle_POST_input,
     "/api/load": _state.handle_POST_load,
+    # 🆕 v2.10.1 W77: 城市变更确认
+    "/api/confirm_city_change": _state.handle_POST_confirm_city_change,
+    "/api/reject_city_change": _state.handle_POST_reject_city_change,
     "/api/archive/delete": _session_router.handle_POST_archive_delete,
     "/api/archives/clear": _session_router.handle_POST_archives_clear,
     "/api/input_stream": _input.handle_POST_input_stream,

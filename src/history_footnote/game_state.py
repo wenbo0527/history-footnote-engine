@@ -8,7 +8,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -35,6 +35,12 @@ class GameState:
     # === 🆕 v1.7.30 当前位置 ===
     # 玩家当前所在城市（"shengze" 表示在盛泽；"suzhou"/"hangzhou"/"nanjing" 表示离乡）
     current_city: str = "shengze"  # 城市 id（对应 era.world.cities 中的 key）
+
+    # 🆕 v2.10.1 W77: 待确认的城市变更
+    # LLM 触发 arrive.X 事件时，先写入此字段 → 前端弹窗让用户确认
+    # 确认后由 /api/confirm_city_change 清除 + 更新 current_city
+    # 拒绝后由 /api/reject_city_change 清除（current_city 不变）
+    pending_city_change: Optional[dict] = None
 
     # === 🆕 v2.4 当前位置（具体地点）===
     # 玩家当前在哪个地点（对应 era.world.locations.list 中的 id）

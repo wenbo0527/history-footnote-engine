@@ -123,11 +123,16 @@ def _apply_fin_event(state, event: dict, logger=None) -> bool:
 
 def _apply_city_event(state, event: dict, logger=None) -> bool:
     """应用城市事件（arrive/leave）
-    
-    🆕 v2.10.1 W74: city 改变需叙事锚定
-    - LLM 输 arrive.X 会改 state.current_city → 玩家看到"突然到苏州"
-    - 修复：必须 narrative 含 "船" 或 "行至/到/去 X" 才生效
-    - 否则 log warning + return False（不改 city）
+
+    🆕 v2.10.1 W77: 城市变更需用户确认
+    - 之前 W74: 拦截无 narrative 锚定的 arrive（直接拒绝）
+    - 现在：保留 W74 检查 + 通过后**不发立即改 state**
+    - 改为写入 state.pending_city_change 字段
+    - 前端检测到 pending_city_change → 弹"是否要去 XX"确认
+    - 用户确认 → 调 /api/confirm_city_change 真正改 state
+    - 用户拒绝 → 调 /api/reject_city_change 保持原 city
+
+    这样玩家不会被 LLM 自由发挥强制移动
     """
     parts = event["id"].split(".")
     if len(parts) < 3:
@@ -135,21 +140,27 @@ def _apply_city_event(state, event: dict, logger=None) -> bool:
     action = parts[1]  # arrive / leave
     city_id = parts[2]
     if action == "arrive" and city_id in CITY_IDS:
-        # 🆕 W74: 检查 narrative 是否描述了"行至/到/船"等移动行为
+        # 同 city → 不需要确认
+        if state.current_city == city_id:
+            return True
+        # W74 检查：narrative 必须含移动关键词（仍保留）
         narrative = (event.get("narrative") or event.get("note") or "").strip()
-        # 移动关键词：船 / 行至 / 到了 / 去了 / 来到 / 路过 / 进城
         travel_keywords = ["船", "行至", "到了", "去了", "来到", "进城", "路过", "坐船", "坐车", "行路", "赶路", "启程", "离开", "动身", "赶去", "抵达"]
         has_travel = any(kw in narrative for kw in travel_keywords)
         if not has_travel:
             if logger:
-                logger.warning(f"[W74] city 突变被拦截：narrative 无移动关键词（id={event.get('id')}, narrative 前 50 字={narrative[:50]!r}）")
-            # 仍标记事件"已处理"（避免 LLM 重复触发），但不改 state
-            return True
-        state.current_city = city_id
+                logger.warning(f"[W77] arrive 拦截：narrative 无移动关键词（id={event.get('id')}, narrative 前 50 字={narrative[:50]!r}）")
+            return True  # 拦截，不进 pending
+        # W77: 写入 pending_city_change，等用户确认
+        state.pending_city_change = {
+            "from_city": state.current_city,
+            "to_city": city_id,
+            "narrative": narrative[:200],
+        }
+        if logger:
+            logger.info(f"[W77] arrive 待确认：{state.current_city} → {city_id}")
         return True
     if action == "leave":
-        # leave 是"离开到其他城市"——只清 location 标记，city 需在 arrive 之前/之后处理
-        # 这里用 note 字段记录离开信息
         if logger:
             logger.info(f"player leave {city_id}")
         return True
