@@ -1,22 +1,50 @@
-v2.10.1 W79: Enter 发送（修复 Ctrl+Enter 体验错位）
+v2.10.1 W80: 命运卡改"卡包"模式（点击弹窗展示）
 
-问题：ActionPanel 输入框按 Enter 无反应
-- placeholder 写"按 Enter 发送"
-- 实际要求 Ctrl/⌘+Enter 才发送
-- 玩家预期"按 Enter 就发" → 实际是必须按 Ctrl/Enter
+之前：CharCard 命运卡 chip 点击直接 useCard（无详情）
+问题：玩家看不到卡详情（效果/使用时机）就"一键使用"
 
-修复（ActionPanel.svelte:97+）：
-- if (e.key === 'Enter' && !e.shiftKey && !e.isComposing)
-  → 直接发送（无 Ctrl/⌘ 要求）
-- Shift+Enter → 保留换行（多行输入）
-- isComposing → 中文输入法下不误触
-- placeholder 同步更新：
-  - "Enter 发送，Shift+Enter 换行"
-  - "Enter 发送，Shift+Enter 换行，Esc 收起"
+新设计：卡包 + 弹窗
+- CharCard 显示紧凑卡包（3 张卡 + "X 张"计数）
+- 点击任一卡 → 弹 FateCardDetailModal
+- 弹窗展示：大图 + 完整描述 + 使用提示 + 效果 + 按钮
+- 弹窗按钮"启用此卡"才真正使用
 
-影响：
-- Enter 直接发（最符合聊天/输入预期）
-- Shift+Enter 仍可换行
-- 中文输入法选词时不会误触
+FateCardDetailModal 新组件（modals/FateCardDetailModal.svelte）：
+- 大图区：emoji + 主题色渐变背景（64px 图标 + 名称 + ⏱使用时机）
+- 描述：完整 description（首行缩进 2em）
+- 提示：use_hint（如"紧急时点击启用"）
+- 效果：effect_type code 显示
+- 按钮：收起 / 启用此卡
+- Esc 关闭
+- 已使用的卡显示"✓ 此卡已使用"banner + 按钮禁用
+
+CharCard 改动（CharCard.svelte）：
+- 删除"一键使用"角标 ▶
+- onclick 改为传整个 card 对象 → 弹窗
+- 新增 FateCardDetailModal 挂载
+- 保留命运卡 chip 已用/未用样式
+
+兼容：
+- fateEvents 总线保留（旧调用 still work）
+- handleQuickUse 仍存在（不再显示角标）
+
+UI 效果：
+┌─ 🎴 我的命运    2/3 未用 ─┐
+│ [🃏 招财] [🃏 安稳] [🃏 聪慧] │
+└──────────────────────────────┘
+         ↓ 点击
+┌────────────────────────┐
+│      命 运 卡          │
+│  ┌──────────────────┐  │
+│  │       🃏          │  │
+│  │     招 财        │  │
+│  │  ⏱ 任何时机      │  │
+│  └──────────────────┘  │
+│  卡牌描述…             │
+│  💡 紧急时点击启用     │
+│  效果类型: instant_cash│
+│                        │
+│  [收起]  [✨ 启用此卡] │
+└────────────────────────┘
 
 测试：173 PASSED 0 回归

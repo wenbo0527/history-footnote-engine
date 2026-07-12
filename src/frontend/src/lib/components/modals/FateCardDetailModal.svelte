@@ -9,7 +9,7 @@
 <script lang="ts">
   import ModalShell from './ModalShell.svelte';
   import { Button, Spinner } from '$lib/components/design-system';
-  import { useFateCard } from '$lib/api/fate';
+  import { fateUse } from '$lib/api/fate';
   import { game, gameActions } from '$lib/stores';
   import { toast } from '$lib/components/design-system';
   import type { FateCard } from '$lib/api/types';
@@ -35,7 +35,11 @@
     if (!card || !$game) return;
     submitting = true;
     try {
-      const res = await useFateCard($game.session_id, card.id);
+      // 🆕 v2.10.1 W80: 用 fateUse（兼容各种 use_type）
+      const context = (card.use_type === 'round_start' ? 'round_start'
+                    : card.use_type === 'emergency' ? 'emergency'
+                    : 'immediate') as 'immediate' | 'round_start' | 'emergency';
+      const res = await fateUse($game.session_id, card.id, context);
       // 刷新 state（含新 cash/variables）
       if ((res as any).updated_state) {
         gameActions.set((res as any).updated_state);
