@@ -1,157 +1,91 @@
 {
   "chapter_id": 2,
-  "chapter_title": "三月初一·税单",
-  "chapter_subtitle": "春风得意马蹄疾",
+  "chapter_title": "三月中·告官",
+  "chapter_subtitle": "府衙深似海",
   "meta": {
-    "act": "departure",
-    "role": "ordinary",
-    "emotion_tone": "unease",
-    "choice_type": "whether_to_resist",
+    "act": "confrontation",
+    "emotion_tone": "frustration",
+    "choice_type": "whether_to_complain",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "authority_denied_then_self_help"
   },
-  "transition_hint": "season",
+  "transition_hint": "year_month",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【税单落地,咬牙抗税】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年三月中，税单落地已半月。赵里长催了三次，你硬是没交。一天，李秀才来访，低声说：'听说苏州府受理税案告状，你要不要走一趟？'你看着他的脸色，心里盘算：去告官，至少要两天船资，还要打点门房。沈氏在灶间说：'相公，咱斗得过他们吗？'",
+      "npc_ids": ["npc_li_xiucai", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "去苏州府告官，哪怕倾家荡产", "path_hint": "main_tax_resistance"},
+        {"text": "先去牙行打听，苏州府是不是真受理", "path_hint": "side_silk_trade"},
+        {"text": "求李秀才写状子，自己去递", "path_hint": "main_tax_resistance"},
+        {"text": "算了吧,等春蚕收了再说", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch2_node1"
-      ],
+      "knowledge_ids": ["kn_suzhou_yamen", "kn_li_xiucai_background"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【税单落地,咬牙抗税】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "你坐船到了苏州府。府衙门口排着长队，大多是织户告状。递状子时，门房上下打量你，伸出三根手指：'三两银子。'你一阵心寒——告官还要先交'过路费'。等了三天，衙门终于传你。一个师爷冷冷地说：'税是朝廷定的，本府管不了。回去吧。'你攥紧状子,几乎要发火。",
+      "npc_ids": ["npc_yamen_shihua", "npc_li_xiucai"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "当堂质问：'为何织户加税三成而丝商分文不动？'", "path_hint": "main_tax_resistance"},
+        {"text": "忍气吞声，回去再想别的办法", "path_hint": "side_silk_trade"},
+        {"text": "递给师爷五两,求他递到巡抚那里", "path_hint": "side_silk_trade"},
+        {"text": "拿回状子,去南京都察院", "path_hint": "main_tax_resistance"}
       ],
-      "knowledge_ids": [
-        "kn_ch2_node2"
-      ],
+      "knowledge_ids": ["kn_yamen_bribe", "kn_shihua_role"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【税单落地,咬牙抗税】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "回盛泽的路上，你遇见了李秀才。他神色严肃：'你告官的事传开了。赵里长说你是'刁民'，要加征'刁名钱'。'沈氏在家已哭了两场。邻人王二嫂偷偷送来一篮鸡蛋：'嫂子让我给你家带话，大家的心意。'你看着这篮鸡蛋，想起父亲说过的话：'织户一家，胜过官府万千。'",
+      "npc_ids": ["npc_li_xiucai", "npc_wang_sao", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "联合邻人,集体上书苏州府", "path_hint": "main_tax_resistance"},
+        {"text": "把赵里长的'刁名钱'登在告示栏上,让大家知道", "path_hint": "main_tax_resistance"},
+        {"text": "认怂,老老实实交税,免得连累家人", "path_hint": "side_silk_trade"},
+        {"text": "卖掉一匹春丝,去城里请讼师", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch2_node3"
-      ],
+      "knowledge_ids": ["kn_diaomin_money", "kn_community_solidarity"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【税单落地,咬牙抗税】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "你选择了一条路:把税单的事写成传单,让阿宝他娘抄了二十份,分给邻村织户。王二嫂带头,十一家联名,再上一次苏州府。临行前,沈氏给你缝了新衣,塞了两个饼。她没说话,但你看见她眼眶红了。这一章,你不仅抗了税,也抗了一个'顺民'的壳。",
+      "npc_ids": ["npc_li_xiucai", "npc_wang_sao", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "随十一家联名上书,带状子去苏州", "path_hint": "main_tax_resistance"},
+        {"text": "把传单散给更多村,扩大联名", "path_hint": "main_tax_resistance"},
+        {"text": "去之前先跟赵里长摊牌", "path_hint": "side_silk_trade"},
+        {"text": "让李秀才代为出面,你幕后", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch2_node4"
-      ],
+      "knowledge_ids": ["kn_lianming_shangshu", "kn_collective_action_wanli"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 2 章专属场景：聚焦家庭与守土"
+      "node_2_scene": "苏州府师爷赶你走时,你身旁的织户老陈头忍不住跪下:大老爷,我们一年到头织的丝都交了税,如今加三成,叫我们怎么活啊。师爷翻了个白眼:朝廷定的,跟我有什么关系。你看着老陈头的背影,心想:这府衙是织户的,不是苏州的。",
+      "node_2_options": [
+        {"text": "扶起老陈头,带他一起去南京", "path_hint": "main_tax_resistance"},
+        {"text": "回盛泽,先把春蚕养好,留得青山在", "path_hint": "side_silk_trade"},
+        {"text": "把老陈头的事写下来,传回盛泽", "path_hint": "main_tax_resistance"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 2 章专属场景：聚焦外出与商机"
+      "node_1_scene": "李秀才来访,不只是出主意——他还压低声音说:苏州城里有位张先生,做丝出口生意,他或许能帮上忙。你心动了:与其告官,不如直接打通商路,绕过里长这一关。沈氏不解:商路?咱世代织户,哪懂什么商路。",
+      "node_1_options": [
+        {"text": "先去苏州见张先生,问商路", "path_hint": "side_silk_trade"},
+        {"text": "让李秀才代为引见,自己暂不动", "path_hint": "side_silk_trade"},
+        {"text": "先去苏州府告官,再谈商路", "path_hint": "main_tax_resistance"},
+        {"text": "问李秀才:商路是丝绸之路那种吗", "path_hint": "side_silk_trade"}
+      ]
     }
   }
 }

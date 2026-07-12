@@ -1,157 +1,92 @@
 {
   "chapter_id": 9,
-  "chapter_title": "八月中秋·团圆",
-  "chapter_subtitle": "月明千里寄相思",
+  "chapter_title": "十月中·织户公会",
+  "chapter_subtitle": "年终盘账",
   "meta": {
-    "act": "rest",
-    "role": "ordinary",
-    "emotion_tone": "tenderness",
-    "choice_type": "whether_to_renovate",
+    "act": "harvest",
+    "emotion_tone": "fulfillment",
+    "choice_type": "how_to_consolidate",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "consolidation_then_year_end"
   },
   "transition_hint": "season",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【中秋夜,家人共】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年十月初,盛泽织户公会正式成立。十一家签字画押,李秀才任会长,王二嫂管账,你是理事之一。公会第一件事:年底前统一卖给苏州客商,不再过牙行。你算了一笔账:统一卖,能多争两成,等于十一家多挣三十多两。但王老板那边,要得罪了。",
+      "npc_ids": ["npc_li_xiucai", "npc_wang_sao", "npc_yahang_wang"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "公会立场坚定,统一卖给苏州客", "path_hint": "main_collective_action"},
+        {"text": "先试探王老板,他若压价我们就走", "path_hint": "side_silk_trade"},
+        {"text": "让王二嫂做和事佬,两边都不伤", "path_hint": "side_community"},
+        {"text": "这一批先卖给王老板,下一批走公会", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch9_node1"
-      ],
+      "knowledge_ids": ["kn_zhihu_gonghui_charter", "kn_unified_selling"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【中秋夜,家人共】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "王老板知道公会的事了。他来你家,脸色铁青:老沈啊,你不念旧情?我帮你家卖了多少丝!沈氏在里屋听见了,出来打圆场:王老板,我们公会不是针对你,就是想多挣点。你心里也为难——王老板一向公道,只是抽成高了点。",
+      "npc_ids": ["npc_yahang_wang", "fm_wife", "npc_li_xiucai"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "坚持公会立场,王老板可以议价", "path_hint": "main_collective_action"},
+        {"text": "私下让步:王老板减半成,我们就卖他", "path_hint": "side_community"},
+        {"text": "让王老板也入公会,一起做大", "path_hint": "side_community"},
+        {"text": "退出公会理事,自己卖自家丝", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch9_node2"
-      ],
+      "knowledge_ids": ["kn_yahang_negotiation", "kn_collective_vs_individual"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【中秋夜,家人共】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "苏州客商来了,十一家联合议价,最后二十二两成交——比王老板给的十八两多四两。十一家分完,平均每家多挣三两多。但王老板第二天在牙行门口贴告示:盛泽织户公会,以后别来我牙行!王二嫂有点慌:王老板会不会报复?李秀才说:不会,牙行也要织户。但你心里隐隐不安。",
+      "npc_ids": ["npc_suzhou_keshang", "npc_yahang_wang", "npc_li_xiucai", "npc_wang_sao"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "继续推公会,下一批还走苏州客", "path_hint": "main_collective_action"},
+        {"text": "主动找王老板,给他一个台阶", "path_hint": "side_community"},
+        {"text": "成立公会基金,留作下年风险", "path_hint": "side_community"},
+        {"text": "暂缓公会,等王老板气消", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch9_node3"
-      ],
+      "knowledge_ids": ["kn_collective_success", "kn_yahang_response"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【中秋夜,家人共】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "年终盘账。今年织机产丝三十斤,卖丝收入二十二两,加上之前存银十五两,共三十七两。减税后实交税五两(减了两成),减束脩二两,日常开销八两,还剩二十二两。你把账本摊开给沈氏看,她不识字,但会数。她数完,笑了:这是咱家五年来存银最多的一年。窗外冬日暖阳,织机房里传来你拉丝的声音。",
+      "npc_ids": ["fm_wife", "fm_son", "npc_li_xiucai"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "存二十两作明年开春本金", "path_hint": "main_silk_harvest"},
+        {"text": "投五两进公会基金,扩大公会影响", "path_hint": "side_community"},
+        {"text": "买第二台织机,明年扩产", "path_hint": "main_silk_harvest"},
+        {"text": "过个好年,杀鸡宰羊", "path_hint": "side_family_first"}
       ],
-      "knowledge_ids": [
-        "kn_ch9_node4"
-      ],
+      "knowledge_ids": ["kn_year_end_accounting", "kn_wanli_15_summary"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 9 章专属场景：聚焦家庭与守土"
+      "node_3_scene": "王老板贴告示那天,沈氏有点担心:王老板家也有老小,他没了生意也不好过。你看着告示,想起王老板以前也帮过你家——灾年免过一回抽成。你心里有点不是滋味。",
+      "node_3_options": [
+        {"text": "还是走公会,但给王老板分一成", "path_hint": "side_community"},
+        {"text": "坚持公会立场,商路就是商路", "path_hint": "main_collective_action"},
+        {"text": "找王老板谈,看他愿不愿意降抽成", "path_hint": "side_community"},
+        {"text": "退公会,自己单干", "path_hint": "side_silk_trade"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 9 章专属场景：聚焦外出与商机"
+      "node_1_scene": "公会成立那天,你心里想的不止盛泽——苏州城里有多少牙行?南京、湖州、杭州还有多少?如果盛泽织户公会能联名,扩大到苏州去,开自己的丝行……你看着李秀才,他会意。",
+      "node_1_options": [
+        {"text": "提议明年去苏州设盛泽丝行分号", "path_hint": "side_silk_trade"},
+        {"text": "先巩固盛泽,明年再说", "path_hint": "side_community"},
+        {"text": "写一封信给苏州张先生,谈合作", "path_hint": "side_silk_trade"},
+        {"text": "先稳住公会,等明年分红再说扩张", "path_hint": "side_community"}
+      ]
     }
   }
 }

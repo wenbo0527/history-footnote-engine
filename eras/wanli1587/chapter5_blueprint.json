@@ -1,157 +1,91 @@
 {
   "chapter_id": 5,
-  "chapter_title": "四月中·织机",
-  "chapter_subtitle": "织梭声中夜未央",
+  "chapter_title": "六月中·水患",
+  "chapter_subtitle": "太湖一夜涨三寸",
   "meta": {
-    "act": "grinding",
-    "role": "ordinary",
-    "emotion_tone": "exhaustion",
-    "choice_type": "whether_to_rest",
+    "act": "trial",
+    "emotion_tone": "anxiety",
+    "choice_type": "whether_to_relocate",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "natural_disaster_response"
   },
   "transition_hint": "season",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【织机损坏,换还是修】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年六月,连下十日大雨。太湖一夜涨三寸,盛泽低洼处已经进水。王二嫂慌了:她家灶间都泡了,蚕匾漂起来。李秀才来敲门:水势还在涨,要不要先去高处避一避?你看着织机房里刚缫好的二十斤夏丝,心里一紧:搬走,丝易受潮;不搬,水真进来了——",
+      "npc_ids": ["npc_wang_sao", "npc_li_xiucai", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "全家先撤到镇东高地,丝也搬", "path_hint": "main_family_first"},
+        {"text": "把丝架到高处的阁楼上,人不走", "path_hint": "side_silk_trade"},
+        {"text": "留在屋里,堆沙袋,死守", "path_hint": "side_silk_trade"},
+        {"text": "先去帮王二嫂搬东西,自己家再说", "path_hint": "side_community"}
       ],
-      "knowledge_ids": [
-        "kn_ch5_node1"
-      ],
+      "knowledge_ids": ["kn_taihu_flood_history", "kn_shengze_geography"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【织机损坏,换还是修】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "第三天早晨,水位到了膝盖。镇南已经全淹了。赵里长带着衙役挨家通知:全家撤到镇北庙里。你家织机房还在,但底层的丝全湿了。沈氏抱着阿宝,挺着大肚子:相公,再不撤,孩子都要生在路上了。你抬头看天——雨还在下。",
+      "npc_ids": ["npc_zhao_lizhang", "fm_wife", "fm_son"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "全家撤到镇北庙里,丝能救多少算多少", "path_hint": "main_family_first"},
+        {"text": "沈氏先撤,自己留下看家", "path_hint": "side_family_first"},
+        {"text": "把湿丝晾起来,等水退", "path_hint": "side_silk_trade"},
+        {"text": "全家撤,丝留给赵里长登记损失", "path_hint": "main_family_first"}
       ],
-      "knowledge_ids": [
-        "kn_ch5_node2"
-      ],
+      "knowledge_ids": ["kn_evacuation_procedure", "kn_silk_water_damage"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【织机损坏,换还是修】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "全家撤到镇北庙里,挤着几十口人。半夜,沈氏肚子痛——要生了!产婆还没来,水阻了路。王二嫂会接生,她烧热水,你举灯。烛光下,沈氏咬着牙,叫得满庙都是声音。半个时辰后,一个女娃的哭声响起。沈氏虚弱地笑:是个丫头……你抱着女儿,想起万历十五年这个夏天的水。",
+      "npc_ids": ["npc_wang_sao", "fm_wife", "fm_son"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "给女儿取名:水生,纪念这一夜", "path_hint": "main_family_first"},
+        {"text": "把阿宝叫过来,让他看妹妹", "path_hint": "main_family_first"},
+        {"text": "先谢王二嫂救命之恩,给她家一匹丝", "path_hint": "side_community"},
+        {"text": "问李秀才:水什么时候能退", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch5_node3"
-      ],
+      "knowledge_ids": ["kn_rural_midwifery", "kn_wanli_15_flood"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【织机损坏,换还是修】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "第七天,水退了。你回到织机房,底层二十斤夏丝全毁了——泡水、霉变。沈氏抱着女儿坐在门槛上,看着你从泥水里捞起变色的丝,没说话。邻家也好不到哪去,王二嫂家蚕匾全废,李秀才家书全湿。这一章,你得了女儿,失了二十斤丝。但沈氏说:人在,家在,织机还能转。",
+      "npc_ids": ["npc_wang_sao", "npc_li_xiucai", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "重整织机,从头再来", "path_hint": "main_silk_harvest"},
+        {"text": "先把湿丝晒干,能卖多少算多少", "path_hint": "side_silk_trade"},
+        {"text": "联合邻人,向县衙请赈", "path_hint": "side_community"},
+        {"text": "借债度日,等秋蚕再起", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch5_node4"
-      ],
+      "knowledge_ids": ["kn_post_flood_recovery", "kn_diwu_tax_relief"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 5 章专属场景：聚焦家庭与守土"
+      "node_3_scene": "半夜产女时,你想的不是二十斤丝——是沈氏和你这一路。从税单到倭警,今年没一件顺心事,但她还愿给你生孩子。庙里烛光摇曳,你握着她手:辛苦了。",
+      "node_3_options": [
+        {"text": "给女儿取名'灯娘',纪念产房烛光", "path_hint": "main_family_first"},
+        {"text": "让阿宝叫妹妹小名'水生'", "path_hint": "main_family_first"},
+        {"text": "问产婆王二嫂要个吉名", "path_hint": "side_community"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 5 章专属场景：聚焦外出与商机"
+      "node_1_scene": "水患来时,你心里闪过一个念头:如果盛泽每年都这样,织户就永远翻不了身。你想:得在苏州或湖州置一处产业,作后路。但手里只有十六两现银,够吗?",
+      "node_1_options": [
+        {"text": "先把眼前的水患处理了,外迁以后再说", "path_hint": "main_family_first"},
+        {"text": "李秀才在苏州有远亲,写信问问", "path_hint": "side_silk_trade"},
+        {"text": "去苏州城里看房,反正水退了也能卖丝", "path_hint": "side_silk_trade"},
+        {"text": "把这次损失写下来,上书县衙", "path_hint": "side_community"}
+      ]
     }
   }
 }

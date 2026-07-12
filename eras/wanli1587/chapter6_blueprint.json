@@ -1,157 +1,92 @@
 {
   "chapter_id": 6,
-  "chapter_title": "五月·债台",
-  "chapter_subtitle": "屋漏偏逢连夜雨",
+  "chapter_title": "七月中·秋蚕",
+  "chapter_subtitle": "灾后第一茬",
   "meta": {
-    "act": "crisis",
-    "role": "ordinary",
-    "emotion_tone": "despair",
-    "choice_type": "whether_to_borrow",
+    "act": "growth",
+    "emotion_tone": "determination",
+    "choice_type": "how_to_rebuild",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "rebuild_then_expand"
   },
   "transition_hint": "season",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【债务如山,找人借】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年七月中,水退后半月。织机房里满是泥污,但织机还在——木质好,没被水泡坏。你和沈氏一寸寸擦干净,阿宝帮递抹布。蚕匾没了,要重买。王二嫂说邻村孙家有一批便宜的——你想起水患前她家也泡了,如今还有心思卖蚕匾,说明她比你起得还快。",
+      "npc_ids": ["fm_wife", "fm_son", "npc_wang_sao"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "买王二嫂家蚕匾,帮她一把", "path_hint": "side_community"},
+        {"text": "去苏州买新蚕匾,质量好", "path_hint": "side_silk_trade"},
+        {"text": "用木箱代替蚕匾,省钱", "path_hint": "main_silk_harvest"},
+        {"text": "先不养秋蚕,修房子要紧", "path_hint": "side_family_first"}
       ],
-      "knowledge_ids": [
-        "kn_ch6_node1"
-      ],
+      "knowledge_ids": ["kn_canbii_replacement", "kn_autumn_silkworm"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【债务如山,找人借】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "秋蚕养上了,但桑叶成了难题。水患后,桑园一片狼藉,老桑农说今年桑叶要涨价三成。你盘算:涨价三成,等于利润砍半。邻人张二建议合伙去太湖边采野桑;李秀才则说,不如联合十家织户,跟老桑农订长约,锁定价格。你看着账本,头有点疼。",
+      "npc_ids": ["npc_zhang_family", "npc_li_xiucai", "npc_sang_nong"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "联合十家织户订长约,锁价", "path_hint": "side_community"},
+        {"text": "去太湖边采野桑,辛苦但省钱", "path_hint": "main_silk_harvest"},
+        {"text": "咬牙买高价桑叶,先养好这一茬", "path_hint": "main_silk_harvest"},
+        {"text": "减半养秋蚕,降低风险", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch6_node2"
-      ],
+      "knowledge_ids": ["kn_sangye_market_wanli", "kn_collective_bargaining"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【债务如山,找人借】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "十家织户真的坐下来谈长约。老桑农犹豫了——他怕织户今年欠收,赖账。你作为发起人,带头押了一两银子,说:如果违约,这银子归你。其他九家也跟着押了。老桑农点头:成,但价格要比今年市价高一成。你心里算:还是比自己买便宜,值得。",
+      "npc_ids": ["npc_sang_nong", "npc_li_xiucai", "npc_wang_sao"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "签长约,押银一两", "path_hint": "side_community"},
+        {"text": "把价格压回去一成,只高半成", "path_hint": "side_community"},
+        {"text": "考虑退出,让别人签", "path_hint": "side_silk_trade"},
+        {"text": "签约,但加条款:明年减一成", "path_hint": "side_community"}
       ],
-      "knowledge_ids": [
-        "kn_ch6_node3"
-      ],
+      "knowledge_ids": ["kn_contract_formation", "kn_ten_family_pact"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【债务如山,找人借】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "秋蚕丰收。十家织户,每家缫了二十斤秋丝,王老板出价十八两——比去年跌了两成,因为水患后市场疲软。但十家联合卖,议价权高了,最后二十两成交。你分得二十两,扣除长约押金,实际到手十八两。沈氏笑:够过冬了。窗外秋阳暖,你看着织机,想起水患那晚的烛光。",
+      "npc_ids": ["npc_yahang_wang", "npc_li_xiucai", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "十家织户成立公会,以后年年长约", "path_hint": "side_community"},
+        {"text": "存银,准备过冬和明年开春", "path_hint": "main_silk_harvest"},
+        {"text": "扩产,再买一台织机", "path_hint": "main_silk_harvest"},
+        {"text": "让阿宝去李秀才家读书,识文断字", "path_hint": "side_family_first"}
       ],
-      "knowledge_ids": [
-        "kn_ch6_node4"
-      ],
+      "knowledge_ids": ["kn_zhihu_gonghui", "kn_autumn_silk_market"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 6 章专属场景：聚焦家庭与守土"
+      "node_4_scene": "秋丝卖掉后,王二嫂提议成立织户公会,十家签字画押。你想:公会好是好,但万一哪家赖账,连累其他人……你看着沈氏怀里的女儿——她才两个月,你不想冒险。",
+      "node_4_options": [
+        {"text": "加入公会,信任邻人", "path_hint": "side_community"},
+        {"text": "不加入,自家单干", "path_hint": "side_silk_trade"},
+        {"text": "加入,但只参与一半事务", "path_hint": "side_community"},
+        {"text": "让李秀才当会长,自己退居二线", "path_hint": "side_community"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 6 章专属场景：聚焦外出与商机"
+      "node_2_scene": "李秀才建议联合订长约时,你心里想的不止桑叶——如果十家织户能联合,以后还可以联合卖丝、联合议价,甚至联合去苏州开牙行。盛泽织户要翻身,得有自己的商路。",
+      "node_2_options": [
+        {"text": "同意长约,顺势推公会成立", "path_hint": "side_community"},
+        {"text": "提建议:长约之外,再合资开丝行", "path_hint": "side_silk_trade"},
+        {"text": "只同意长约,公会的事以后再说", "path_hint": "side_community"},
+        {"text": "建议先联合十家,再扩到三十家", "path_hint": "side_community"}
+      ]
     }
   }
 }

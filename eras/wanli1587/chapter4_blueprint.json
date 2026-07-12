@@ -1,157 +1,92 @@
 {
   "chapter_id": 4,
-  "chapter_title": "四月初·春蚕",
-  "chapter_subtitle": "满城尽带黄金甲",
+  "chapter_title": "五月中·倭警",
+  "chapter_subtitle": "海上有风",
   "meta": {
-    "act": "pressure",
-    "role": "ordinary",
-    "emotion_tone": "strain",
-    "choice_type": "whether_to_give_up",
+    "act": "trial",
+    "emotion_tone": "fear",
+    "choice_type": "whether_to_evacuate",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "external_threat_then_internal_choice"
   },
-  "transition_hint": "season",
+  "transition_hint": "historical_anchor",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【春蚕上簇,咬牙撑】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年五月初,镇北来人带信:东海有倭寇出没,劫了三条运丝船。盛泽虽近内陆,但太湖口的风也带上了腥味。赵里长在镇上贴告示:每家出一壮丁,夜间巡逻。你看着阿宝,想起船上被劫的客商——丝绸、银子、人命,一锅端。",
+      "npc_ids": ["npc_zhao_lizhang", "fm_wife", "fm_son"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "主动报名巡逻,保一方平安", "path_hint": "main_resist_external"},
+        {"text": "让沈氏带孩子去娘家暂避", "path_hint": "side_family_first"},
+        {"text": "把丝银藏到地窖,严守口风", "path_hint": "side_silk_trade"},
+        {"text": "请李秀才写一封信给县衙,请兵", "path_hint": "main_resist_external"}
       ],
-      "knowledge_ids": [
-        "kn_ch4_node1"
-      ],
+      "knowledge_ids": ["kn_wanli_15_wokou", "kn_shengze_security"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【春蚕上簇,咬牙撑】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "倭警越来越近。一天夜里,你家后院狗叫,你握起扁担冲出去——只是野猫。但邻村张家真遭了:夜里倭寇翻墙,抢走全部存银,张家媳妇受了伤。李秀才急匆匆来:镇北要组织联防,问你去不去。你心里打鼓:去,白天织机就停了;不去,倭寇真来了怎么办?",
+      "npc_ids": ["npc_li_xiucai", "npc_zhang_family", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "加入联防队,白天织机让沈氏照看", "path_hint": "main_resist_external"},
+        {"text": "出钱不出人,联防费一两", "path_hint": "side_silk_trade"},
+        {"text": "关起门来,织机不停,邻居的事不管", "path_hint": "side_family_first"},
+        {"text": "去县衙请愿,让官府出面", "path_hint": "main_resist_external"}
       ],
-      "knowledge_ids": [
-        "kn_ch4_node2"
-      ],
+      "knowledge_ids": ["kn_lianfang_organization", "kn_wokou_tactics"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【春蚕上簇,咬牙撑】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "联防巡逻到第三天夜里,你刚睡着,锣声响了!倭寇二十余人,真的到了盛泽镇外!火光冲天,犬吠声乱成一片。你冲出门,看见王二嫂抱着孩子跑,李秀才拿着棍子喊:男人们,上!你看着自己织机房里满屋的春丝,心里一紧:如果倭寇进了镇——",
+      "npc_ids": ["npc_li_xiucai", "npc_wang_sao", "npc_zhao_lizhang"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "冲出去和邻人一起抗倭", "path_hint": "main_resist_external"},
+        {"text": "把春丝全浇上水,藏到后院地窖", "path_hint": "side_family_first"},
+        {"text": "让沈氏带孩子从后门跑,自己殿后", "path_hint": "main_resist_external"},
+        {"text": "敲锣,招呼更多人", "path_hint": "main_resist_external"}
       ],
-      "knowledge_ids": [
-        "kn_ch4_node3"
-      ],
+      "knowledge_ids": ["kn_wokou_attack_wanli", "kn_local_defense_role"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【春蚕上簇,咬牙撑】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "那一夜,你和联防队打退了倭寇。三人受了轻伤,无一人亡。倭寇见势不妙,退去太湖。第二天,县里派了兵来。赵里长挨家挨户登记损失,王老板说丝行也丢了几匹。你看着自己织机房里那批春丝——还好好地锁在柜里。这一章,你守住了织机,也守住了盛泽的一夜。",
+      "npc_ids": ["npc_zhao_lizhang", "npc_li_xiucai", "npc_wang_sao"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "把联防经验写下来,传给邻人", "path_hint": "side_community"},
+        {"text": "让阿宝学武,以后也能抗倭", "path_hint": "main_resist_external"},
+        {"text": "出银子,资助县里建哨塔", "path_hint": "main_resist_external"},
+        {"text": "先养伤,联防的事以后再说", "path_hint": "side_family_first"}
       ],
-      "knowledge_ids": [
-        "kn_ch4_node4"
-      ],
+      "knowledge_ids": ["kn_post_wokou_recovery", "kn_local_militia_wanli"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 4 章专属场景：聚焦家庭与守土"
+      "node_2_scene": "李秀才要你加入联防队时,沈氏拉了拉你衣角。她担心:咱家就你一个壮丁,真出了事,我和阿宝怎么办。你看着她隆起的肚子——她又有了。",
+      "node_2_options": [
+        {"text": "加入联防,但每天回家看沈氏", "path_hint": "main_resist_external"},
+        {"text": "出钱不出人,在家守妻儿", "path_hint": "side_family_first"},
+        {"text": "白天织机,夜里巡逻,两头兼顾", "path_hint": "main_resist_external"},
+        {"text": "把沈氏送回娘家,再加入联防", "path_hint": "side_family_first"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 4 章专属场景：聚焦外出与商机"
+      "node_1_scene": "倭警来时,你想的不止是盛泽——苏州的丝行、湖州的织坊,整个东南丝绸之路,都靠着海上运输。如果倭寇常来,外销的路就断了。你想:或许该跟李秀才合计,组织联防后,再筹办一支商船护卫队。",
+      "node_1_options": [
+        {"text": "先守盛泽,再想商路", "path_hint": "main_resist_external"},
+        {"text": "直接去找李秀才谈商船护卫", "path_hint": "side_silk_trade"},
+        {"text": "向苏州客商写信,告知盛泽联防情况", "path_hint": "side_silk_trade"},
+        {"text": "把春丝全卖给本镇商人,不走外销", "path_hint": "side_silk_trade"}
+      ]
     }
   }
 }

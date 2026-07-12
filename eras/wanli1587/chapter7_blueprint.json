@@ -1,157 +1,92 @@
 {
   "chapter_id": 7,
-  "chapter_title": "六月·倭警",
-  "chapter_subtitle": "海疆不靖人心慌",
+  "chapter_title": "八月中·生员",
+  "chapter_subtitle": "阿宝开蒙",
   "meta": {
-    "act": "external_threat",
-    "role": "ordinary",
-    "emotion_tone": "fear",
-    "choice_type": "whether_to_flee",
+    "act": "growth",
+    "emotion_tone": "hope",
+    "choice_type": "whether_to_send_son_to_school",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "education_choice"
   },
   "transition_hint": "season",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【倭寇来袭,躲还是守】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年八月,秋收后。阿宝七岁了,该开蒙了。李秀才在镇上开私塾,束脩一年二两银子。你算了算:家里存银十五两,交完税剩不了多少。但沈氏坚持:再不读书,就一辈子织户;识了字,将来或许能考个秀才。你抱着阿宝,想起自己小时候——没书读,一辈子认命。",
+      "npc_ids": ["npc_li_xiucai", "fm_wife", "fm_son"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "送阿宝去李秀才私塾,束脩二两", "path_hint": "main_education"},
+        {"text": "在家自己教,省钱", "path_hint": "side_family_first"},
+        {"text": "等明年,手头宽裕些再说", "path_hint": "side_silk_trade"},
+        {"text": "送去镇东孙家私塾,束脩一两五", "path_hint": "main_education"}
       ],
-      "knowledge_ids": [
-        "kn_ch7_node1"
-      ],
+      "knowledge_ids": ["kn_li_xiucai_school", "kn_wanli_education"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【倭寇来袭,躲还是守】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "阿宝第一天去私塾回来,哭丧着脸:李先生让他背'人之初,性本善',他背不下来,被罚站了一下午。你心疼,想去找李秀才理论。沈氏拦住你:先生严是好事,严师出高徒。你不情愿,但也知道——自己小时候要是有这机会,早就飞了。",
+      "npc_ids": ["npc_li_xiucai", "fm_wife", "fm_son"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "默许,孩子该严", "path_hint": "main_education"},
+        {"text": "私下教阿宝一些,帮他跟上", "path_hint": "main_education"},
+        {"text": "找李秀才谈,不要这么严", "path_hint": "side_family_first"},
+        {"text": "送阿宝去孙家私塾", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch7_node2"
-      ],
+      "knowledge_ids": ["kn_strict_teaching", "kn_kid_psychology_wanli"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【倭寇来袭,躲还是守】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "一个月后,阿宝能背整本《三字经》,还学会了写自己的名字。李秀才很高兴:这孩子聪明,将来或许能考个秀才。你看着阿宝认真写'沈'字,心里一动:如果他真能考中,沈家就不是织户了——是'士'了。但束脩欠了一两,赵里长催得紧——",
+      "npc_ids": ["npc_li_xiucai", "fm_son", "npc_zhao_lizhang"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "把束脩全交了,卖一匹秋丝", "path_hint": "main_education"},
+        {"text": "找李秀才赊账,等春丝卖了再还", "path_hint": "side_community"},
+        {"text": "让阿宝休学一季,家里紧", "path_hint": "side_family_first"},
+        {"text": "先把赵里长的税交了,束脩后说", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch7_node3"
-      ],
+      "knowledge_ids": ["kn_xiucai_exam_path", "kn_school_fee_negotiation"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【倭寇来袭,躲还是守】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "束脩交了。阿宝继续读。这一章,你把十五两存银交了五两给李秀才,三两给赵里长。剩下的留着过冬。沈氏不识字,但她每天晚上看阿宝写字,看得入神。窗外秋月明,织机房里传来你拉丝的声音——这年,织机没停,阿宝的书也没断。",
+      "npc_ids": ["fm_wife", "fm_son", "npc_li_xiucai"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "明年让沈氏也学认字,一起读", "path_hint": "side_family_first"},
+        {"text": "给阿宝买笔墨纸砚,练好字", "path_hint": "main_education"},
+        {"text": "存银,等阿宝十二岁考童生", "path_hint": "main_education"},
+        {"text": "把阿宝送去苏州府学,跟名师", "path_hint": "main_education"}
       ],
-      "knowledge_ids": [
-        "kn_ch7_node4"
-      ],
+      "knowledge_ids": ["kn_family_literacy", "kn_12_year_exam_path"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 7 章专属场景：聚焦家庭与守土"
+      "node_2_scene": "阿宝被罚站那晚,沈氏偷偷抹泪。她嫁过来时也是文盲,一辈子签契约都按手印。她对阿宝说:宝啊,你好好读,娘就算不识字,也认你这个读书人的儿子。",
+      "node_2_options": [
+        {"text": "让阿宝以后教沈氏认字", "path_hint": "side_family_first"},
+        {"text": "把阿宝叫来,严父教子", "path_hint": "main_education"},
+        {"text": "私塾的事让沈氏管,自己只管织机", "path_hint": "side_family_first"},
+        {"text": "阿宝太累,让他玩半天", "path_hint": "side_family_first"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 7 章专属场景：聚焦外出与商机"
+      "node_3_scene": "你交完束脩,心里想:苏州府学比李秀才私塾强多了。如果阿宝能进府学,将来考秀才的路更宽。但府学一年束脩要十两——你一年净收入才二十两,撑得住吗?",
+      "node_3_options": [
+        {"text": "明年扩产,多挣十两供阿宝", "path_hint": "side_silk_trade"},
+        {"text": "先在李秀才私塾打基础", "path_hint": "main_education"},
+        {"text": "让阿宝边读边学织机,两手准备", "path_hint": "main_education"},
+        {"text": "问李秀才:府学收不收盛泽的", "path_hint": "main_education"}
+      ]
     }
   }
 }

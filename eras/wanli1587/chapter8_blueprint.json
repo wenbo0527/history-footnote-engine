@@ -1,157 +1,92 @@
 {
   "chapter_id": 8,
-  "chapter_title": "七月·内讧",
-  "chapter_subtitle": "人心离散各自飞",
+  "chapter_title": "九月中·税复议",
+  "chapter_subtitle": "十一家联名上书",
   "meta": {
-    "act": "betrayal",
-    "role": "ordinary",
-    "emotion_tone": "shock",
-    "choice_type": "whether_to_forgive",
+    "act": "climax",
+    "emotion_tone": "anticipation",
+    "choice_type": "whether_to_petition",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "collective_action_climax"
   },
-  "transition_hint": "season",
+  "transition_hint": "historical_anchor",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【邻人背叛,怒还是恕】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年九月,十一家织户联名上书的日子到了。李秀才写了状子,洋洋洒洒三页:盛泽织户三十余家,本年加税三成,水患后更不堪重负,望府衙减免,体恤民情。你作为发起人之一,要去苏州府递状子。沈氏给阿宝穿上新衣:让先生看看,我家也有读书种子。",
+      "npc_ids": ["npc_li_xiucai", "fm_wife", "fm_son", "npc_wang_sao"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "带阿宝一起去苏州,让他见世面", "path_hint": "main_collective_action"},
+        {"text": "阿宝留在家读书,自己和李秀才去", "path_hint": "side_education"},
+        {"text": "让阿宝代写一份家书,表明家风", "path_hint": "main_collective_action"},
+        {"text": "去之前先拜祭父亲,告慰先祖", "path_hint": "side_family_first"}
       ],
-      "knowledge_ids": [
-        "kn_ch8_node1"
-      ],
+      "knowledge_ids": ["kn_lianming_petition", "kn_suzhou_yamen_procedure"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【邻人背叛,怒还是恕】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "船到苏州府。府衙门口,十一家织户的代表聚齐了——有的全家出动,有的就派个当家的。赵里长不知从哪得了消息,带着两个衙役也赶来了。他远远看着,脸色铁青。你心里一紧:他要是当场闹起来,这状子还递不递?",
+      "npc_ids": ["npc_zhao_lizhang", "npc_li_xiucai", "npc_wang_sao"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "不理赵里长,直接进府衙递状", "path_hint": "main_collective_action"},
+        {"text": "派李秀才去跟赵里长周旋", "path_hint": "main_collective_action"},
+        {"text": "邀请赵里长一起上书,共担风险", "path_hint": "side_community"},
+        {"text": "退一步,改成只递税单复议", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch8_node2"
-      ],
+      "knowledge_ids": ["kn_lizhang_confrontation", "kn_petition_procedure"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【邻人背叛,怒还是恕】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "府衙大堂。苏州知府亲临,听完十一家代表的陈情,沉吟半晌。他开口:税是朝廷定的,本府不能全免——但今年水患属实,可减两成,明年再议。十一家跪谢知恩。你走出大堂,看见赵里长在外远远站着,他的眼神——复杂。你心里明白:这减的两成,救了这十一家,也得罪了里长。",
+      "npc_ids": ["npc_suzhou_zhifu", "npc_zhao_lizhang", "npc_li_xiucai"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "回盛泽后,主动去里长那里解释", "path_hint": "side_community"},
+        {"text": "不理里长,减税就完了", "path_hint": "main_collective_action"},
+        {"text": "联合十家,给里长也分点功劳", "path_hint": "side_community"},
+        {"text": "回盛泽后,继续推公会", "path_hint": "main_collective_action"}
       ],
-      "knowledge_ids": [
-        "kn_ch8_node3"
-      ],
+      "knowledge_ids": ["kn_zhifu_decision", "kn_post_victory_diplomacy"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【邻人背叛,怒还是恕】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "回盛泽的路上,李秀才说:减两成,等于十一家省了十二两银子,平均每家一两多——值!你回到家,沈氏抱着女儿迎上来:回来了?你点头。她塞给你一个热饼。你想起一年前税单落地,那时的绝望——如今,虽然还是织户,但你知道:织户能联合,能发声,能改。这一章,你不仅减了税,也立了'织户公会'的雏形。",
+      "npc_ids": ["fm_wife", "fm_son", "npc_li_xiucai"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "正式成立'盛泽织户公会',推李秀才为会长", "path_hint": "side_community"},
+        {"text": "把减税的银子存起来,作公会基金", "path_hint": "side_community"},
+        {"text": "给阿宝买新书,鼓励他考秀才", "path_hint": "side_education"},
+        {"text": "扩大公会,联名镇南镇北三十家", "path_hint": "side_community"}
       ],
-      "knowledge_ids": [
-        "kn_ch8_node4"
-      ],
+      "knowledge_ids": ["kn_shengze_gonghui_charter", "kn_wanli_collective_action"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 8 章专属场景：聚焦家庭与守土"
+      "node_2_scene": "赵里长脸色铁青地站在府衙外时,你犹豫:他也是盛泽人,也是为了完成上头的差事。把他逼急了,以后他报复你,你也吃不消。你看着邻家王二嫂——她家去年被里长加征过'刁名钱'。",
+      "node_2_options": [
+        {"text": "硬气,不理他,递状子要紧", "path_hint": "main_collective_action"},
+        {"text": "走过去,跟里长说:减税是大家的好事", "path_hint": "side_community"},
+        {"text": "让李秀才去周旋,自己先进去", "path_hint": "main_collective_action"},
+        {"text": "退一步,这次就递复议不联名", "path_hint": "side_silk_trade"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 8 章专属场景：聚焦外出与商机"
+      "node_3_scene": "知府说减两成时,你心里想的更多:如果能借此把十一家织户变成'盛泽织户公会',以后不只减税,还能集体议价、集体外销、集体开牙行——盛泽的丝,不必再过牙行抽成。你看着李秀才,他似乎也有同感。",
+      "node_3_options": [
+        {"text": "回盛泽,立刻推公会成立", "path_hint": "side_community"},
+        {"text": "在苏州多留一天,考察城里的丝行", "path_hint": "side_silk_trade"},
+        {"text": "先回盛泽,公会的事慢慢来", "path_hint": "side_community"},
+        {"text": "建议公会先只管桑叶长约,其他以后", "path_hint": "side_community"}
+      ]
     }
   }
 }

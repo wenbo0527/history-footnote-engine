@@ -1,157 +1,91 @@
 {
   "chapter_id": 3,
-  "chapter_title": "三月中·告官",
-  "chapter_subtitle": "府衙深似海",
+  "chapter_title": "四月初·春蚕",
+  "chapter_subtitle": "吐丝成茧",
   "meta": {
-    "act": "confrontation",
-    "role": "ordinary",
-    "emotion_tone": "frustration",
-    "choice_type": "whether_to_complain",
+    "act": "growth",
+    "emotion_tone": "hope",
+    "choice_type": "how_to_invest",
     "suggested_node_count": 4,
-    "suggested_template": "pressure_divide_choose_consequence"
+    "suggested_template": "investment_growth_then_pressure"
   },
   "transition_hint": "season",
   "nodes": [
     {
       "index": 1,
       "role": "introduction",
-      "scene": "【上告苏州府,无门】场景开篇。家庭/邻人对话引入本章主题。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "万历十五年四月,春蚕上簇。一张张蚕匾摆满里屋,沙沙的食桑声如雨。沈氏日夜喂蚕,你盘算着:这季春蚕,能缫多少丝?卖多少银?赵里长说五月又要来催税,留给你家的时间只有一个月。阿宝趴在门槛上数蚕:一、二、三——他数不到十就睡了。",
+      "npc_ids": ["fm_wife", "fm_son"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "全家动员,日夜缫丝,先把春丝做出", "path_hint": "main_silk_harvest"},
+        {"text": "请王二嫂帮忙,给她分一成", "path_hint": "side_community"},
+        {"text": "留一半自己缫,另一半卖鲜茧", "path_hint": "side_silk_trade"},
+        {"text": "租邻人两台织机,扩大产能", "path_hint": "main_silk_harvest"}
       ],
-      "knowledge_ids": [
-        "kn_ch3_node1"
-      ],
+      "knowledge_ids": ["kn_spring_silk_harvest", "kn_silkworm_lifecycle"],
       "completion_condition": "round_4_reached"
     },
     {
       "index": 2,
       "role": "escalation",
-      "scene": "【上告苏州府,无门】外部压力升级。衙役/债主/倭寇到访。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "春蚕吐丝了,作茧成功。但缫丝的水和燃料都是钱。你家后院的桑叶只够喂半月,王二嫂说镇东的老桑农家桑叶多,可以买;李秀才则说,先赊账等卖丝再还。你看着灶间堆起的蚕茧,想起父亲临终前的话:织户要稳,不能赌。",
+      "npc_ids": ["npc_wang_sao", "npc_li_xiucai", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "买桑叶,稳扎稳打", "path_hint": "main_silk_harvest"},
+        {"text": "赊账买燃料,等春丝卖完再还", "path_hint": "side_community"},
+        {"text": "卖掉一半蚕茧换现银,降低风险", "path_hint": "side_silk_trade"},
+        {"text": "种桑树,长期打算", "path_hint": "main_silk_harvest"}
       ],
-      "knowledge_ids": [
-        "kn_ch3_node2"
-      ],
+      "knowledge_ids": ["kn_sangye_market", "kn_she_zhang_account"],
       "completion_condition": "round_8_reached"
     },
     {
       "index": 3,
       "role": "climax",
-      "scene": "【上告苏州府,无门】高潮抉择。玩家被迫表态,不可回避。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "春丝缫完了。三十斤上等湖绫,泛着银光。沈氏小心翼翼地用油纸包好。牙行王老板来你家,看了丝,出价二十两。你心里盘算:还赵里长五两,留十两度日,剩五两……正要答应,李秀才冲进来:别卖!苏州府的客商明天到,听说能给二十五两!",
+      "npc_ids": ["npc_yahang_wang", "npc_li_xiucai", "fm_wife"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "卖给王老板,稳妥,二十两落袋为安", "path_hint": "side_silk_trade"},
+        {"text": "等苏州客商,冒险多赚五两", "path_hint": "main_silk_harvest"},
+        {"text": "分成两批:二十斤卖王老板,十斤等客商", "path_hint": "main_silk_harvest"},
+        {"text": "让李秀才代为谈判,自己不露面", "path_hint": "side_silk_trade"}
       ],
-      "knowledge_ids": [
-        "kn_ch3_node3"
-      ],
+      "knowledge_ids": ["kn_silk_price_negotiation", "kn_suzhou_keshang"],
       "completion_condition": "round_12_reached"
     },
     {
       "index": 4,
       "role": "resolution",
-      "scene": "【上告苏州府,无门】本回合收束,留悬念到下章。",
-      "npc_ids": [
-        "fm_wife",
-        "fm_son",
-        "npc_zhao_lizhang",
-        "npc_wang_sao"
-      ],
+      "scene": "苏州客商来了,二十六两,比预期多一两。沈氏笑得合不拢嘴。你把银子锁进柜,打算五两还税,五两还李秀才赊账,十六两存着。但王二嫂傍晚又来敲门:她家春蚕死了三成,眼巴巴想借十斤丝度日。你站在门槛上,春风拂面,想起一年前也是这个季节。",
+      "npc_ids": ["npc_wang_sao", "fm_wife", "npc_li_xiucai"],
       "option_directions": [
-        {
-          "text": "顺从,认命",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "硬抗,不理",
-          "path_hint": "main_tax_resistance"
-        },
-        {
-          "text": "求援,找人",
-          "path_hint": "side_silk_trade"
-        },
-        {
-          "text": "逃避,躲藏",
-          "path_hint": "side_silk_trade"
-        }
+        {"text": "借王二嫂十斤丝,写欠条不收息", "path_hint": "side_community"},
+        {"text": "分五斤给王二嫂,不要还", "path_hint": "side_community"},
+        {"text": "拒绝,各家自扫门前雪", "path_hint": "side_silk_trade"},
+        {"text": "组织邻人合买桑种,明年一起种", "path_hint": "side_community"}
       ],
-      "knowledge_ids": [
-        "kn_ch3_node4"
-      ],
+      "knowledge_ids": ["kn_community_mutual_aid", "kn_sangzhong_market"],
       "completion_condition": "round_16_reached"
     }
   ],
   "differentiation": {
-    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "_description": "Build × 节点分化（v2.8.0 段四）",
     "守乡人": {
-      "_note": "守乡人 path 中第 3 章专属场景：聚焦家庭与守土"
+      "node_3_scene": "牙行王老板和李秀才争着出价时,你犹豫不决。沈氏在灶间小声说:相公,稳妥为上,二十两已经够还债度日了。你想起父亲的话,点了点头:卖!",
+      "node_3_options": [
+        {"text": "卖给王老板,落袋为安", "path_hint": "side_silk_trade"},
+        {"text": "坚持等客商,让王老板加价", "path_hint": "main_silk_harvest"},
+        {"text": "分两批,折中", "path_hint": "main_silk_harvest"}
+      ]
     },
     "外望人": {
-      "_note": "外望人 path 中第 3 章专属场景：聚焦外出与商机"
+      "node_4_scene": "王二嫂借丝时,你想的不仅是她一家——如果整个盛泽织户联合起来,直接和苏州客商谈价,就能跳过牙行抽成。你对王二嫂说:嫂子,这一斤丝不是借你的,是投到咱织户公会的。",
+      "node_4_options": [
+        {"text": "把十六两存银全投进织户公会", "path_hint": "side_community"},
+        {"text": "投一半,留一半度日", "path_hint": "side_community"},
+        {"text": "先借王二嫂,公会的事缓一缓", "path_hint": "side_community"},
+        {"text": "拉李秀才一起,做织户公会会长", "path_hint": "side_community"}
+      ]
     }
   }
 }
