@@ -1,49 +1,38 @@
-v2.10.1 W81: 命运卡整卡渲染（中国算命风）
+v2.10.1 W82: 统一 Icon 组件 + 11 个中国风 SVG icon
 
-调研：
-- 项目已有 37 张命运卡图（/static/fate/*.webp，W60 用 mmx 生成）
-- mmx 命令（minimax CLI）支持 mmx image generate
-  --prompt / --aspect-ratio / --seed / --out-dir
-- mmx auth status: Not authenticated
-  （OAuth 过期，登录后可生成新图）
+调研：项目已有 12 个 icon（nav/* 7个 + stats/* 5个）
+- nav: archive / choice / home / recap / settings / share / wiki
+- stats: action / cash / health / loom / reputation
 
-本次实现：
-1. SVG 卡背（card_back.svg）
-   - 宣纸底 + 朱砂描金外框
-   - 八卦圆环（☰☱☲☳☴☵☶☷）
-   - 中央太极（红黑双鱼）
-   - 顶部"命运"朱砂印章
-   - 底部"万历十五年·盛泽"铭文
+新加 11 个 SVG icon（/static/icons/ui/，中国水墨风）：
+- search.svg 🔍 (放大镜 + 墨点)
+- sparkle.svg ✨ (光芒四射)
+- warning.svg ⚠ (惊堂木 + 朱砂)
+- hint.svg 💡 (油灯 + 火苗)
+- coin.svg 🪙 (铜钱外圆内方)
+- scroll.svg 📜 (卷轴)
+- chat.svg 💬 (书信 + 朱砂印章)
+- calendar.svg 🗓 (日历·农历)
+- walk.svg 🚶 (行路人 + 包袱)
+- gear.svg ⚙ (齿轮)
+- cards.svg 🎴 (牌组)
 
-2. 后端（fate_cards.py）：
-   - FateCard 加 image_url 字段
-   - FATE_CARD_IMAGES 映射 → /fate/{id}.webp
-   - _default fallback → /fate/card_back.svg
-   - draw_fate_cards 抽卡时注入 image_url
+颜色统一：朱砂 #a52828 / 古铜 #6b5230 / 宣纸 #f5ebd4 / 描金 #c9a961
 
-3. 前端：
-   - FateCardDetailModal 改成整卡图渲染
-     - 240x320 竖版卡（3:4 比例）
-     - 整卡图 + 角标（使用时机）
-     - 已用蒙层
-     - 失败回退 → emoji 渐变
-   - CharCard chip 加缩略图
-     - 24x32 缩略图 + 卡名
-   - types.ts: FateCard 加 image_url 字段
+Icon 组件（Icon.svelte）：
+- 23 个 icon 名字（11 svg + 7 nav + 5 stats）
+- 自动路由：svg → /icons/ui/{name}.svg
+  nav → /icons/nav/{name}.webp
+  stats → /icons/stats/{name}.webp
+- <img> 渲染（浏览器原生 SVG 支持）
+- 失败回退：opacity 0.3
+- 任意 size
 
-UI 效果：
-- 弹窗中央大卡（240x320）显示中国算命风
-- 卡角显示"⏱ 任何时机"等
-- 底部卡名 + id
-- 描述 + 💡 提示 + 效果代码
-- 按钮区：收起 / 启用此卡
+RecapModal 改造（demo）：
+- 搜索框 🔍 → <Icon name="search" />
+- 玩家选择 ⚙ → <Icon name="gear" />
+
+未来继续替换：EmergencyModal ⚠ / CityChangeModal 🚶 / 
+FateCardDetailModal ✨ / 等 16 个文件
 
 测试：173 PASSED 0 回归
-后端已重启（PID 86799）
-
-mmx 用法记录：
-  mmx image generate --prompt "..." --aspect-ratio 3:4 --seed N
-                    --out-dir <dir> --out-prefix <prefix>
-                    --out <file> --response-format base64
-  mmx auth status/login/refresh
-  API: image-01 / image-01-live

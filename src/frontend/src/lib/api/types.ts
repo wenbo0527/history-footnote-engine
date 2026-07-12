@@ -394,10 +394,23 @@ export interface RecapResponse {
   total_narratives: number;
   recent: RecapNarrativeItem[];
   archive: RecapNarrativeItem[];
+  // 🆕 v2.10.1 W83: 按章节分组
+  chapters?: RecapChapter[];
   // 旧字段保留（兼容）
   markdown?: string;
   rounds_covered?: number;
   generated_at?: string;
+}
+
+// 🆕 v2.10.1 W83: 章节
+export interface RecapChapter {
+  chapter_id: string;
+  title: string;        // "第一章 · 1587年3月"
+  date_label: string;    // "1587年3月"
+  year: number;
+  month: number;
+  index: number;         // 1, 2, 3...
+  narratives: RecapNarrativeItem[];
 }
 
 // ============ Glossary 词条 ============

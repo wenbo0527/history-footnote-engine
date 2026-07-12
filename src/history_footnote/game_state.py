@@ -703,7 +703,64 @@ class GameState:
             "total_narratives": len(self.narrative_recent) + len(self.narrative_archive),
             "recent": recent,
             "archive": archive,
+            # 🆕 v2.10.1 W83: 按章节分组（每章节 = 一个月度，按 current_date 分）
+            "chapters": self._group_narratives_by_chapter(recent + archive),
         }
+
+    def _group_narratives_by_chapter(self, narratives: list[dict]) -> list[dict]:
+        """🆕 v2.10.1 W83: 按 current_date 的月份分组
+
+        每条目 = 一个月度（"1587年3月"）
+        Returns: [
+          {
+            "chapter_id": "ch_1587_03",
+            "title": "第三章 · 三月风波",
+            "date_label": "1587年3月",
+            "narratives": [...]  # 该月所有 narrative
+          },
+          ...
+        ]
+        """
+        if not narratives:
+            return []
+        chapters_dict: dict[str, dict] = {}
+        chapter_order: list[str] = []
+        for n in narratives:
+            date = n.get("current_date", "") or ""
+            if not date:
+                continue
+            # 提取月份部分（"1587年3月" → "ch_1587_03"）
+            # 兼容 "1587年3月"、"1587年10月" 等
+            import re
+            m = re.match(r'(\d+)年(\d+)月', date)
+            if not m:
+                continue
+            year, month = m.groups()
+            month_pad = month.zfill(2)
+            ch_id = f"ch_{year}_{month_pad}"
+            if ch_id not in chapters_dict:
+                chapters_dict[ch_id] = {
+                    "chapter_id": ch_id,
+                    "date_label": f"{year}年{int(month)}月",
+                    "year": int(year),
+                    "month": int(month),
+                    "narratives": []
+                }
+                chapter_order.append(ch_id)
+            chapters_dict[ch_id]["narratives"].append(n)
+
+        # 按 year/month 排序
+        chapters = [chapters_dict[ch] for ch in chapter_order]
+        chapters.sort(key=lambda c: (c["year"], c["month"]))
+
+        # 生成 chapter title（"第三章 · 三月风波"）
+        chinese_nums = ['一','二','三','四','五','六','七','八','九','十']
+        for idx, ch in enumerate(chapters, 1):
+            num_str = chinese_nums[idx-1] if idx <= 10 else str(idx)
+            ch["title"] = f"第{num_str}章 · {ch['date_label']}"
+            ch["index"] = idx
+
+        return chapters
 
     def get_visible_state(self) -> dict:
         """返回给玩家可见的状态（过滤敏感信息）"""

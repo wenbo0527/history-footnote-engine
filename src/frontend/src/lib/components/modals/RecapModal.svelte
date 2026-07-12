@@ -6,14 +6,18 @@
    * 国风：章节式 + 朱砂标题
    *
    * 🆕 v1.7.30: 字段对齐后端（recent[] + archive[]）
-   * 🆕 v1.7.32: 后端默认返完整 NARRATIVE_RECENT_SIZE=20 条 + ARCHIVE_SIZE=100 条摘要，
-   *   玩家可看到每一回合的完整 DM 叙事，不用等 LLM 总结
+   * 🆕 v1.7.32: 后端默认返完整 NARRATIVE_RECENT_SIZE=20 条 + ARCHIVE_SIZE=100 条摘要
+   * 🆕 v2.10.1 W78: 加玩家选择 + 故事衔接
+   * 🆕 v2.10.1 W82: 改用 Icon 组件
+   * 🆕 v2.10.1 W83: 按章节分目录（侧边导航）+ 移除假 loading
+   *              → 直接展示已有 narrative，不再"DM 整理..."
+   *              → 左侧章节列表（按月分组），点击滚动到章节
    */
   import { game } from '$lib/stores';
   import { getRecap, type RecapResponse, type RecapNarrativeItem } from '$lib/api/recap';
   import { Chapter, Spinner, Button, Tabs, Icon } from '$lib/components/design-system';
   import ModalShell from './ModalShell.svelte';
-  import type { RecapNarrativeItem as Item } from '$lib/api/types';
+  import type { RecapNarrativeItem as Item, RecapChapter } from '$lib/api/types';
 
   interface Props {
     open: boolean;
@@ -25,11 +29,16 @@
   let loading = $state(false);
   let recap = $state<RecapResponse | null>(null);
   let error = $state<string | null>(null);
-  let activeTab = $state<'recent' | 'archive'>('recent');
-  // 🆕 v1.7.32: 玩家可按关键词搜索全文（长 session 时有用）
+  let activeTab = $state<'chapter' | 'archive'>('chapter');  // 🆕 W83: 默认"按章节"
   let searchKeyword = $state('');
 
-  // 🆕 v1.7.32: 派生过滤（轻量级纯前端搜索）
+  // 🆕 W83: 当前激活章节（点击左侧导航）
+  let activeChapterId = $state<string | null>(null);
+
+  // 🆕 W83: 章节列表（已分组，按月）
+  const chapters = $derived(recap?.chapters ?? []);
+
+  // 兼容旧模式：flat list（filtered）
   const filteredRecent = $derived.by(() => {
     if (!recap) return [];
     const kw = searchKeyword.trim();
@@ -51,8 +60,9 @@
     );
   });
 
+  // 🆕 W83: 加载即触发（仍走 API，但内容是已有 narrative，不调 LLM）
   $effect(() => {
-    if (open && $game && !recap) {
+    if (open && $game && !recap && !loading) {
       loadRecap();
     }
   });
@@ -63,10 +73,23 @@
     error = null;
     try {
       recap = await getRecap($game.session_id);
+      // 默认激活第一章节
+      if (recap?.chapters && recap.chapters.length > 0) {
+        activeChapterId = recap.chapters[0].chapter_id;
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : '加载失败';
     } finally {
       loading = false;
+    }
+  }
+
+  // 🆕 W83: 点击章节 → 滚动到对应位置
+  function scrollToChapter(chapterId: string) {
+    activeChapterId = chapterId;
+    const el = document.getElementById(`chapter-${chapterId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 </script>
@@ -95,11 +118,11 @@
 
       <Tabs
         tabs={[
-          { id: 'recent', label: `最近 (${recap.recent.length})` },
+          { id: 'chapter', label: `按章节 (${chapters.length})` },  <!-- 🆕 W83 -->
           { id: 'archive', label: `存档 (${recap.archive.length})` }
         ]}
         value={activeTab}
-        onchange={(id) => activeTab = id as 'recent' | 'archive'}
+        onchange={(id) => activeTab = id as 'chapter' | 'archive'}
       />
 
       <!-- 🆕 v2.10.1 W82: 用 Icon 组件（不用 emoji） -->
@@ -121,7 +144,76 @@
         {/if}
       </div>
 
-      {#if activeTab === 'recent'}
+      <!-- 🆕 v2.10.1 W83: 按章节分（左侧章节目录 + 主区内容） -->
+      {#if activeTab === 'chapter'}
+        {#if chapters.length === 0}
+          <p class="recap-empty">暂无章节（还未生成叙事）</p>
+        {:else}
+          <div class="recap-chapter-layout">
+            <!-- 左侧章节目录 -->
+            <nav class="recap-chapter-toc">
+              <div class="recap-chapter-toc-title">目 录</div>
+              <ul class="recap-chapter-toc-list">
+                {#each chapters as ch (ch.chapter_id)}
+                  <li>
+                    <button
+                      type="button"
+                      class="recap-chapter-toc-item"
+                      class:active={ch.chapter_id === activeChapterId}
+                      onclick={() => scrollToChapter(ch.chapter_id)}
+                    >
+                      <span class="recap-chapter-toc-index">第{ch.index}章</span>
+                      <span class="recap-chapter-toc-date">{ch.date_label}</span>
+                      <span class="recap-chapter-toc-count">{ch.narratives.length} 节</span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            </nav>
+
+            <!-- 主区：按章节展示 narrative -->
+            <div class="recap-chapter-main">
+              {#each chapters as ch (ch.chapter_id)}
+                <section class="recap-chapter-section" id="chapter-{ch.chapter_id}">
+                  <header class="recap-chapter-section-header">
+                    <h3 class="recap-chapter-section-title">{ch.title}</h3>
+                    <span class="recap-chapter-section-count">{ch.narratives.length} 回合</span>
+                  </header>
+                  <div class="recap-list">
+                    {#each ch.narratives as item, idx (ch.chapter_id + '-' + item.round)}
+                      <article class="recap-item">
+                        <header class="recap-item-header">
+                          <span class="recap-round">第 {item.round} 回合</span>
+                          {#if item.summary}
+                            <span class="recap-summary">{item.summary}</span>
+                          {/if}
+                        </header>
+                        {#if item.player_input || item.chosen_voice}
+                          <div class="recap-choice">
+                            <Icon name="gear" size={14} class="recap-choice-icon" />
+                            <span class="recap-choice-text">
+                              {#if item.chosen_voice}
+                                你的选择：<strong>{item.chosen_voice}</strong>
+                                {#if item.player_input && item.player_input !== item.chosen_voice}
+                                  （原话：<em>「{item.player_input}」</em>）
+                                {/if}
+                              {:else}
+                                你的行动：<em>「{item.player_input}」</em>
+                              {/if}
+                            </span>
+                          </div>
+                        {/if}
+                        <p class="recap-narrative">{item.narrative}</p>
+                      </article>
+                    {/each}
+                  </div>
+                </section>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      {:else if activeTab === 'recent'}
+        <!-- W83 兼容旧模式：flat recent list -->
         {#if filteredRecent.length === 0}
           <p class="recap-empty">{searchKeyword ? `「${searchKeyword}」无匹配回合` : '暂无近期叙事'}</p>
         {:else}
@@ -129,7 +221,6 @@
             {#each filteredRecent as item, idx (idx)}
               {@const prevDate = idx > 0 ? filteredRecent[idx - 1].current_date : null}
               {@const showMonth = item.current_date && item.current_date !== prevDate}
-              <!-- 🆕 v2.10.1 W78: 月份标记（衔接月份） -->
               {#if showMonth}
                 <div class="recap-month-marker">
                   <span class="recap-month-marker-line"></span>
@@ -144,7 +235,6 @@
                     <span class="recap-summary">{item.summary}</span>
                   {/if}
                 </header>
-                <!-- 🆕 W78: 玩家选择（自由输入 或 voice 名） -->
                 {#if item.player_input || item.chosen_voice}
                   <div class="recap-choice">
                     <Icon name="gear" size={14} class="recap-choice-icon" />
@@ -412,5 +502,117 @@
     letter-spacing: 0.1em;
     padding: 0 var(--space-2);
     background: var(--color-paper);
+  }
+
+  /* 🆕 v2.10.1 W83: 章节布局（左侧 TOC + 右侧内容） */
+  .recap-chapter-layout {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: var(--space-4);
+    min-height: 400px;
+  }
+  .recap-chapter-toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: var(--space-3);
+    background: var(--color-paper-aged);
+    border: 1px solid var(--color-ink-faint);
+    border-radius: var(--radius-sm);
+  }
+  .recap-chapter-toc-title {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    color: var(--color-cinnabar);
+    font-weight: 600;
+    text-align: center;
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-ink-faint);
+    letter-spacing: 0.2em;
+  }
+  .recap-chapter-toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .recap-chapter-toc-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--duration-quick) var(--ease-ink);
+    text-align: left;
+    font-family: var(--font-body);
+  }
+  .recap-chapter-toc-item:hover {
+    background: var(--color-paper);
+    border-color: var(--color-bronze);
+  }
+  .recap-chapter-toc-item.active {
+    background: var(--color-paper);
+    border-color: var(--color-cinnabar);
+    box-shadow: 0 0 0 1px var(--color-cinnabar);
+  }
+  .recap-chapter-toc-index {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    color: var(--color-cinnabar);
+    font-weight: 600;
+  }
+  .recap-chapter-toc-date {
+    font-size: var(--text-xs);
+    color: var(--color-ink);
+    margin-top: 2px;
+  }
+  .recap-chapter-toc-count {
+    font-size: var(--text-xs);
+    color: var(--color-ink-light);
+    font-family: var(--font-numeric);
+    margin-top: 2px;
+  }
+  .recap-chapter-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: var(--space-2);
+  }
+  .recap-chapter-section {
+    scroll-margin-top: var(--space-2);
+  }
+  .recap-chapter-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: var(--space-2) 0;
+    margin-bottom: var(--space-2);
+    border-bottom: 2px solid var(--color-bronze);
+  }
+  .recap-chapter-section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    color: var(--color-cinnabar);
+    font-weight: 600;
+  }
+  .recap-chapter-section-count {
+    font-family: var(--font-numeric);
+    font-size: var(--text-xs);
+    color: var(--color-ink-light);
+    padding: 2px 8px;
+    background: var(--color-paper-aged);
+    border-radius: 10px;
   }
 </style>
