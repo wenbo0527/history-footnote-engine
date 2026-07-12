@@ -138,7 +138,7 @@ class GameState:
     # === 🆕 v1.7.30 钱结构化（替代 financial_status 部分字段） ===
     # 之前 financial_status 是 dict（LLM 自由写），现在 cash/rice/debt 严格类型
     # 后端校验：财务字段变更必须通过 state.apply_financial_change()（拒绝 LLM 自由改）
-    cash: float = 0.0           # 现金（两，1 两 = 1000 文）
+    cash: float = 0.0           # 现金（两；1 两 = 10 钱 = 100 分 = 1000 文）
     rice: float = 0.0           # 存粮（石）
     debt: float = 0.0           # 欠债（两）
     monthly_burn: float = 0.0   # 每月基础开销（两，自动计算）

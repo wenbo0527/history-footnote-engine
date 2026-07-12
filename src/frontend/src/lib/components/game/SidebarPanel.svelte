@@ -13,6 +13,8 @@
   import type { GameState } from '$lib/api/types';
   import { Chapter } from '$lib/components/design-system';
   import { locationList } from '$lib/api/location';
+  // 🆕 v2.10.2: 银钱单位统一（两/钱/分/厘）
+  import { toCompactLiang, toLiangOrYuan } from '$lib/utils/currency';
   import { fateHand } from '$lib/api/fate';
   import type { LocationListResponse, FateCard } from '$lib/api/types';
   import LocationPanel from './LocationPanel.svelte';
@@ -57,7 +59,8 @@
     <div class="fin-grid">
       <div class="fin-item" class:fin-item-warn={cashWarning}>
         <span class="fin-label">银两</span>
-        <span class="fin-value">{game.cash.toFixed(2)}</span>
+        <!-- 🆕 v2.10.2: 紧凑显示 (5.7 → "5 两 7 钱") -->
+        <span class="fin-value" title={toLiangOrYuan(game.cash)}>{toCompactLiang(game.cash)}</span>
       </div>
       <div class="fin-item">
         <span class="fin-label">米</span>
@@ -65,11 +68,13 @@
       </div>
       <div class="fin-item" class:fin-item-warn={debtWarning}>
         <span class="fin-label">欠债</span>
-        <span class="fin-value">{game.debt}</span>
+        <!-- 🆕 v2.10.2: 紧凑显示 -->
+        <span class="fin-value" title={toLiangOrYuan(game.debt)}>{toCompactLiang(game.debt)}</span>
       </div>
       <div class="fin-item">
         <span class="fin-label">月支出</span>
-        <span class="fin-value">{game.monthly_burn.toFixed(1)}</span>
+        <!-- 🆕 v2.10.2: 紧凑显示 -->
+        <span class="fin-value" title={toLiangOrYuan(game.monthly_burn)}>{toCompactLiang(game.monthly_burn)}</span>
       </div>
     </div>
   </section>

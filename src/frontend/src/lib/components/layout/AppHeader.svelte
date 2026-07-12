@@ -9,6 +9,8 @@
    */
   import { page } from '$app/stores';
   import { session } from '$lib/stores';
+  // 🆕 v2.10.2: 银钱单位统一
+  import { toCompactLiang } from '$lib/utils/currency';
 
   type Variant = 'home' | 'game' | 'wizard';
 
@@ -52,7 +54,7 @@
       <div class="app-header-stats">
         <span class="app-header-stat" title="现金">
           <img src="/icons/stats/cash.webp" alt="" class="app-header-stat-icon" />
-          {stats.cash.toFixed(2)}
+          {toCompactLiang(stats.cash)}
         </span>
         <span class="app-header-stat" title="织机">
           <img src="/icons/stats/loom.webp" alt="" class="app-header-stat-icon" />

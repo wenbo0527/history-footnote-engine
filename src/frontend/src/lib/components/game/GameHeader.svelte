@@ -10,6 +10,8 @@
    */
   import type { GameState } from '$lib/api/types';
   import GameToolbar from './GameToolbar.svelte';
+  // 🆕 v2.10.2: 银钱单位统一
+  import { toCompactLiang, toLiangOrYuan } from '$lib/utils/currency';
 
   interface Props {
     game: GameState;
@@ -67,7 +69,7 @@
     </div>
     <div class="game-header-stat" title="银两">
       <img src="/icons/stats/cash.webp" alt="" class="game-header-stat-icon" />
-      <span class="game-header-stat-val">{game.cash.toFixed(2)}</span>
+      <span class="game-header-stat-val" title={toLiangOrYuan(game.cash)}>{toCompactLiang(game.cash)}</span>
     </div>
     <div class="game-header-stat" title="织机">
       <img src="/icons/stats/loom.webp" alt="" class="game-header-stat-icon" />
