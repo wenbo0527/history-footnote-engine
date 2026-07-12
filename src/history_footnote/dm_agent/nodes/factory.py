@@ -33,8 +33,9 @@ from history_footnote.rule_engine import (
     PacingDirective, RuleEngine, TriggeredRule,
 )
 from history_footnote.game_memory import GameMemory, GameEvent
-
 from history_footnote.dm_agent.state import DMState
+# 🆕 v2.10.1 fix: import extract_narrative_node（factory.py:291 调用，但未 import）
+from history_footnote.dm_agent.nodes.extract import extract_narrative_node
 
 
 def make_dm_nodes(llm_with_tools, state_ref):
