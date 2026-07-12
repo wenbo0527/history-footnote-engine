@@ -59,6 +59,14 @@ from history_footnote.game_loop_save import (
     load_from_slot as _load_from_slot_impl,
     auto_save as _auto_save_impl,
 )
+# 🆕 v2.10.1 W52 P1-2 followup: 身份切换逻辑拆到独立模块
+from history_footnote.game_loop_identity import (
+    inject_identity_switch_offers as _inject_identity_switch_offers_impl,
+    handle_identity_decision as _handle_identity_decision_impl,
+    apply_identity_switch as _apply_identity_switch_impl,
+    show_available_offers as _show_available_offers_impl,
+    set_pending_offer as _set_pending_offer_impl,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -214,23 +222,8 @@ class GameLoop:
         self._inject_identity_switch_offers()
 
     def _inject_identity_switch_offers(self) -> None:
-        """把identity_switch_offers注入到DM的LLM state_ref中
-
-        这样DM在每次Tool调用时都能感知到当前可用的offer选项。
-        """
-        offers = self.era_config.get("world", {}).get("identity_switch_offers", [])
-        if not offers:
-            return
-
-        # 找到当前身份可用的offers
-        available = [o for o in offers if o.get("from_identity") == self.selected_identity]
-        if not available:
-            return
-
-        # 注入到 llm state_ref（通过 DM Agent）
-        if hasattr(self.dm, "llm") and hasattr(self.dm.llm, "_state_ref_slot_ref"):
-            current_ref = self.dm.llm._state_ref_slot_ref[0]
-            current_ref["identity_switch_offers"] = available
+        """把 identity_switch_offers 注入到 DM 的 LLM state_ref——委托给 game_loop_identity"""
+        _inject_identity_switch_offers_impl(self)
 
     def _apply_character_initial_state(self) -> None:
         """🆕 v1.9.5 把 custom_character 解析为结构化 state 字段
@@ -927,107 +920,20 @@ class GameLoop:
     # === 身份切换机制 ===
 
     def _handle_identity_decision(self, accept: bool) -> bool:
-        """处理/accept或/decline
-
-        DM通过Tool发起的offer存在self.pending_identity_offer
-        """
-        if self.pending_identity_offer is None:
-            print("[INFO] 当前没有待处理的身份切换offer")
-            return True
-
-        if accept:
-            self._apply_identity_switch(self.pending_identity_offer)
-        else:
-            print(f"[INFO] 你拒绝了身份切换offer：{self.pending_identity_offer.get('to_label', '新身份')}")
-            print("  继续当前身份的游戏。")
-            self.pending_identity_offer = None
-        return True
+        """处理 /accept 或 /decline——委托给 game_loop_identity"""
+        return _handle_identity_decision_impl(self, accept)
 
     def _apply_identity_switch(self, offer: dict) -> None:
-        """应用身份切换——更新state、identity_config、DM Agent
-
-        Args:
-            offer: offer_identity_switch的返回值
-        """
-        to_identity = offer.get("to_identity")
-        if not to_identity:
-            print("[ERROR] offer缺少to_identity")
-            return
-
-        # 1. 更新state
-        old_identity = self.selected_identity
-        self.state.selected_identity = to_identity
-        # player_gender不变（性别锁定）
-        # self.state.player_gender保持
-
-        # 2. 更新GameLoop的identity_config
-        identities = self.era_config.get("world", {}).get("player_identities", {})
-        self.selected_identity = to_identity
-        self.identity_config = identities.get(to_identity, {})
-
-        # 3. 重新注入offers（新身份可能有新offer）
-        self._inject_identity_switch_offers()
-
-        # 4. 记录到事件日志
-        summary = f"身份切换：{old_identity} → {to_identity}（{offer.get('reason', '')}）"
-        event = GameEvent(
-            round=self.state.round_number,
-            type="identity_switch",
-            summary=summary,
-            metadata={
-                "from": old_identity,
-                "to": to_identity,
-                "cost": offer.get("cost", ""),
-                "benefit": offer.get("benefit", ""),
-            },
-        )
-        self.memory.save_event(event)
-
-        # 5. 显示反馈
-        to_label = self.identity_config.get("label", to_identity)
-        print(f"\n{'=' * 60}")
-        print(f"🎭 身份已切换：{identities.get(old_identity, {}).get('label', old_identity)} → {to_label}")
-        print(f"{'=' * 60}")
-        new_role = self.identity_config.get("role", "")
-        new_desc = self.identity_config.get("description", "")
-        print(f"\n新身份：{new_role}")
-        print(f"\n{new_desc[:200]}...")
-
-        # 6. 清除pending offer
-        self.pending_identity_offer = None
+        """应用身份切换——委托给 game_loop_identity"""
+        _apply_identity_switch_impl(self, offer)
 
     def _show_available_offers(self) -> None:
-        """显示所有可用的身份切换offer（不依赖DM）"""
-        offers = self.era_config.get("world", {}).get("identity_switch_offers", [])
-        available = [o for o in offers if o.get("from_identity") == self.selected_identity]
-        if not available:
-            print("[INFO] 当前身份暂无可用的身份切换选项")
-            return
-
-        print(f"\n=== 当前身份可用的切换选项 ===\n")
-        for i, o in enumerate(available, 1):
-            print(f"  {i}. {o.get('id')}")
-            print(f"     目标身份: {o.get('to_identity')}")
-            cond = o.get("trigger_condition", {})
-            cond_str = ", ".join(f"{k}={v}" for k, v in cond.items())
-            print(f"     触发条件: {cond_str}")
-            print(f"     代价: {o.get('cost_description', '')}")
-            print(f"     收益: {o.get('benefit_description', '')}")
-            print()
+        """显示可用 offer——委托给 game_loop_identity"""
+        _show_available_offers_impl(self)
 
     def set_pending_offer(self, offer: dict) -> None:
-        """设置待处理的offer（DM Agent通过Tool调用）"""
-        if offer.get("offered"):
-            self.pending_identity_offer = offer
-            print(f"\n{'─' * 60}")
-            print(f"[OFFER] {offer.get('message', '身份切换')}")
-            print(f"  目标: {offer.get('to_label', offer.get('to_identity'))}")
-            print(f"  原因: {offer.get('reason', '')}")
-            print(f"  代价: {offer.get('cost', '')}")
-            print(f"  收益: {offer.get('benefit', '')}")
-            print(f"\n  接受请输入 /accept")
-            print(f"  拒绝请输入 /decline")
-            print(f"{'─' * 60}\n")
+        """设置待处理 offer——委托给 game_loop_identity"""
+        _set_pending_offer_impl(self, offer)
 
     def _display_full_state(self) -> None:
         """展示完整状态——委托给 game_loop_display.display_full_state"""
