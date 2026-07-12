@@ -19,6 +19,8 @@ export default defineConfig({
     cssCodeSplit: true,           // CSS 拆包，按页面加载
     sourcemap: false,             // 生产不生成 sourcemap
     minify: 'esbuild',
+    // 🆕 v2.10.1 W52 P1-4B: 关闭 module preload 阻塞，避免 modal chunk 阻塞首屏
+    modulePreload: { polyfill: false },
     rollupOptions: {
       output: {
         // 拆包策略
@@ -29,6 +31,8 @@ export default defineConfig({
           if (id.includes('node_modules')) return 'vendor';
           if (id.includes('lib/components/design-system')) return 'design-system';
           if (id.includes('lib/components/game')) return 'game';
+          // 🆕 W52 P1-4B: 弹窗组件单独 chunk，按需加载（不在首屏）
+          if (id.includes('lib/components/modals/')) return 'modals';
         }
       }
     }
