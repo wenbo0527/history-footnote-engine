@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from typing import Optional
 
 from history_footnote.chapter.types import ChapterBlueprint
@@ -284,11 +283,15 @@ class RouteDetector:
             # 3) 异常
             response = self.llm(prompt, max_tokens=200)
             if isinstance(response, str):
-                # 尝试从可能的 markdown 代码块中提取 JSON
-                json_match = re.search(r"\{[\s\S]*\}", response)
-                if json_match:
-                    response = json_match.group(0)
-                return json.loads(response)
+                # 🆕 W85-P0-2: 使用项目统一的 extract_json_from_text 工具
+                # 它支持 markdown 包裹 + 括号深度匹配 + 控制字符清洗
+                # 容错能力远胜于之前的 re.search 简易版
+                from history_footnote.narrative_sanitizer import extract_json_from_text
+                cleaned = extract_json_from_text(response)
+                if not cleaned:
+                    _LOG.warning("[W85-P0-2] 无法从 LLM 输出提取 JSON")
+                    return {"changed_conflict": False}
+                return json.loads(cleaned)
             elif isinstance(response, dict):
                 return response
             else:
