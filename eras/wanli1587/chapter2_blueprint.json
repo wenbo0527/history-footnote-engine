@@ -1,0 +1,157 @@
+{
+  "chapter_id": 2,
+  "chapter_title": "三月初一·税单",
+  "chapter_subtitle": "春风得意马蹄疾",
+  "meta": {
+    "act": "departure",
+    "role": "ordinary",
+    "emotion_tone": "unease",
+    "choice_type": "whether_to_resist",
+    "suggested_node_count": 4,
+    "suggested_template": "pressure_divide_choose_consequence"
+  },
+  "transition_hint": "season",
+  "nodes": [
+    {
+      "index": 1,
+      "role": "introduction",
+      "scene": "【税单落地,咬牙抗税】场景开篇。家庭/邻人对话引入本章主题。",
+      "npc_ids": [
+        "fm_wife",
+        "fm_son",
+        "npc_zhao_lizhang",
+        "npc_wang_sao"
+      ],
+      "option_directions": [
+        {
+          "text": "顺从,认命",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "硬抗,不理",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "求援,找人",
+          "path_hint": "side_silk_trade"
+        },
+        {
+          "text": "逃避,躲藏",
+          "path_hint": "side_silk_trade"
+        }
+      ],
+      "knowledge_ids": [
+        "kn_ch2_node1"
+      ],
+      "completion_condition": "round_4_reached"
+    },
+    {
+      "index": 2,
+      "role": "escalation",
+      "scene": "【税单落地,咬牙抗税】外部压力升级。衙役/债主/倭寇到访。",
+      "npc_ids": [
+        "fm_wife",
+        "fm_son",
+        "npc_zhao_lizhang",
+        "npc_wang_sao"
+      ],
+      "option_directions": [
+        {
+          "text": "顺从,认命",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "硬抗,不理",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "求援,找人",
+          "path_hint": "side_silk_trade"
+        },
+        {
+          "text": "逃避,躲藏",
+          "path_hint": "side_silk_trade"
+        }
+      ],
+      "knowledge_ids": [
+        "kn_ch2_node2"
+      ],
+      "completion_condition": "round_8_reached"
+    },
+    {
+      "index": 3,
+      "role": "climax",
+      "scene": "【税单落地,咬牙抗税】高潮抉择。玩家被迫表态,不可回避。",
+      "npc_ids": [
+        "fm_wife",
+        "fm_son",
+        "npc_zhao_lizhang",
+        "npc_wang_sao"
+      ],
+      "option_directions": [
+        {
+          "text": "顺从,认命",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "硬抗,不理",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "求援,找人",
+          "path_hint": "side_silk_trade"
+        },
+        {
+          "text": "逃避,躲藏",
+          "path_hint": "side_silk_trade"
+        }
+      ],
+      "knowledge_ids": [
+        "kn_ch2_node3"
+      ],
+      "completion_condition": "round_12_reached"
+    },
+    {
+      "index": 4,
+      "role": "resolution",
+      "scene": "【税单落地,咬牙抗税】本回合收束,留悬念到下章。",
+      "npc_ids": [
+        "fm_wife",
+        "fm_son",
+        "npc_zhao_lizhang",
+        "npc_wang_sao"
+      ],
+      "option_directions": [
+        {
+          "text": "顺从,认命",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "硬抗,不理",
+          "path_hint": "main_tax_resistance"
+        },
+        {
+          "text": "求援,找人",
+          "path_hint": "side_silk_trade"
+        },
+        {
+          "text": "逃避,躲藏",
+          "path_hint": "side_silk_trade"
+        }
+      ],
+      "knowledge_ids": [
+        "kn_ch2_node4"
+      ],
+      "completion_condition": "round_16_reached"
+    }
+  ],
+  "differentiation": {
+    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同",
+    "守乡人": {
+      "_note": "守乡人 path 中第 2 章专属场景：聚焦家庭与守土"
+    },
+    "外望人": {
+      "_note": "外望人 path 中第 2 章专属场景：聚焦外出与商机"
+    }
+  }
+}
