@@ -1,25 +1,29 @@
-v2.10.1 W69: 章节开场遮罩 + LLM 幻觉占位符清洗
+v2.10.1 W70: LLM 失败时 state 自动回滚（避免白扣 AP）
 
 问题：
-1. 进入 session 直接是回合 1，没有"章节名开场"画面
-2. LLM 模仿 prompt 上下文产生 {{user_avatar_url}} 幻觉占位符
+- game._run_round() 内部扣 AP → LLM 失败 → 异常抛出
+- 之前 except 块只返 500 → state 仍被修改
+- 结果：玩家看不到结果但 AP 已扣 + 跳月 + 变量已变
 
-P1 章节开场（前端）：
-- 新 ChapterIntro.svelte 组件
-- 检测：recent_narratives[0].round === 0 → 显示开场
-- 显示章节名（recent_narratives[0].summary）+
-  简介（recent_narratives[0].narrative[:200]）+
-  era_name + "开始本章节" 按钮
-- 按 Enter/空格也直接开始
-- GameView 集成：仅开场回合触发
+修复（input.py:166+）：
+1. try 前 _state_snapshot = {...} 快照
+   - action_points_current/max
+   - current_date + round_number
+   - narrative_history_len
+   - variables + value_shifts（dict 浅拷贝）
+2. except 块内 _rollback_state 还原
+   - action_points_current/max
+   - current_date + round_number
+   - narrative_history 截断到失败前长度
+   - variables / value_shifts 还原
 
-P2 占位符清洗（后端）：
-- narrative_sanitizer.py 加 Jinja 占位符清洗
-- {{...}} → 提取内容（短保留，长截断）
-- {%...%} {#...#} → "…"
-- 11 个 W69 测试 PASS（含 user_avatar_url 真实案例）
+3. 错误消息更新：suggestion 含"行动点已退还，状态已回滚"
 
 测试：
-- 前端 173 PASSED 0 回归
-- 后端 narrative_sanitizer 11 个新测试 PASS
+- 10 个 W70 单元测试 PASS（含 AP/date/round/narrative/variables 多场景）
 - 0 回归
+
+影响：
+- LLM 失败 → state 完全不变 + 返 500
+- 玩家重试同 input → 行为一致
+- 不再"白扣 AP"

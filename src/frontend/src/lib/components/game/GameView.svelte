@@ -111,11 +111,16 @@
       if (warning) toast.warning(warning.message);
     } catch (e) {
       const err = e as Error & { status?: number; data?: any };
-      if (err.data?.error) {
-        const friendly = err.data.suggestion || err.data.message || '提交失败';
+      // 🆕 v2.10.1 W71: 区分输入级错误（warning = 重试）vs 系统错误（error）
+      if (err.status === 400 && err.data?.error) {
+        // 玩家输入问题（meta_query/empty/too_long/era_violation）→ warning + 重新输入
+        const friendly = err.data.suggestion || err.data.message || '请检查输入';
         toast.warning(friendly);
+      } else if (err.status && err.status >= 500) {
+        // LLM 失败等系统错误 → error
+        toast.error(err.message || '提交失败，请稍后重试');
       } else {
-        toast.error(err.message || '提交失败');
+        toast.warning(err.message || '提交失败');
       }
     } finally {
       isLoading.set(false);

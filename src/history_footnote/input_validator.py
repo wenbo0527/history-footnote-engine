@@ -146,22 +146,29 @@ def validate_input(
             suggestion=SUGGESTIONS["empty"],
         )
 
+    # 🆕 v2.10.1 W71: 纯英文不再直接拒收（之前英文/数字/拉丁字符全 400 → 玩家感受"无正常返回"）
+    # 改为：纯英文/数字通过（让 LLM 理解 + 转化为明朝语境）
+    # 仅当同时全是 ASCII + 长度 <= 2 + 不像动作（如"hi" "ok" "yes"）时，soft warn
     if NO_CHINESE.match(stripped):
-        return ValidationResult(
-            is_valid=False,
-            reason="meta_query",
-            message="这是英文/符号，不是游戏内容",
-            suggestion=SUGGESTIONS["meta_query"],
-        )
+        # 短英文动作词（"go" "ok" "yes" "no"）→ 仍允许（玩家意图明确）
+        # 长英文（>10 字符）可能是 meta_query（玩家在问系统问题）→ 警告
+        if len(stripped) > 10:
+            return ValidationResult(
+                is_valid=False,
+                reason="meta_query",
+                message="这是英文长句，可能是系统问题（请用中文描述）",
+                suggestion=SUGGESTIONS["meta_query"],
+            )
+        # 短英文 → 通过（让 LLM 尝试理解）
+        # 不返回，等后续检查
 
     # ============================================================
-    # 3.5 极短中文输入（1-2 字废话）
+    # 3.5 极短中文输入（1-2 字）
     # ============================================================
-    # 1-2 字几乎都是废话（嗯/好/不/行/可以），但保留给"去！""走！"等行动
-    # 判定条件：纯中文 + 长度 <= 2 + 不含"去/走/做/开/打/买/卖/织/想/说/看/听/问/要"
-    if len(stripped) <= 2 and re.fullmatch(r"[\u4e00-\u9fa5]+", stripped):
-        action_chars = "去做开打买卖织想说看听问要绣食查察寻赶冲回"
-        if not any(c in action_chars for c in stripped):
+    # 🆕 v2.10.1 W71: 放宽 — 仅 1 字且非动作 → 拒；2 字几乎都给过（让 LLM 理解）
+    if len(stripped) == 1 and re.fullmatch(r"[\u4e00-\u9fa5]", stripped):
+        action_chars = "去做开打买卖织想说看听问要绣食查察寻赶冲回走走啊"
+        if stripped not in action_chars:
             return ValidationResult(
                 is_valid=False,
                 reason="empty",

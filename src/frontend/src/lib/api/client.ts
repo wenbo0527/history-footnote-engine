@@ -82,9 +82,15 @@ function normalizeError(e: unknown, endpoint: string, timeoutMs: number): Error 
 
   // 优先用后端的 suggestion（已有友好文案）
   if (backendSuggestion) {
-    const e2 = new Error(backendSuggestion) as Error & { status?: number; friendly?: boolean };
+    const e2 = new Error(backendSuggestion) as Error & {
+      status?: number;
+      friendly?: boolean;
+      data?: { error?: string; message?: string; suggestion?: string; retryable?: boolean };
+    };
     e2.status = status;
     e2.friendly = true;
+    // 🆕 v2.10.1 W71: 把后端 data 复制到 Error，让前端能 err.data?.error 判断重试性
+    e2.data = err.data;
     return e2;
   }
 
