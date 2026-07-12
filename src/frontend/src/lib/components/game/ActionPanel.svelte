@@ -95,7 +95,9 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    // 🆕 v2.10.1 W79: Enter 直接发送（玩家预期）
+    // 之前要求 Ctrl/⌘+Enter 但 placeholder 写"按 Enter 发送" → 体验错位
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -134,7 +136,7 @@
           type="text"
           bind:value={text}
           onkeydown={handleKeydown}
-          placeholder="你想做些什么？……（按 Enter 发送）"
+          placeholder="你想做些什么？……（按 Enter 发送，Shift+Enter 换行）"
           maxlength="200"
           disabled={loading}
         />
@@ -155,7 +157,7 @@
           class="input-bar-textarea"
           bind:value={text}
           onkeydown={handleKeydown}
-          placeholder="你此刻想做些什么？……（Ctrl/⌘+Enter 发送，Esc 收起）"
+          placeholder="你此刻想做些什么？……（Enter 发送，Shift+Enter 换行，Esc 收起）"
           rows="2"
           maxlength="200"
           disabled={loading}

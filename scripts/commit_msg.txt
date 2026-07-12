@@ -1,16 +1,42 @@
-v2.10.1 W77.1: 修复 CityChangeModal 路径错误（500 Internal Error）
+v2.10.1 W78: 回顾摘要加玩家选择 + 故事衔接 + 文字展示优化
 
-问题：/game 页面 500 Internal Error
-- Vite 日志：Failed to load url ./CityChangeModal.svelte
-  (resolved id: ./CityChangeModal.svelte) in GameView.svelte
+问题：RecapModal 只显示 narrative 全文，缺：
+1. 玩家选择（自由输入/voice）
+2. 月份衔接（看不出"跳到几月"）
+3. 文字展示拥挤（max-width 无限）
 
-根因（GameView.svelte:26）：
-- import CityChangeModal from './CityChangeModal.svelte'
-- 实际文件在 /components/modals/CityChangeModal.svelte
-- 相对路径应为 ../modals/CityChangeModal.svelte
+后端修复（game_state.py:592+）：
+- append_narrative 加 3 个可选参数：
+  - player_input: 玩家原话
+  - chosen_voice: 选的 voice 名
+  - current_date: 回合日期
+- 归档版本也保留这些字段
 
-修复（GameView.svelte:26+）：
-- import CityChangeModal from '../modals/CityChangeModal.svelte'
+后端调用（game_loop.py:507+）：
+- append_narrative 调用时传 player_input
+  / chosen_voice / current_date
+
+前端类型（types.ts:377+）：
+- RecapNarrativeItem 加 3 个字段
+
+前端 RecapModal（RecapModal.svelte:128+）：
+- 每月份变化时显示"🗓 1587年3月"标记
+  （左右两道横线 + 月份名）
+- 每回合 narrative 前显示"⚙ 你的选择：起身上路
+  （原话：「我去苏州」）"
+- 自由输入：显示"你的行动：「...」"
+- voice 选择：显示"你的选择：起身上路"
+
+文字展示优化（CSS）：
+- max-width: 65ch（中文段落理想宽度）
+- text-indent: 2em（中文段落首行缩进）
+- letter-spacing: 0.02em（字距微调）
+- archive 用 narrative_preview（灰一点）
+
+影响：
+- 旧 session 数据无 player_input/chosen_voice → 仍正常显示
+  （不显示"你的选择"行）
+- 新 session 数据 → 完整显示选择 + 衔接 + 优化排版
 
 测试：173 PASSED 0 回归
-浏览器无错误
+后端已重启（PID 70291）
