@@ -26,6 +26,8 @@
   let loadingArchives = $state(false);
   let accountUsername = $state<string | null>(null);
   let currentAccountId = $state<string | null>(null);
+  // 🆕 v2.10.1 W68: "入局" 过渡状态（点击后显示 loading overlay）
+  let enteringWizard = $state(false);
 
   onMount(async () => {
     // 🆕 v2.7+: 游客也要拿真 guest_id（首页已兜底一次，这里再保险）
@@ -79,6 +81,17 @@
     // 保留 SESSION_KEY（游客 ID）和 GUEST_KEY，等注册成功后由后端迁移
     goto('/login');
   }
+
+  // 🆕 v2.10.1 W68: "入局" 点击 → 200ms 视觉反馈 → 跳 /wizard
+  // 目的：避免点击"无响应"的疑惑（实际 goto() 是即时但用户感知延迟）
+  function handleEnter() {
+    enteringWizard = true;
+    setTimeout(() => {
+      goto('/wizard');
+      // 兜底：万一 goto 失败，1.5s 后恢复
+      setTimeout(() => { enteringWizard = false; }, 1500);
+    }, 200);
+  }
 </script>
 
 <article class="start-menu">
@@ -92,6 +105,17 @@
 
   <Divider variant="brush" spacing="md" />
 
+  <!-- 🆕 v2.10.1 W68: 入局过渡遮罩 -->
+  {#if enteringWizard}
+    <div class="start-menu-transition" role="status" aria-live="polite">
+      <div class="start-menu-transition-card">
+        <Spinner mode="brush" size={56} />
+        <p class="start-menu-transition-title">即将入局</p>
+        <p class="start-menu-transition-subtitle">AI 正在为你翻开万历十五年的篇章...</p>
+      </div>
+    </div>
+  {/if}
+
   <div class="start-menu-grid">
     <!-- 左侧 1 列：开始新游戏 / 设置 / 账户 -->
     <aside class="start-menu-left">
@@ -101,7 +125,12 @@
         <h2 class="start-menu-card-title">开始新游戏</h2>
         <p class="start-menu-card-desc">选择一个朝代，创建你的角色，开启一段历史注脚</p>
         <div class="start-menu-card-action">
-          <Seal text="入 局" size="md" onclick={() => goto('/wizard')} />
+          <Seal
+            text="入 局"
+            size="md"
+            disabled={enteringWizard}
+            onclick={handleEnter}
+          />
         </div>
       </div>
 
@@ -256,6 +285,50 @@
     grid-template-columns: 1fr;       /* 移动：1 列 */
     gap: var(--space-4);
     width: 100%;
+  }
+
+  /* 🆕 v2.10.1 W68: 入局过渡遮罩 */
+  .start-menu-transition {
+    position: fixed;
+    inset: 0;
+    background: rgba(245, 240, 225, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 200ms ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .start-menu-transition-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-5) var(--space-6);
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(143, 75, 40, 0.2);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 8px 32px rgba(143, 75, 40, 0.15);
+    min-width: 280px;
+  }
+  .start-menu-transition-title {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: var(--text-xl, 18px);
+    color: var(--color-bronze-dark, #5a3a25);
+    font-weight: 600;
+  }
+  .start-menu-transition-subtitle {
+    margin: 0;
+    font-size: var(--text-sm, 12px);
+    color: var(--color-ink-light, #6a5a4a);
+    text-align: center;
+    max-width: 240px;
   }
 
   @media (min-width: 1024px) {

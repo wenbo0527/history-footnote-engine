@@ -1,12 +1,11 @@
-v2.10.1 W67: 首页默认强制登录（删除访客跳过逻辑）
+v2.10.1 W67.1: 修复 isLoggedIn（仅真登录，不算访客）
 
-+page.svelte 改动：
-- 删除访客模式跳过（isGuest() 检查）
-- 删除 skip_login 自动跳过（除 ?skip_login=1 调试参数）
-- 未登录默认 goto('/login?next=/')
+account.ts: isLoggedIn() 原本检查 getCurrentAccountId()
+- 但访客模式有 hfe_guest_account_id 也算'登录'
+- 导致首页不跳 /login
 
-保留：
-- isLoggedIn() → 直接进 StartMenu
-- ?skip_login=1 URL 参数 → 调试用
+修复：isLoggedIn() 改为检查 SESSION_KEY（真登录态）
+- 访客 hfe_guest_account_id 不再算登录
+- 强制走 /login
 
-验证：前端 173 PASSED 0 回归
+验证：173 PASSED 0 回归
