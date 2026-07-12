@@ -34,6 +34,7 @@
   import { onMount } from 'svelte';
   import { getPlateMap, type PlateMapResponse, type PlateDefinition } from '$lib/api/chapter';
   import { circularLayout, buildEdges, findNode, nodeRadius } from './graphLayout';
+  import PlateCell from './PlateCell.svelte';
 
   interface Props {
     sessionId: string;
@@ -251,52 +252,17 @@
     {:else}
     <div class="plate-map-grid">
       {#each plateMap.definitions as plate (`plate-${plate.id}`)}
-        {@const status = plateMap.statuses[plate.id] ?? 'stable'}
-        {@const tension = plateMap.tensions[plate.id] ?? 0}
-        {@const isShifting = status === 'shifting'}
-        {@const isCollapsed = status === 'collapsed'}
-        <article
-          class="plate-cell"
-          class:plate-cell-shifting={isShifting}
-          class:plate-cell-collapsed={isCollapsed}
-          onclick={() => (showDetail = showDetail === plate.id ? null : plate.id)}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              showDetail = showDetail === plate.id ? null : plate.id;
-            }
-          }}
-          role="button"
-          tabindex="0"
-          aria-label={`${plate.name} 板块，${statusLabel(status)}`}
-        >
-          <header class="plate-cell-header">
-            <span class="plate-cell-name">{plate.name}</span>
-            <span class="plate-cell-type" data-type={plate.type}>{typeLabel(plate.type)}</span>
-          </header>
-          <div class="plate-cell-status" style="--status-color: {statusColor(status)};">
-            <span class="plate-cell-dot" aria-hidden="true"></span>
-            <span class="plate-cell-status-label">{statusLabel(status)}</span>
-          </div>
-          <div class="plate-cell-tension" aria-label={`张力 ${(tension * 100).toFixed(0)}%`}>
-            <div class="plate-cell-tension-bar" style="width: {tensionWidth(tension)}"></div>
-          </div>
-          <div class="plate-cell-tension-label">张力 {(tension * 100).toFixed(0)}%</div>
-
-          {#if showDetail === plate.id}
-            <div class="plate-cell-detail">
-              <p class="plate-cell-desc">{plate.description}</p>
-              {#if plate.neighbors.length > 0}
-                <div class="plate-cell-neighbors">
-                  <span class="plate-cell-neighbors-label">邻接:</span>
-                  {#each plate.neighbors as nid (nid)}
-                    <span class="plate-cell-neighbor-chip">{nid}</span>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          {/if}
-        </article>
+        <PlateCell
+          plate={plate}
+          status={plateMap.statuses[plate.id] ?? 'stable'}
+          tension={plateMap.tensions[plate.id] ?? 0}
+          expanded={showDetail === plate.id}
+          statusColor={statusColor}
+          statusLabel={statusLabel}
+          typeLabel={typeLabel}
+          tensionWidth={tensionWidth}
+          ontoggle={(id) => (showDetail = showDetail === id ? null : id)}
+        />
       {/each}
     </div>
     {/if}
