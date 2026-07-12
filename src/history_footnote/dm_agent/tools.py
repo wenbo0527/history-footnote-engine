@@ -540,3 +540,58 @@ def make_tools(
             }
 
     return [get_state, recall_events, check_rules, query_knowledge, query_narrative_snippets, query_story_segments, get_random_segment, roll_dice, offer_identity_switch, save_event, fill_chapter_blueprint, fill_chapter_summary]
+
+
+# === 🆕 v2.10.1 W52 P1-1: 轻量关键词提取（无 jieba 依赖） ===
+# 原本在 agent.py 行 487-519，v1.7.30 拆 tools.py 时漏移
+# 实际被 agent.py._prefetch_query_tools 用，故搬到 tools.py 跟 query_knowledge 工具配套
+
+def extract_keywords(text: str, max_keywords: int = 5) -> list[str]:
+    """🆕 v2.7+ 轻量关键词提取（无 jieba 依赖）
+
+    策略：中文按 2-gram 切分（2 字常见词） + 停用词过滤 + 去重
+    - 输入 "我走进织坊检查织机" → ["织坊", "检查", "织机", "走进"]
+    - 输入 "我去街上走走" → ["街上", "走走"]
+    """
+    if not text:
+        return []
+    text = text.strip()
+    if not text:
+        return []
+
+    # 1) 2-gram 切分
+    keywords = []
+    for i in range(len(text) - 1):
+        bigram = text[i:i+2]
+        # 过滤：单字停用 + 双字都停用
+        if any(c in _STOP_WORDS for c in bigram):
+            continue
+        # 过滤：含标点
+        if any(not (c.isalnum() or '\u4e00' <= c <= '\u9fff') for c in bigram):
+            continue
+        if bigram not in keywords:
+            keywords.append(bigram)
+        if len(keywords) >= max_keywords:
+            break
+
+    # 2) 如果没找到（全是停用词），fallback 原始文本
+    if not keywords:
+        return [text[:max_keywords*2]]
+    return keywords
+
+
+# 停用词表（中文单字 + 2 字）
+_STOP_WORDS = {
+    # 单字停用
+    "的", "了", "是", "我", "你", "他", "她", "它", "在", "和", "与", "或",
+    "也", "都", "就", "要", "有", "没", "不", "这", "那", "些", "吧", "吗",
+    "呢", "啊", "哦", "嗯", "把", "让", "给", "从", "向", "到", "为", "对",
+    "用", "做", "说", "看", "想", "去", "来", "上", "下", "出", "入", "起",
+    "会", "能", "可", "么", "什", "谁", "哪", "怎", "时", "日", "月", "年",
+    "一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
+    # 2 字停用
+    "什么", "怎么", "为什么", "可以", "应该", "已经", "正在", "现在",
+    "但是", "如果", "因为", "所以", "于是", "然后", "接着", "最后",
+    "他们", "我们", "你们", "它们", "这个", "那个", "这样", "那样",
+    "知道", "觉得", "认为", "发现", "听说", "感觉", "希望", "打算",
+}
