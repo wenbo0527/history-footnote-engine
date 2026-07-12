@@ -51,8 +51,9 @@
 <aside class="char-card" class:char-card-collapsed={collapsible && !expanded}>
   <header class="char-card-header">
     <div class="char-card-avatar" aria-hidden="true">
+      <!-- 🆕 v2.10.2 fix: 用 character.identity 兜底（$game.identity 在 GameState 中不存在） -->
       <img
-        src={`/character/${character.identity ?? $game?.identity ?? 'weaving_male'}.webp`}
+        src={`/character/${character.identity ?? 'weaving_male'}.webp`}
         alt=""
         class="char-card-avatar-img"
         onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}

@@ -114,7 +114,8 @@
 
       <!-- 描述 -->
       <div class="fate-detail-body">
-        <p class="fate-detail-description">{card.description}</p>
+        <!-- 🆕 v2.10.2 fix: description 兜底 -->
+        <p class="fate-detail-description">{card.description || '（暂无描述）'}</p>
 
         {#if card.use_hint}
           <div class="fate-detail-hint">
@@ -125,7 +126,8 @@
 
         <div class="fate-detail-effect">
           <span class="fate-detail-effect-label">效果类型</span>
-          <code class="fate-detail-effect-code">{card.effect_type}</code>
+          <!-- 🆕 v2.10.2 fix: effect_type 兜底 -->
+          <code class="fate-detail-effect-code">{card.effect_type || 'unknown'}</code>
         </div>
       </div>
 

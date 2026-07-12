@@ -61,6 +61,23 @@
     );
   });
 
+  // 🆕 v2.10.2 fix: 派生日期/选择/叙事（避免 undefined 显示）
+  function safeDate(d: string | undefined | null): string {
+    return d && d.trim() ? d : '—';
+  }
+  function safeChoice(voice: string | undefined | null, input: string | undefined | null): { label: string; isVoice: boolean } {
+    if (voice && voice.trim()) {
+      return { label: voice, isVoice: true };
+    }
+    if (input && input.trim()) {
+      return { label: input, isVoice: false };
+    }
+    return { label: '（无记录）', isVoice: false };
+  }
+  function safeNarrative(n: string | undefined | null): string {
+    return n && n.trim() ? n : '（无叙事）';
+  }
+
   // 🆕 W83: 加载即触发（仍走 API，但内容是已有 narrative，不调 LLM）
   $effect(() => {
     if (open && $game && !recap && !loading) {
@@ -219,7 +236,8 @@
               {#if showMonth}
                 <div class="recap-month-marker">
                   <span class="recap-month-marker-line"></span>
-                  <span class="recap-month-marker-text">{item.current_date}</span>
+                  <!-- 🆕 v2.10.2 fix: safeDate 兜底 -->
+                  <span class="recap-month-marker-text">{safeDate(item.current_date)}</span>
                   <span class="recap-month-marker-line"></span>
                 </div>
               {/if}
@@ -238,7 +256,8 @@
               {#if showMonth}
                 <div class="recap-month-marker">
                   <span class="recap-month-marker-line"></span>
-                  <span class="recap-month-marker-text">{item.current_date}</span>
+                  <!-- 🆕 v2.10.2 fix: safeDate 兜底 -->
+                  <span class="recap-month-marker-text">{safeDate(item.current_date)}</span>
                   <span class="recap-month-marker-line"></span>
                 </div>
               {/if}
@@ -246,19 +265,22 @@
                 <header class="recap-item-header">
                   <span class="recap-round">第 {item.round} 回合</span>
                 </header>
-                {#if item.player_input || item.chosen_voice}
+                <!-- 🆕 v2.10.2 fix: safeChoice 兜底 -->
+                {#if safeChoice(item.chosen_voice, item.player_input).label !== '（无记录）'}
+                  {@const choice = safeChoice(item.chosen_voice, item.player_input)}
                   <div class="recap-choice">
                     <span class="recap-choice-icon">⚙</span>
                     <span class="recap-choice-text">
-                      {#if item.chosen_voice}
-                        你的选择：<strong>{item.chosen_voice}</strong>
+                      {#if choice.isVoice}
+                        你的选择：<strong>{choice.label}</strong>
                       {:else}
-                        你的行动：<em>「{item.player_input}」</em>
+                        你的行动：<em>「{choice.label}」</em>
                       {/if}
                     </span>
                   </div>
                 {/if}
-                <p class="recap-narrative-preview">{item.narrative}</p>
+                <!-- 🆕 v2.10.2 fix: safeNarrative 兜底 -->
+                <p class="recap-narrative-preview">{safeNarrative(item.narrative)}</p>
               </article>
             {/each}
           </div>

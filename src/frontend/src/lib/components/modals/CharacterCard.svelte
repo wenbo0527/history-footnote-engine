@@ -74,10 +74,11 @@
   <div class="wiki-char-body">
     <header class="wiki-char-name">
       <span class="wiki-char-name-text">{character.name}</span>
+      <!-- 🆕 v2.10.2 fix: relation 兜底（与后端 default "陌生人" 一致） -->
       <span
         class="wiki-char-relation"
         class:wiki-char-relation-family={isFamily}
-      >{character.relation}</span>
+      >{character.relation || '陌生人'}</span>
     </header>
     <p class="wiki-char-meta">
       {#if character.age}<span>{character.age}岁</span>{/if}

@@ -13,6 +13,8 @@
    */
   import type { GameState } from '$lib/api/types';
   import { toast } from '$lib/components/design-system/Toast.svelte';
+  // 🆕 v2.10.2: 银钱单位统一
+  import { toCompactLiang } from '$lib/utils/currency';
 
   interface Props {
     game: GameState;
@@ -44,6 +46,22 @@
     })[0];
   }
 
+  /**
+   * 🆕 v2.10.2 fix: 派生角色名（game.identity 字段不存在，应该用 game.character.identity）
+   * game.identity 在 GameState 类型中不存在；用 character?.identity 兜底
+   */
+  const gameRoleName = $derived.by(() => {
+    const id = (game as any).character?.identity || (game as any).identity;
+    const name = game.character?.name || '织工';
+    if (id === 'weaving_male') return `织工·${name}`;
+    if (id === 'weaving_female') return `织女·${name}`;
+    if (id === 'merchant_male') return `牙商·${name}`;
+    if (id === 'merchant_female') return `牙商·${name}`;
+    if (id === 'farmer_male') return `佃户·${name}`;
+    if (id === 'farmer_female') return `佃妇·${name}`;
+    return `织户·${name}`;
+  });
+
   async function handleShare() {
     if (busy || !narrative) return;
     busy = true;
@@ -51,10 +69,10 @@
       const goldenLine = extractGoldenLine(narrative);
       const dataUrl = renderCard({
         era: '万历十五年',
-        role: `${game.identity === 'weaving_male' ? '织工' : game.identity === 'weaving_female' ? '织女' : game.identity === 'merchant_male' ? '牙商' : '佃户'}·${game.character.name}`,
+        role: gameRoleName,  // 🆕 v2.10.2 fix: 用派生 role
         quote: goldenLine,
         round: game.round_current,
-        stats: `现金 ${game.cash.toFixed(1)} · ${game.looms} 织机 · 声望 ${game.reputation}`
+        stats: `现金 ${toCompactLiang(game.cash)} · ${game.looms ?? 1} 织机 · 声望 ${game.reputation ?? 0}`
       });
 
       // 触发下载
