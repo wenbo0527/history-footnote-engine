@@ -109,6 +109,9 @@ class GameLoop:
                 era_config, load_state_data
             )
             self.state = GameState(**state_kwargs)
+            # 🆕 v2.10.1 W86: 老数据 narrative 字段迁移
+            # 走 GameState(**kwargs) 路径不触发 load()，手动迁移
+            self.state._migrate_narrative_fields()
             # selected_identity从存档恢复
             self.selected_identity = self.state.selected_identity or selected_identity
             self.identity_config = identities.get(self.selected_identity, {})

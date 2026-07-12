@@ -1,45 +1,53 @@
-v2.10.1 W83: 回顾摘要按章节分目录（左侧 TOC + 主区内容）
+v2.10.1 W84: 章节按故事弧分（不按月）
 
-需求：
-1. 移除"DM 正在整理往事..."假 loading
-   → 后端实际是读已有 narrative（同步操作）
-   → 不应展示假 spinner
-2. 内容是游戏中实际生成过的 narrative（已实现）
-3. 按章节分目录
+需求：章节应是按故事情节走的，不是按月
+（之前 W83 是按月分组 → 错误，"1587年3月"不是故事弧）
 
-实现：
+数据源：
+- 项目已有 chapter_state（含 current_chapter + chapter_history）
+- chapter_record 已有 chapter_title / summary / core_event / key_choice 等
+- 但 narrative 没记录 chapter_id → 无法按故事弧分组
 
-后端（game_state.py:700+）：
-- get_recap 加 chapters 字段
-- _group_narratives_by_chapter: 按 current_date 月份分组
-- 每章 = 一个月度（"1587年3月"）
-- chapter title = "第一章 · 1587年3月"（中文数字）
+修复：
 
-前端类型（types.ts:398+）：
-- RecapResponse.chapters: RecapChapter[]
-- RecapChapter 字段：
-  chapter_id / title / date_label / year / month / index / narratives[]
+后端（game_state.py:593+）：
+- append_narrative 加 chapter_id 参数
+- narrative_recent + narrative_archive 都注入 chapter_id
+- 旧数据（无 chapter_id）→ 归到虚拟 chapter 0（"序章"）
 
-RecapModal 重写：
-- 移除"DM 整理..."假 loading（删除 Spinner + 文字）
-- 移除"⚠ 重试" → 已用 Icon 组件
-- Tabs: "最近" → "按章节" + "存档"
-- "按章节" 模式：
-  ┌─ 目录 ──┬─ 主区 ──────────────┐
-  │ 第1章  │ 第一章 · 1587年3月    │
-  │ 1587年3│  第1回合 ...          │
-  │  3节   │  第2回合 ...          │
-  │ ────  │                       │
-  │ 第2章  │ ──────────────────  │
-  │ 1587年4│ 第二章 · 1587年4月    │
-  └────────┴──────────────────────┘
-- 左侧 sticky TOC：180px 宽
-- 点击章节 → 平滑滚动到对应 section
-- active 章节高亮（朱砂边框）
+后端调用（game_loop.py:511+）：
+- append_narrative 传 chapter_state.current_chapter
+
+后端分组（game_state.py:_group_narratives_by_chapter）：
+- 不再按 current_date 月份分组
+- 改为按 chapter_id 分组
+- 关联 chapter_history 拿 meta：
+  - chapter_title（如"且听下回分解 · 春蚕"）
+  - summary（200 字压缩版）
+  - core_event / key_choice
+- 已结算章节：is_settled=true，显示完整 meta
+- 未结算当前章节：is_current=true，显示"（进行中）"
+
+前端（RecapModal.svelte）：
+- 章节标题：第X章 · [chapter_title] · [subtitle]（进行中）
+- 章节摘要：is_settled 时显示（首行缩进 + 朱砂左边框）
+- 章节时间：date_label（"1587年3月" / "1587年1月-3月"）
+- 当前章节：● 红点 + 动画 pulse
+- 章节序号：中文数字（一/二/三...）
+
+数据流：
+  LLM 输出 arrive.X → event_parser
+  → game_loop 调 append_narrative(round, narrative, summary,
+    player_input, chosen_voice, current_date, chapter_id)
+  → state.narrative_recent 存每回合的 chapter_id
+  → get_recap 调 _group_narratives_by_chapter
+  → 按 chapter_id 分组 + 关联 chapter_history meta
+  → 返 chapters[] 给前端
+  → RecapModal 按章节 TOC 展示
 
 兼容：
-- "存档" tab 仍显示 flat list（按时间排）
-- 旧 sessions 无 chapter 字段 → "按章节" tab 显示"暂无章节"
+- 旧 sessions narrative 无 chapter_id → 归到"序章"
+- chapter_history 为空时：派生临时标题"进行中 · 1587年3月"
 
 测试：173 PASSED 0 回归
-后端已重启（PID 94000）
+后端已重启（PID 98065）

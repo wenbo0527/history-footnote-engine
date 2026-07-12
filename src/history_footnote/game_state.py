@@ -587,7 +587,35 @@ class GameState:
     def load(cls, path: Path) -> "GameState":
         """从JSON文件加载"""
         data = json.loads(path.read_text(encoding="utf-8"))
-        return cls(**data)
+        state = cls(**data)
+        # 🆕 v2.10.1 W86: 老数据 narrative 补默认值
+        # 老 session narrative 缺 current_date / player_input / chosen_voice / chapter_id
+        # 这些 W78/W84 加的字段加载后是 None（dataclass 默认）
+        # → 补默认值，让章节分组 + 月份标记正常工作
+        state._migrate_narrative_fields()
+        return state
+
+    def _migrate_narrative_fields(self) -> None:
+        """🆕 v2.10.1 W86: 补全老 narrative 缺省的字段
+
+        老 session 存的 narrative 字典（dict）可能缺：
+        - current_date: 老代码没存（用 state.current_date 作 fallback）
+        - player_input: W78 加
+        - chosen_voice: W78 加
+        - chapter_id: W84 加
+
+        加载时直接补默认值，不改 state 持久化（避免反复迁移）
+        """
+        fallback_date = getattr(self, "current_date", "") or ""
+        for lst in (self.narrative_recent, self.narrative_history, self.narrative_archive):
+            for n in lst:
+                if not isinstance(n, dict):
+                    continue
+                # 🆕 W86: 补默认值（dict.setdefault 只在 key 不存在时设）
+                n.setdefault("current_date", fallback_date)
+                n.setdefault("player_input", "")
+                n.setdefault("chosen_voice", "")
+                n.setdefault("chapter_id", 0)
 
     def append_narrative(self, round_number: int, narrative: str, summary: str,
                           player_input: str = "", chosen_voice: str = "",
