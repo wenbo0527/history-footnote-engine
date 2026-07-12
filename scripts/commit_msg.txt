@@ -1,38 +1,16 @@
-v2.10.1 W74-W76: 故事通畅度 3 关键修复
+v2.10.1 W77.1: 修复 CityChangeModal 路径错误（500 Internal Error）
 
-分析 session wanli1587_20260712_155758 后：
-- 故事文学性 5/5（陆游式白话）
-- 故事机制 2/5（地理突变/结算突兀/角色缺字段）
+问题：/game 页面 500 Internal Error
+- Vite 日志：Failed to load url ./CityChangeModal.svelte
+  (resolved id: ./CityChangeModal.svelte) in GameView.svelte
 
-修复 3 项：
+根因（GameView.svelte:26）：
+- import CityChangeModal from './CityChangeModal.svelte'
+- 实际文件在 /components/modals/CityChangeModal.svelte
+- 相对路径应为 ../modals/CityChangeModal.svelte
 
-P0-1 W74 城市突变（event_parser.py:124+）：
-- LLM 输 arrive.X 自由改 state.current_city
-- 玩家在盛泽镇突然"到苏州"无叙事铺垫
-- 修复：narrative 必须含"船/行至/到/去"等移动关键词
-  才生效；否则 log warning + 不改 state
-- 影响：未来 LLM 触发 arrive 会被拦截
-
-P0-2 W76 月末结算突兀（settlement.py:181+）：
-- 之前：直接 "📅 月末结算 → -0.42 两"
-- 现在：先讲"月底到了"过渡 + 列扣费 + "新的一月开始了"
-- 玩家体验：从"突然扣钱"变"时光流逝 + 自然扣费"
-
-P1 W75 角色缺字段（session.py:23+）：
-- 前端 wizard 只传 4 字段（name/age/occupation/hometown）
-- LLM 收到 custom_character 大量为空
-- 修复：后端按身份补全 personality/tics/starting_situation
-  等 8 个默认字段
-  织工：谨慎持家，顾念家人
-  商人：精于算计，嘴上活络
-- 影响：narrative 色彩更丰富（不再空白）
-
-P1-3（水险凭空冒）暂缓：
-- 实际是 LLM 自由发挥 prompt 问题
-- 修复需改 system prompt，风险大
-- 后续 sprint 处理
-
-未触发：W67-W73 已修，无需重做
+修复（GameView.svelte:26+）：
+- import CityChangeModal from '../modals/CityChangeModal.svelte'
 
 测试：173 PASSED 0 回归
-后端已重启（PID 55352）
+浏览器无错误

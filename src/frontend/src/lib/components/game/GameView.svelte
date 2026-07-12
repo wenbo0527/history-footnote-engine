@@ -23,7 +23,8 @@
   import { submitInput } from '$lib/api/input';
   import { fateEmergencyCheck } from '$lib/api/fate';
   import { confirmCityChange, rejectCityChange } from '$lib/api/state';
-  import CityChangeModal from './CityChangeModal.svelte';
+  // 🆕 W77: 修正路径（modal 在 modals/ 子目录）
+  import CityChangeModal from '../modals/CityChangeModal.svelte';
   import { Toast, toast } from '$lib/components/design-system';
   import CharCard from './CharCard.svelte';
   import SidebarPanel from './SidebarPanel.svelte';
