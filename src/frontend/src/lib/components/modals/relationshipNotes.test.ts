@@ -109,12 +109,10 @@ describe('relationshipNotes 派生', () => {
   it('key 唯一（用 name 作 key）', () => {
     const wiki = {
       relationships: {
-        'A': '朋友',
-        'A': '敌人',  // 重复 key
+        'A': '敌人',  // 后者会覆盖前者
       },
     };
     const notes = deriveRelationshipNotes(wiki);
-    // 后者覆盖前者
     expect(notes).toHaveLength(1);
     expect(notes[0].value).toBe('敌人');
   });
