@@ -98,6 +98,11 @@ class GameState:
     npc_levels: dict[str, str] = field(default_factory=dict)  # npc_id -> 当前关系等级
     value_shifts: dict[str, int] = field(default_factory=dict)  # value_dimension_id -> 累计偏移
 
+    # === 🆕 v2.10.1 W85: 上一回合玩家原文 ===
+    # RouteDetector 在 post_step 用它做关键词匹配与价值偏移
+    # 旧存档反序列化时缺失 → 默认空字符串（无副作用）
+    last_player_input: str = ""
+
     # === 记忆 ===
     event_log: list[dict] = field(default_factory=list)  # 每回合的事件摘要
 

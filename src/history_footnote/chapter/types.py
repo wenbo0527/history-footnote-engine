@@ -93,6 +93,32 @@ class ClosureStatus(str, Enum):
 
 # ============= 核心数据结构 =============
 
+# 🆕 v2.10.1 W85: 5 类叙事位置（章节模板类型）
+# 章节制叙事的"骨架标签"。玩家行为触发关键词/价值偏移后,
+# RouteDetector 会把章节的 narrative_position 在这 5 类之间切换。
+NARRATIVE_POSITIONS = [
+    "opening",           # 开篇：铺陈日常，建立关系
+    "rising_conflict",   # 上升：冲突升级，逼迫表态
+    "crisis",            # 危机：不可逆事件发生
+    "convergence",       # 汇合：历史铁轨落地
+    "resolution",        # 收束：所有线索收束
+]
+
+# 🆕 v2.10.1 W85: 节奏类型
+PACE_TYPES = ["slow", "accelerating", "fast", "variable", "decelerating"]
+
+# 🆕 v2.10.1 W85: 钩子类型
+HOOK_TYPES = ["suspense", "conflict_imminent", "reversal", "emotional_blank", "none"]
+
+# 🆕 v2.10.1 W85: 当前路线默认值（兜底，Phase 1 纯规则版无 LLM）
+DEFAULT_CURRENT_ROUTE: dict = {
+    "template": "opening",
+    "trigger": None,          # "keyword:抗税" / "value_shift:trust=-0.8"
+    "entered_at_round": 1,
+    "dm_instruction": "",
+}
+
+
 @dataclass
 class ChapterState:
     """章节运行时状态——嵌套在 GameState.chapter_state
@@ -101,6 +127,11 @@ class ChapterState:
     - 所有字段有默认值 → 旧存档反序列化时自动建空对象
     - 蓝图段一存 dict（避免 dataclass 序列化测试受冲击）
     - 段三再升级为 ChapterBlueprint dataclass
+
+    🆕 v2.10.1 W85 新增 current_route / route_history:
+    - current_route: 当前章节所属的"涌现路线"状态
+    - route_history: 本局所有路线变更记录
+    - 旧 session 反序列化时自动用 DEFAULT_CURRENT_ROUTE 兜底
     """
 
     # === 当前章节 ===
@@ -125,6 +156,18 @@ class ChapterState:
     # 形如：
     # [{"chapter": 1, "summary": "...", "transition": "season", "rounds_in_chapter": 12}]
 
+    # === 🆕 v2.10.1 W85: 涌现式路线状态 ===
+    # current_route: 玩家当前所处路线的运行时快照
+    #   - template: "opening" / "rising_conflict" / "crisis" / "convergence" / "resolution"
+    #   - trigger: "keyword:抗税" / "value_shift:trust=-0.8" / "historical_anchor:hai_rui_death"
+    #   - entered_at_round: 进入此路线的回合号
+    #   - dm_instruction: 给 DM 的创作指令（由 RouteDetector 生成）
+    current_route: dict = field(default_factory=lambda: dict(DEFAULT_CURRENT_ROUTE))
+
+    # route_history: 本局所有路线变更的轨迹
+    #   每条: {"round": int, "from_template": str, "to_template": str, "trigger": str}
+    route_history: list[dict] = field(default_factory=list)
+
     def to_dict(self) -> dict:
         return asdict(self)
 
@@ -142,6 +185,9 @@ class ChapterState:
             last_closure_status=data.get("last_closure_status", "INIT"),
             chapter_history=data.get("chapter_history", []),
             just_initialized=data.get("just_initialized", False),
+            # 🆕 v2.10.1 W85: 旧 session 兜底
+            current_route=data.get("current_route") or dict(DEFAULT_CURRENT_ROUTE),
+            route_history=data.get("route_history", []),
         )
 
 
@@ -181,8 +227,17 @@ class ChapterBlueprint:
     """章节蓝图——完整章节的内容结构
 
     段二 W5 升级：增加 meta 字段（元属性硬约束）
-    段一阶段蓝图用 JSON dict 形式存于 ChapterState.blueprint，
+    段一阶段蓝图用 JSON dict 形式存于 ChapterState.blueprint,
     段三可选择是否升级为正式 dataclass
+
+    🆕 v2.10.1 W85 新增 5 个"涌现式模板字段":
+    - narrative_position: 5 类之一(opening/rising_conflict/crisis/convergence/resolution)
+      RouteDetector 在 post_step 触发路线变更时,会在 _maybe_advance_node 把
+      current_route.template 同步到此字段(让下一节点的叙事骨架变化)
+    - pace: 节奏(slow/accelerating/fast/variable/decelerating)
+    - hook_type: 章节开头钩子(suspense/conflict_imminent/reversal/emotional_blank/none)
+    - must_resolve: 本章必须解决的冲突列表(LLM 在生成节点时不能跳过)
+    - dm_instruction: 给 DM 的创作指令,DM system prompt 可读
     """
 
     chapter_id: int
@@ -192,6 +247,13 @@ class ChapterBlueprint:
     transition_hint: str = "season"       # 建议的下一章转化方式
     meta: Optional[ChapterMeta] = None    # 🆕 v2.8.0 段二元属性
 
+    # === 🆕 v2.10.1 W85: 涌现式模板字段 ===
+    narrative_position: str = "opening"   # 5 类之一
+    pace: str = "slow"                    # 节奏
+    hook_type: str = "none"               # 钩子类型
+    must_resolve: list[str] = field(default_factory=list)  # 必解冲突
+    dm_instruction: str = ""              # DM 创作指令
+
     def to_dict(self) -> dict:
         return {
             "chapter_id": self.chapter_id,
@@ -200,6 +262,12 @@ class ChapterBlueprint:
             "nodes": [n.to_dict() for n in self.nodes],
             "transition_hint": self.transition_hint,
             "meta": self.meta.to_dict() if self.meta else None,
+            # 🆕 v2.10.1 W85
+            "narrative_position": self.narrative_position,
+            "pace": self.pace,
+            "hook_type": self.hook_type,
+            "must_resolve": list(self.must_resolve),
+            "dm_instruction": self.dm_instruction,
         }
 
     @classmethod
@@ -213,6 +281,12 @@ class ChapterBlueprint:
             nodes=[BlueprintNode.from_dict(n) for n in data.get("nodes", [])],
             transition_hint=data.get("transition_hint", "season"),
             meta=meta,
+            # 🆕 v2.10.1 W85: 旧蓝图文件兜底
+            narrative_position=data.get("narrative_position", "opening"),
+            pace=data.get("pace", "slow"),
+            hook_type=data.get("hook_type", "none"),
+            must_resolve=data.get("must_resolve", []),
+            dm_instruction=data.get("dm_instruction", ""),
         )
 
     @classmethod
