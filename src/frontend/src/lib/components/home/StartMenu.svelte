@@ -18,6 +18,8 @@
   import { listArchives } from '$lib/api/archives';
   import { getCurrentUsername, getCurrentAccountId, logout, getAccountInfo, isLoggedIn, isGuest, ensureGuestAccountId } from '$lib/api/account';
   import type { Archive } from '$lib/api/types';
+  import StartMenuCard from './StartMenuCard.svelte';
+  import ArchiveList from './ArchiveList.svelte';
 
   let archives = $state<Archive[]>([]);
   let loadingArchives = $state(false);
@@ -114,25 +116,23 @@
     <!-- 左侧 1 列：开始新游戏 / 设置 / 账户 -->
     <aside class="start-menu-left">
       <!-- 开始新游戏 -->
-      <div class="start-menu-card start-menu-card-primary hf-fade-up">
-        <img src="/icons/nav/home.webp" alt="" class="start-menu-card-icon" />
-        <h2 class="start-menu-card-title">开始新游戏</h2>
-        <p class="start-menu-card-desc">选择一个朝代，创建你的角色，开启一段历史注脚</p>
-        <div class="start-menu-card-action">
-          <Seal
-            text="入 局"
-            size="md"
-            disabled={enteringWizard}
-            onclick={handleEnter}
-          />
-        </div>
-      </div>
+      <StartMenuCard
+        iconSrc="/icons/nav/home.webp"
+        title="开始新游戏"
+        description="选择一个朝代，创建你的角色，开启一段历史注脚"
+        primary
+      >
+        {#snippet action()}
+          <Seal text="入 局" size="md" disabled={enteringWizard} onclick={handleEnter} />
+        {/snippet}
+      </StartMenuCard>
 
       <!-- 我的账户 -->
-      <div class="start-menu-card hf-fade-up">
-        <img src="/icons/nav/choice.webp" alt="" class="start-menu-card-icon" />
-        <h2 class="start-menu-card-title">我的账户</h2>
-        <p class="start-menu-card-desc">
+      <StartMenuCard
+        iconSrc="/icons/nav/choice.webp"
+        title="我的账户"
+      >
+        {#snippet description()}
           {#if accountUsername}
             当前: <strong>{accountUsername}</strong>
             <br />
@@ -142,29 +142,26 @@
             <br />
             <span class="start-menu-card-hint">登录后可同步存档</span>
           {/if}
-        </p>
-        <div class="start-menu-card-action">
+        {/snippet}
+        {#snippet action()}
           {#if accountUsername}
-            <Button variant="ghost" size="sm" onclick={handleLogout} fullWidth>
-              登 出
-            </Button>
+            <Button variant="ghost" size="sm" onclick={handleLogout} fullWidth>登 出</Button>
           {:else}
-            <Button variant="primary" size="sm" onclick={handleGoLogin} fullWidth>
-              登录 / 注册
-            </Button>
+            <Button variant="primary" size="sm" onclick={handleGoLogin} fullWidth>登录 / 注册</Button>
           {/if}
-        </div>
-      </div>
+        {/snippet}
+      </StartMenuCard>
 
       <!-- 系统设置 -->
-      <div class="start-menu-card hf-fade-up">
-        <div class="start-menu-card-icon">⚙️</div>
-        <h2 class="start-menu-card-title">系统设置</h2>
-        <p class="start-menu-card-desc">主题、字号、提示音、动画</p>
-        <div class="start-menu-card-action">
+      <StartMenuCard
+        iconEmoji="⚙️"
+        title="系统设置"
+        description="主题、字号、提示音、动画"
+      >
+        {#snippet action()}
           <Button variant="ghost" size="sm" disabled fullWidth>即将开放</Button>
-        </div>
-      </div>
+        {/snippet}
+      </StartMenuCard>
     </aside>
 
     <!-- 右侧：我的存档（大块可滚动）-->
@@ -201,45 +198,12 @@
           </p>
         </div>
       {:else}
-        <p class="start-menu-archive-count">
-          共 <strong>{archives.length}</strong> 个存档
-        </p>
-        <ul class="start-menu-archive-list">
-          {#each archives as arc (arc.session_id)}
-            <li>
-              <button
-                type="button"
-                class="start-menu-archive-item"
-                onclick={() => handleLoadArchive(arc.session_id)}
-                title={arc.summary}
-              >
-                <div class="start-menu-archive-icon">
-                  {arc.era_id === 'wanli1587' ? '万' : '古'}
-                </div>
-                <div class="start-menu-archive-info">
-                  <div class="start-menu-archive-line1">
-                    <span class="start-menu-archive-era">
-                      {arc.era_id === 'wanli1587' ? '万历十五年' : arc.era_id}
-                    </span>
-                    <span class="start-menu-archive-round">
-                      第 {arc.current_round} 回合
-                    </span>
-                  </div>
-                  <div class="start-menu-archive-line2">
-                    {arc.summary || '新游戏'}
-                  </div>
-                  <div class="start-menu-archive-line3">
-                    {new Date(arc.last_saved_at).toLocaleString('zh-CN', {
-                      year: 'numeric', month: '2-digit', day: '2-digit',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  </div>
-                </div>
-                <span class="start-menu-archive-arrow">→</span>
-              </button>
-            </li>
-          {/each}
-        </ul>
+        <ArchiveList
+          archives={archives}
+          loading={loadingArchives}
+          accountUsername={accountUsername}
+          onload={handleLoadArchive}
+        />
       {/if}
     </section>
   </div>
