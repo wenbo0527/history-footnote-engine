@@ -2,8 +2,14 @@
   /**
    * ArchiveCard 存档卡片
    * 用于"我的存档"列表中每条记录
+   *
+   * 🆕 v2.10.2 fix: 派生 name/occupation
+   * - 后端不返回 character_name/character_occupation（已废弃字段）
+   * - 用 selected_identity 派生（IDENTITY_PRESETS）
+   * - 若 IDENTITY_PRESETS 也没匹配，显示 generic "盛泽织户"
    */
-  import type { Archive } from '$lib/api/types';
+  import type { Archive, Identity } from '$lib/api/types';
+  import { IDENTITY_PRESETS } from '$lib/stores/wizard.svelte';
 
   interface Props {
     archive: Archive;
@@ -27,6 +33,32 @@
   }
 
   const eraName = $derived(archive.era_id === 'wanli1587' ? '万历十五年' : archive.era_id);
+
+  // 🆕 v2.10.2 fix: 派生人物信息（用 selected_identity + IDENTITY_PRESETS）
+  const characterName = $derived.by(() => {
+    // 优先用旧字段（兼容老存档）
+    if (archive.character_name && archive.character_name.trim()) {
+      return archive.character_name;
+    }
+    // 否则用 selected_identity 派生
+    const preset = IDENTITY_PRESETS[archive.selected_identity as Identity];
+    if (preset) {
+      return preset.name;
+    }
+    // 兜底
+    return '盛泽织户';
+  });
+
+  const characterOccupation = $derived.by(() => {
+    if (archive.character_occupation && archive.character_occupation.trim()) {
+      return archive.character_occupation;
+    }
+    const preset = IDENTITY_PRESETS[archive.selected_identity as Identity];
+    if (preset) {
+      return preset.profile.occupation;
+    }
+    return '织工';
+  });
 </script>
 
 <article class="archive-card">
@@ -34,11 +66,11 @@
     type="button"
     class="archive-card-main"
     onclick={onclick}
-    aria-label={`加载存档 ${archive.character_name}`}
+    aria-label={`加载存档 ${characterName}`}
   >
     <div class="archive-card-header">
-      <h3 class="archive-card-name">{archive.character_name}</h3>
-      <span class="archive-card-occupation">{archive.character_occupation}</span>
+      <h3 class="archive-card-name">{characterName}</h3>
+      <span class="archive-card-occupation">{characterOccupation}</span>
     </div>
     <div class="archive-card-meta">
       <span class="archive-card-era">{eraName}</span>
