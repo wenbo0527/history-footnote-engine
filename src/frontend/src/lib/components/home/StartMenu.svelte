@@ -15,9 +15,6 @@
   import { onMount } from 'svelte';
   import { Chapter, Divider, Button, Seal, Spinner, toast } from '$lib/components/design-system';
   import { session, sessionActions } from '$lib/stores';
-  // 🆕 v2.10.1 W66: i18n 启用
-  import LanguageSwitcher from '$lib/components/i18n/LanguageSwitcher.svelte';
-  import { t } from '$lib/i18n';
   import { listArchives } from '$lib/api/archives';
   import { getCurrentUsername, getCurrentAccountId, logout, getAccountInfo, isLoggedIn, isGuest, ensureGuestAccountId } from '$lib/api/account';
   import type { Archive } from '$lib/api/types';
@@ -96,9 +93,6 @@
 
 <article class="start-menu">
   <header class="start-menu-header">
-    <div class="start-menu-i18n">
-      <LanguageSwitcher />
-    </div>
     <Chapter title="入 局" level={1} />
     <p class="start-menu-subtitle">历史注脚 · AI 驱动的明朝万历年间生存模拟</p>
   </header>
@@ -273,13 +267,6 @@
     margin: 0;
   }
 
-  .start-menu-i18n {
-    position: absolute;
-    top: var(--space-3, 12px);
-    right: var(--space-3, 12px);
-  }
-
-  /* 桌面 2 列布局 */
   .start-menu-grid {
     display: grid;
     grid-template-columns: 1fr;       /* 移动：1 列 */
