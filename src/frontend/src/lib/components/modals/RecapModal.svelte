@@ -127,6 +127,16 @@
         {:else}
           <div class="recap-list">
             {#each filteredRecent as item, idx (idx)}
+              {@const prevDate = idx > 0 ? filteredRecent[idx - 1].current_date : null}
+              {@const showMonth = item.current_date && item.current_date !== prevDate}
+              <!-- 🆕 v2.10.1 W78: 月份标记（衔接月份） -->
+              {#if showMonth}
+                <div class="recap-month-marker">
+                  <span class="recap-month-marker-line"></span>
+                  <span class="recap-month-marker-text">{item.current_date}</span>
+                  <span class="recap-month-marker-line"></span>
+                </div>
+              {/if}
               <article class="recap-item">
                 <header class="recap-item-header">
                   <span class="recap-round">第 {item.round} 回合</span>
@@ -134,6 +144,22 @@
                     <span class="recap-summary">{item.summary}</span>
                   {/if}
                 </header>
+                <!-- 🆕 W78: 玩家选择（自由输入 或 voice 名） -->
+                {#if item.player_input || item.chosen_voice}
+                  <div class="recap-choice">
+                    <span class="recap-choice-icon">⚙</span>
+                    <span class="recap-choice-text">
+                      {#if item.chosen_voice}
+                        你的选择：<strong>{item.chosen_voice}</strong>
+                        {#if item.player_input && item.player_input !== item.chosen_voice}
+                          （原话：<em>「{item.player_input}」</em>）
+                        {/if}
+                      {:else}
+                        你的行动：<em>「{item.player_input}」</em>
+                      {/if}
+                    </span>
+                  </div>
+                {/if}
                 <p class="recap-narrative">{item.narrative}</p>
               </article>
             {/each}
@@ -145,11 +171,32 @@
         {:else}
           <div class="recap-list">
             {#each filteredArchive as item, idx (idx)}
+              {@const prevDate = idx > 0 ? filteredArchive[idx - 1].current_date : null}
+              {@const showMonth = item.current_date && item.current_date !== prevDate}
+              {#if showMonth}
+                <div class="recap-month-marker">
+                  <span class="recap-month-marker-line"></span>
+                  <span class="recap-month-marker-text">{item.current_date}</span>
+                  <span class="recap-month-marker-line"></span>
+                </div>
+              {/if}
               <article class="recap-item">
                 <header class="recap-item-header">
                   <span class="recap-round">第 {item.round} 回合</span>
                 </header>
-                <p class="recap-narrative">{item.narrative}</p>
+                {#if item.player_input || item.chosen_voice}
+                  <div class="recap-choice">
+                    <span class="recap-choice-icon">⚙</span>
+                    <span class="recap-choice-text">
+                      {#if item.chosen_voice}
+                        你的选择：<strong>{item.chosen_voice}</strong>
+                      {:else}
+                        你的行动：<em>「{item.player_input}」</em>
+                      {/if}
+                    </span>
+                  </div>
+                {/if}
+                <p class="recap-narrative-preview">{item.narrative}</p>
               </article>
             {/each}
           </div>
@@ -293,5 +340,77 @@
     margin: 0;
     white-space: pre-wrap;
     word-break: break-word;
+    /* 🆕 v2.10.1 W78: 文字展示优化 */
+    max-width: 65ch;
+    text-indent: 2em;        /* 中文段落首行缩进 */
+    letter-spacing: 0.02em;  /* 字距微调 */
+  }
+  .recap-narrative-preview {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    color: var(--color-ink-light);
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 65ch;
+    text-indent: 2em;
+    letter-spacing: 0.02em;
+  }
+
+  /* 🆕 W78: 玩家选择样式 */
+  .recap-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+    background: rgba(143, 75, 40, 0.06);
+    border-left: 2px solid var(--color-bronze);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    color: var(--color-ink-light);
+  }
+  .recap-choice-icon {
+    color: var(--color-bronze);
+    font-size: var(--text-base);
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+  .recap-choice-text strong {
+    color: var(--color-cinnabar);
+    font-weight: 600;
+  }
+  .recap-choice-text em {
+    font-style: italic;
+    color: var(--color-ink);
+  }
+
+  /* 🆕 W78: 月份标记（衔接） */
+  .recap-month-marker {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-4) 0 var(--space-2);
+  }
+  .recap-month-marker-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--color-ink-faint),
+      transparent
+    );
+  }
+  .recap-month-marker-text {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    color: var(--color-bronze-dark);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 0 var(--space-2);
+    background: var(--color-paper);
   }
 </style>

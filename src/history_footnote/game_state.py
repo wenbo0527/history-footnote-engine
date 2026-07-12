@@ -589,18 +589,28 @@ class GameState:
         data = json.loads(path.read_text(encoding="utf-8"))
         return cls(**data)
 
-    def append_narrative(self, round_number: int, narrative: str, summary: str) -> None:
+    def append_narrative(self, round_number: int, narrative: str, summary: str,
+                          player_input: str = "", chosen_voice: str = "",
+                          current_date: str = "") -> None:
         """追加一回合的叙事到历史
 
         🆕 v1.6.3 双层保留：
         1. 先入 narrative_recent + narrative_history（最近 N 回合完整叙事）
         2. 超 N 回合 → 弹出最旧的，提取摘要到 narrative_archive
         3. archive 最多保留 N 条
+
+        🆕 v2.10.1 W78: 记录玩家选择 + 当前日期
+        - player_input: 玩家原始输入（"我去苏州" / "look around"）
+        - chosen_voice: 选的 voice option 名（"起身上路"）
+        - current_date: 回合日期（"1587年2月"），用于按月分组
         """
         entry = {
             "round": round_number,
             "narrative": narrative,
             "summary": summary,
+            "player_input": player_input,
+            "chosen_voice": chosen_voice,
+            "current_date": current_date,
         }
         self.narrative_recent.append(entry)
         self.narrative_history.append(entry)  # 兼容旧字段
@@ -608,11 +618,14 @@ class GameState:
         # 超 N 回合：从 recent 弹到 archive
         while len(self.narrative_recent) > self.NARRATIVE_RECENT_SIZE:
             old = self.narrative_recent.pop(0)
-            # 生成归档版本（保留前 200 字 + 关键元数据）
+            # 生成归档版本（保留前 200 字 + 关键元数据 + 玩家选择）
             archived = {
                 "round": old["round"],
                 "summary": old.get("summary", "") or old.get("narrative", "")[:200],
                 "narrative_preview": old.get("narrative", "")[:200],
+                "player_input": old.get("player_input", ""),
+                "chosen_voice": old.get("chosen_voice", ""),
+                "current_date": old.get("current_date", ""),
             }
             self.narrative_archive.append(archived)
             # 同步更新 narrative_history（旧字段不弹，保持兼容）

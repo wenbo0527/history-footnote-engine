@@ -506,10 +506,19 @@ class GameLoop:
 
         # 记录到state的narrative_history
         event_summary = dm_response.get("events_to_save", ["日常"])[0] if dm_response.get("events_to_save") else "日常"
+        # 🆕 v2.10.1 W78: 记录玩家选择 + 当前日期（用于 recap 显示）
+        # player_input: 自由输入的原文 / voice intent
+        # chosen_voice: 选的 voice 名（如果有）
+        chosen_voice_name = ""
+        if chosen_voice and isinstance(chosen_voice, dict):
+            chosen_voice_name = chosen_voice.get("voice_name", "") or ""
         self.state.append_narrative(
             self.state.round_number,
             narrative,
             event_summary,
+            player_input=player_input,
+            chosen_voice=chosen_voice_name,
+            current_date=self.state.current_date,
         )
 
         # 🆕 v2.7.2：从 narrative 提取 4 类结构化 fact（保持上下文连贯性）

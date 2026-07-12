@@ -376,10 +376,14 @@ export interface DilemmaResponse {
 
 // ============ Recap 剧情回顾 ============
 // 🆕 v1.7.30: 字段对齐后端（后端返回 recent + archive + total_narratives）
+// 🆕 v2.10.1 W78: 加 player_input / chosen_voice / current_date
 export interface RecapNarrativeItem {
   round: number;
   narrative: string;
   summary?: string;
+  player_input?: string;   // 玩家原始输入（"我去苏州"）
+  chosen_voice?: string;   // 选的 voice 名（"起身上路"）
+  current_date?: string;   // 回合日期（"1587年2月"）
 }
 
 export interface RecapResponse {
