@@ -38,6 +38,16 @@ from history_footnote.storage.save_manager import (
     SaveSession,
     DEFAULT_SAVE_ROOT,
 )
+# 🆕 v2.10.1 W52 P1-2: 5 个纯显示函数拆到独立模块
+from history_footnote.game_loop_display import (
+    print_opening as _print_opening_impl,
+    display_narrative as _display_narrative_impl,
+    display_state as _display_state_impl,
+    display_full_state as _display_full_state_impl,
+    help_text as _help_text_impl,
+    has_persona_opening as _has_persona_opening_impl,
+    get_persona_opening as _get_persona_opening_impl,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -722,85 +732,22 @@ class GameLoop:
         logger.info(f"已加载{len(bg)}条background知识")
 
     def _print_opening(self) -> None:
-        """打印开场白——根据身份动态变化
-
-        v1.5.1+：如果 state.custom_character 存在（玩家在 8 步向导中由 LLM 生成的人设），
-        优先使用人设的开场白。
-        """
-        era_name = self.era_config.get("era_name", "")
-        gender_label = "♂" if self.state.player_gender == "male" else "♀" if self.state.player_gender == "female" else ""
-        label = self.identity_config.get("label", "小人物")
-        role = self.identity_config.get("role", "小人物")
-        description = self.identity_config.get("description", "你是这个时代的一个小人物。")
-
-        # 🐛 v1.5.1 P0 Bug #1 修复：优先用 custom_character
-        # 🆕 v1.7.32 重构（C 方案）：判据改为「LLM 是否真正生成了叙事字段」
-        # 仅看 opening_paragraph / background / starting_situation ——这三个是 8 步向导 LLM 生成的产物
-        # name 不再作为判据（v2.0 简化为 3 步 wizard 后，cc 只有 name+age+occupation+hometown 4 键，
-        # 原判据 `... or name` 会错误进入 cc 分支并只打 6 行 → 退化叙事）
-        # 结构化字段（cash/debt/family/tasks）由 _apply_character_initial_state() 走 base_state 兜底，与此处独立
-        cc = getattr(self.state, "custom_character", None)
-        cc_has_narrative = cc and (
-            cc.get("opening_paragraph") or cc.get("background") or cc.get("starting_situation")
+        """打印开场白——委托给 game_loop_display.print_opening"""
+        _print_opening_impl(
+            self.state,
+            self.era_config,
+            self.identity_config,
+            self.era_id,
+            self.selected_identity,
         )
-        if cc and cc_has_narrative:
-            # 🆕 v1.9.5 修复：去掉装饰性 "==========" 字符（前端 narrative 会原样显示）
-            print(f"\n欢迎来到【{era_name}】 {gender_label}")
-            print(f"\n你是 {cc.get('name', '?')} — {cc.get('hometown', '盛泽镇')}")
-            if cc.get('family'):
-                family_str = ' / '.join([f"{k}: {v}" for k, v in list(cc.get('family', {}).items())[:3]])
-                if family_str:
-                    print(f"家庭：{family_str}")
-            if cc.get('background'):
-                print(f"\n【来历】{cc['background']}")
-            if cc.get('starting_situation'):
-                print(f"\n【开局处境】{cc['starting_situation']}")
-            if cc.get('opening_paragraph'):
-                print(f"\n{cc['opening_paragraph']}")
-            print(f"\n日期：{self.state.current_date}\n")
-            return
-
-        # 优先从dm_persona.md的开场白部分读（但只在身份为默认男性时使用）
-        from pathlib import Path
-        is_default_identity = self.selected_identity == self.era_config.get("world", {}).get("default_identity", "")
-
-        # 动态identity开场白（当不是默认男性身份时）
-        if not is_default_identity or not self._has_persona_opening():
-            # 🆕 v1.9.5 修复：去掉装饰性 "==========" 字符
-            print(f"\n欢迎来到【{era_name}】 {gender_label}")
-            print(f"\n你选择成为：{label}")
-            print(f"你的身份：{role}")
-            print(f"\n{description}")
-            print(f"\n日期：{self.state.current_date}\n")
-        else:
-            # 默认男性身份 + 有persona.md → 用persona的开场白
-            opening = self._get_persona_opening()
-            # 🆕 v1.9.5 修复：去掉装饰性 "==========" 字符
-            print(f"\n{opening}\n")
 
     def _has_persona_opening(self) -> bool:
-        """检查dm_persona.md是否有开场白"""
-        from pathlib import Path
-        persona_path = Path("eras") / self.era_id / "dm_persona.md"
-        if not persona_path.exists():
-            return False
-        text = persona_path.read_text(encoding="utf-8")
-        return "# 开场白" in text
+        """检查dm_persona.md是否有开场白——委托给 game_loop_display.has_persona_opening"""
+        return _has_persona_opening_impl(self.era_id)
 
     def _get_persona_opening(self) -> str | None:
-        """从dm_persona.md提取开场白"""
-        from pathlib import Path
-        persona_path = Path("eras") / self.era_id / "dm_persona.md"
-        if not persona_path.exists():
-            return None
-        text = persona_path.read_text(encoding="utf-8")
-        if "# 开场白" in text:
-            start = text.find("# 开场白") + len("# 开场白")
-            end = text.find("\n# ", start)
-            if end == -1:
-                end = len(text)
-            return text[start:end].strip()
-        return None
+        """从dm_persona.md提取开场白——委托给 game_loop_display.get_persona_opening"""
+        return _get_persona_opening_impl(self.era_id)
 
     def _get_player_input(self) -> str:
         """获取玩家输入"""
@@ -813,16 +760,12 @@ class GameLoop:
             return "/quit"
 
     def _display_narrative(self, narrative: str) -> None:
-        """展示叙事"""
-        print(f"\n【DM叙事】\n{narrative}")
+        """展示叙事——委托给 game_loop_display.display_narrative"""
+        _display_narrative_impl(narrative)
 
     def _display_state(self) -> None:
-        """展示状态"""
-        visible = self.state.get_visible_state()
-        ap_cur = visible.get('action_points_current', 0)
-        ap_max = visible.get('action_points_max', 3)
-        ap_bar = "●" * ap_cur + "○" * (ap_max - ap_cur)
-        print(f"\n[状态] 回合{visible['round']} | {visible['date']} | 行动点 {ap_bar} {ap_cur}/{ap_max} | 已解锁认知{visible['unlocked_insights_count']}个")
+        """展示状态——委托给 game_loop_display.display_state"""
+        _display_state_impl(self.state)
 
     def _handle_meta_command(self, cmd: str) -> bool:
         """处理元指令"""
@@ -1218,41 +1161,10 @@ class GameLoop:
             print(f"{'─' * 60}\n")
 
     def _display_full_state(self) -> None:
-        """展示完整状态"""
-        print(f"\n{'=' * 40}")
-        print(f"会话: {self.session.session_id}")
-        print(f"回合: {self.state.round_number} | 日期: {self.state.current_date}")
-        print(f"{'=' * 40}")
-        print("\n变量:")
-        for k, v in self.state.variables.items():
-            print(f"  {k}: {v:.1f}")
-        print(f"\n已触发事件: {len(self.state.triggered_events)}")
-        print(f"已解锁认知: {self.state.unlocked_insights}")
-        print(f"NPC关系: {self.state.npc_levels}")
-        print(f"价值观: {self.state.value_shifts}")
-        print(f"事件日志: {self.memory.count()}条")
-        print(f"\n存档:")
-        for name, slot in self.session.slots.items():
-            print(f"  {name}: 回合{slot.round_number} {slot.current_date}")
-        print(f"{'=' * 40}\n")
+        """展示完整状态——委托给 game_loop_display.display_full_state"""
+        _display_full_state_impl(self.session, self.state, self.memory)
 
     @staticmethod
     def _help_text() -> str:
-        return """
-可用元指令：
-  /state         - 查看完整游戏状态
-  /save [1|2|3]  - 保存到slot1/2/3（不传则存slot1）
-  /load [1|2|3|auto] - 从指定slot读档
-  /quit          - 退出游戏
-  /help          - 显示帮助
-
-游戏玩法：
-  直接输入你想做的任何事（去牙行、问税收、织丝绸等）
-  DM会根据时代背景和你的行动生成叙事
-
-存档机制：
-  - 每回合结束自动存档（auto.json）
-  - 手动存档有3个slot（slot1/2/3.json）
-  - 重新游戏用：python -m history_footnote continue
-  - 列出存档：python -m history_footnote list-saves
-"""
+        """帮助文本——委托给 game_loop_display.help_text"""
+        return _help_text_impl()
