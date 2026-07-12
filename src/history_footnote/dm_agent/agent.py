@@ -494,57 +494,23 @@ class DMAgent(MockHelpersMixin):
         # 默认上限 800 字；时间模式信息在 skill_pacing.time_mode 里
         skill_pacing = state_ref.get("skill_pacing", {}) if isinstance(state_ref, dict) else {}
         time_mode = skill_pacing.get("time_mode", "now_time") if isinstance(skill_pacing, dict) else "now_time"
-        max_chars_by_mode = {
-            "abstract_time": 180,
-            "sharp_cut":     320,
-            "now_time":      500,
-            "slow_time":     700,
-        }
-        char_limit = max_chars_by_mode.get(time_mode, 800)
-        if len(narrative) < 100:
-            need_retry = True
-            retry_reason = f"短答（{len(narrative)}字）"
-        elif len(narrative) > char_limit:
-            need_retry = True
-            retry_reason = f"过长（{len(narrative)}>{char_limit}字，{time_mode}模式）"
-        elif not _narr_ends_with_question(narrative):
-            need_retry = True
-            retry_reason = "末尾无问号"
+        # 🆕 v2.10.1 W52 候选 E：narrative 后处理已抽到 narrative_postprocess.py
+        from history_footnote.dm_agent.narrative_postprocess import (
+            postprocess_narrative,
+            check_narrative_quality,
+        )
+        need_retry, retry_reason = check_narrative_quality(narrative, time_mode)
         if need_retry:
             _log.warning(
                 f"[v2.3] narrative {retry_reason}，触发重试"
             )
-            for retry_i in range(2):  # 最多 2 次重试
-                try:
-                    result = self.graph.invoke(initial_state)
-                    narrative = result.get("narrative", "")
-                    # 重新检查（每次重试前用上次的 time_mode 上限）
-                    short_ok = len(narrative) >= 100
-                    length_ok = len(narrative) <= char_limit
-                    question_ok = _narr_ends_with_question(narrative)
-                    if short_ok and length_ok and question_ok:
-                        _log.info(
-                            f"[v2.3] 第 {retry_i+1} 次重试成功，narrative={len(narrative)}字"
-                        )
-                        break
-                except Exception as e:
-                    _log.exception(f"[v2.3] 重试 {retry_i+1} 失败: {e}")
-                    break
-            else:
-                _log.warning(
-                    f"[v2.3] 2 次重试仍失败，narrative={len(narrative)}字（目标≤{char_limit}）"
-                )
-                # 截断兜底：在句号处截断到上限的 80%
-                if len(narrative) > char_limit:
-                    cut_at = int(char_limit * 0.8)
-                    # 找最近的句号
-                    for i in range(cut_at, min(cut_at + 50, len(narrative))):
-                        if narrative[i] in "。！？\n":
-                            narrative = narrative[:i+1]
-                            break
-                    else:
-                        narrative = narrative[:cut_at] + "……"
-                    _log.warning(f"[v2.3] 已截断 narrative 到 {len(narrative)}字")
+            def _retry_fn() -> str:
+                nonlocal result
+                result = self.graph.invoke(initial_state)
+                return result.get("narrative", "")
+            narrative, _status = postprocess_narrative(
+                narrative, time_mode, retry_fn=_retry_fn, max_retries=2
+            )
 
         # 🆕 v1.6+ P0 修复：返回 DMResponse 完整字段（含 voice_options/intent_type/is_action/time_cost）
         return {
