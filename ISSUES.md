@@ -15,6 +15,9 @@
 - [v1.6.x 新增功能](#v16x-新增功能)
   - [Feature #1: 剧情回顾 (v1.6.3)](#feature-1-剧情回顾-v163)
   - [Feature #2: 明朝名词字典 tooltip (v1.6.6)](#feature-2-明朝名词字典-tooltip-v166)
+- [v2.10.x 系列问题](#v210x-系列问题)
+  - [Issue #7: 章节蓝图 chapter2-10 缺失导致玩家卡死 (v2.10.1 W52 P0-1)](#issue-7-章节蓝图-chapter2-10-缺失导致玩家卡死-v2101-w52-p0-1)
+  - [Issue #8: LLM JSON 解析失败 9.7% (v2.10.1 W52 P0-2)](#issue-8-llm-json-解析失败-97-v2101-w52-p0-2)
 - [未解决问题 / 已知限制](#未解决问题--已知限制)
 
 ---
@@ -276,6 +279,74 @@ def test_npc_consistency_simulation():
 **开发中发现 XSS 漏洞**（写测试时发现）：
 - `get_term_html()` 没 escape 用户/字典值
 - 已修复：所有字段都通过 `escape_html()`
+
+---
+
+## v2.10.x 系列问题
+
+### Issue #7: 章节蓝图 chapter2-10 缺失导致玩家卡死 (v2.10.1 W52 P0-1)
+
+**问题描述**：
+> 仅 `chapter1_blueprint.json` 存在（v1 行）。玩家游玩到第 7 章时，`coordinator._init_first_chapter` 抛 `FileNotFoundError`，原代码 silent log 后退出，章节化叙事直接中断，玩家卡死。
+
+**信号源**：
+- 真 LLM smoke ERROR：`第 7 章蓝图加载失败: 蓝图文件不存在: /root/.../chapter7_blueprint.json`
+- 紧接着：硬编码路径也失败 → "章节化就此退出（无法继续）"
+
+**根因**：
+- `eras/{era}/` 只有第 1 章蓝图 JSON
+- `coordinator._init_first_chapter` 的两层 try-except 在硬编码失败时仅 `_LOG.error`，不抛
+- 玩家卡在当前章节，强制重启也无效（章节状态仍异常）
+
+**修复**（commit `f5d640e`）：
+- 3 层 fallback 链路：
+  1. LLM 实时生成（如有 `_llm`）
+  2. 静态最小可用 blueprint（"第 N 章"+ 应急场景 + W85 5 字段）
+  3. 放弃（保留向后兼容，不 raise）
+- 新方法 `_static_fallback_init(chapter_id)` 内联应急 blueprint
+
+**验证**：
+- `tests/test_w85_p01_blueprint_fallback.py` 7 用例全通过
+- mock `facade.init_chapter` 抛 FileNotFoundError → 静态 fallback 自动初始化
+
+**相关文件**：
+- `src/history_footnote/chapter/coordinator.py`（`_static_fallback_init` + `_init_first_chapter` 改写）
+- `tests/test_w85_p01_blueprint_fallback.py`（7 新测试）
+
+---
+
+### Issue #8: LLM JSON 解析失败 9.7% (v2.10.1 W52 P0-2)
+
+**问题描述**：
+> 真 LLM smoke 230s 内 5 个 ERROR + 14 WARN（"章节蓝图校验失败"）。主因 LLM 返回非标准 JSON（`Expecting ',' delimiter` 字符 2264 位错位），JSON 解析失败触发 fallback，章节叙事内容不如 LLM 实时生成。
+
+**信号源**：
+- `nohup.out.w52a` + `/tmp/w52_real_llm_smoke.log`
+- 主失败模式：LLM 输出长 JSON 时偶尔漏转义换行 / 含 markdown 代码块 / 含括号嵌套
+
+**根因**：
+- `route_detector._classify_intent_with_llm` 使用 `re.search(r"\{[\s\S]*\}")` 简易提取
+- non-greedy 在第一个 `}` 停下 → 长 JSON 截断
+- 不支持 markdown 包裹 / 控制字符 / 加粗标记
+
+**修复**（commit `b75c738`）：
+- 改用项目统一工具 `extract_json_from_text`（`narrative_sanitizer.py` W32-W66）
+- 5 种容错能力：
+  1. markdown ```json ... ``` 包裹
+  2. 文本末尾 {...} 块（greedy）
+  3. 括号深度匹配（嵌套对象不被截断）
+  4. 控制字符清洗（裸换行/制表符）
+  5. markdown 加粗清洗（**xxx** → xxx）
+- 清理 unused `re` import
+
+**验证**：
+- `tests/test_w85_p02_json_tolerance.py` 11 用例全通过
+- 全量回归 290/290 PASSED
+
+**相关文件**：
+- `src/history_footnote/chapter/route_detector.py`（`_classify_intent_with_llm` 改写）
+- `tests/test_w85_p02_json_tolerance.py`（11 新测试）
+- `src/history_footnote/narrative_sanitizer.py`（共用工具，无需改）
 
 ---
 

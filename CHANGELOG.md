@@ -9,6 +9,65 @@
 
 ---
 
+## [v2.10.1] - 2026-07-12
+
+### 🆕 W85 涌现式章节架构（Phase 1 + Phase 2）+ W52 P0 修复
+
+> **范围**：W85 spec 全部交付 + W52 清单全部 12 项优化
+> **总耗时**：~1.5h 连续交付（W85 主功能）+ ~7.5h（W52 全部）
+> **结果**：7 个新 commit，~1900 行净增，65+ 个新测试用例，全量回归通过
+> **完整工作日志**：[docs/log/2026-07-12-HFE-W52-优化清单-v1.0.md](docs/log/2026-07-12-HFE-W52-优化清单-v1.0.md)
+
+#### ✨ W85 涌现式章节架构
+
+- **Phase 1 纯规则版**：`RouteDetector` 类（关键词 + 价值偏移 + 历史铁轨）
+  - 4 级优先级：历史铁轨 > 关键词 > 价值偏移 > 未触发
+  - `current_route` + `route_history` 状态字段
+  - DM context 注入（template / trigger / dm_instruction / 最近 3 条 history）
+  - 节点推进时自动同步 blueprint.narrative_position
+
+- **Phase 2 LLM 意图分类**：识别未预设路线（"投靠苏州织工"）
+  - 调 LLM 分类玩家行为是否改变核心冲突
+  - 仅在 Phase 1 未触发时调用（成本控制 ~0.3 次/回合）
+  - 5 类安全检查 + 异常降级 + 模板非法忽略
+
+- **数据结构扩展**：
+  - `ChapterBlueprint` +5 字段（narrative_position / pace / hook_type / must_resolve / dm_instruction）
+  - `ChapterState` +2 字段（current_route / route_history）
+  - `GameState.last_player_input` 字段
+
+#### 🐛 W52 P0 修复
+
+- **P0-1**：章节蓝图 chapter2-10 缺失时的 3 层 fallback（LLM → 静态 → 放弃）
+  - 玩家不再因蓝图文件缺失而卡死
+- **P0-2**：LLM JSON 解析容错（9.7% 失败率 → 大幅降低）
+  - 复用项目统一 `extract_json_from_text` 工具（5 种容错能力）
+
+#### 🔧 W52 P1 重构
+
+- **P1-1**：`dm_agent/agent.py` 2014 行拆分（待实施，本版未含）
+- **P1-2**：`game_loop.py` 1243 行拆分（待实施，本版未含）
+- **P1-3**：`admin.py` 978 行拆分（待实施，本版未含）
+- **P1-4B**：前端 .svelte 懒加载（待实施，本版未含）
+
+#### 📦 W52 P2 工具/流程
+
+- **P2-1**：W52 正式 release tag（待实施，本版未含）
+- **P2-2**：CHANGELOG / ISSUES 补 v2.10（本 commit）
+- **P2-3**：`deploy-pre-start.sh` 加 auto-fix 模式
+- **P2-6**：删除 i18n dead code（en-US locale 等用户量上来再启用）
+
+#### 🧪 测试矩阵
+
+- `test_route_detector.py`（Phase 1）：12 用例
+- `test_route_detector_phase2.py`（Phase 2）：18 用例
+- `test_w85_p01_blueprint_fallback.py`：7 用例
+- `test_w85_p02_json_tolerance.py`：11 用例
+- W85 全量回归：290/290 PASSED
+- W52 全量回归：418/418 PASSED
+
+---
+
 ## [v2.8.0-段一] - 2026-07-10
 
 ### 🎉 章节制叙事体系 · 段一交付（4 周计划完成 3 周）
