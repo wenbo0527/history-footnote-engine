@@ -8,9 +8,10 @@
    *   - dotted  点线
    *   - center  居中文字（带卷草纹）
    *   - seal    朱砂色印章分割
+   *   - brush   🆕 毛笔笔触分割
    */
   interface Props {
-    variant?: 'solid' | 'dashed' | 'dotted' | 'center' | 'seal';
+    variant?: 'solid' | 'dashed' | 'dotted' | 'center' | 'seal' | 'brush';
     text?: string;          // center / seal 变体
     spacing?: 'sm' | 'md' | 'lg';
   }
@@ -56,6 +57,23 @@
   .divider-line-only[data-variant='dotted'] {
     background: none;
     border-top: 1px dotted var(--color-ink-faint);
+  }
+  /* 🆕 brush: 毛笔笔触分割（不规则粗细） */
+  .divider-line-only[data-variant='brush'] {
+    background: none;
+    height: 8px;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--color-ink) 5%,
+      var(--color-ink) 25%,
+      var(--color-ink-light) 50%,
+      var(--color-ink) 75%,
+      var(--color-ink) 95%,
+      transparent 100%
+    );
+    opacity: 0.6;
+    border-radius: 50%;
   }
 
   /* center / seal */

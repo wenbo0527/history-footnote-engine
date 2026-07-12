@@ -1,0 +1,101 @@
+{
+  "chapter_id": 10,
+  "chapter_title": "中秋月圆·尾声",
+  "chapter_subtitle": "万历十五年已过",
+  "meta": {
+    "act": "ending",
+    "role": "ending",
+    "emotion_tone": "tenderness→farewell",
+    "choice_type": "whether_to_look_back",
+    "suggested_node_count": 4,
+    "suggested_template": "epilogue_dual_paths",
+    "is_endgame": true
+  },
+  "transition_hint": "year_boundary",
+  "nodes": [
+    {
+      "index": 1,
+      "role": "introduction",
+      "scene": "万历十五年已过，腊月将至。一年来，你经春税之压、织机之苦、邻人之离合。沈氏在灶间忙活，阿宝在院里念书。你站在织机前，看着经年未变的织机。",
+      "npc_ids": ["fm_wife", "fm_son", "npc_wang_sao"],
+      "option_directions": [
+        {"text": "回想这一年，自己做得够吗", "path_hint": "epilogue_inner_voice"},
+        {"text": "算账，看看到底挣了多少", "path_hint": "epilogue_ledger"},
+        {"text": "出门走走，看看盛泽的新年", "path_hint": "epilogue_outside"},
+        {"text": "关上织机房门，陪家人坐坐", "path_hint": "epilogue_family"}
+      ],
+      "knowledge_ids": ["kn_year_review_wanli_1587"],
+      "completion_condition": "round_4_reached"
+    },
+    {
+      "index": 2,
+      "role": "escalation",
+      "scene": "赵里长又来了。这次他不是催税，而是送来一张邸报：万历十六年，朝廷要加重东南丝税。里长神色复杂地说：'你去年就抗过，今年还不交？'",
+      "npc_ids": ["npc_zhao_lizhang", "fm_wife"],
+      "option_directions": [
+        {"text": "既然如此，继续硬抗", "path_hint": "epilogue_inner_voice"},
+        {"text": "今年织机多了，应该能交齐", "path_hint": "epilogue_ledger"},
+        {"text": "找李秀才合计，看有没有减免的法子", "path_hint": "epilogue_outside"},
+        {"text": "算了，今年还是先避一避", "path_hint": "epilogue_family"}
+      ],
+      "knowledge_ids": ["kn_tax_increase_wanli_16"],
+      "completion_condition": "round_8_reached"
+    },
+    {
+      "index": 3,
+      "role": "climax",
+      "scene": "除夕夜。你与沈氏、阿宝围坐。沈氏终于开口：'相公，这一年你辛苦了。不管明年怎样，今年咱全家都在。'阿宝也抬头看你。窗外爆竹声声，远处有人在拜神。",
+      "npc_ids": ["fm_wife", "fm_son", "npc_li_xiucai"],
+      "option_directions": [
+        {"text": "点头，明年也这么过，守着这片织机", "path_hint": "epilogue_family"},
+        {"text": "沈氏，等过了年我想去苏州府试试商路", "path_hint": "epilogue_outside"},
+        {"text": "这一年挣了多少，够不够咱过完年", "path_hint": "epilogue_ledger"},
+        {"text": "……（沉思不语）", "path_hint": "epilogue_inner_voice"}
+      ],
+      "knowledge_ids": ["kn_new_year_wanli_16"],
+      "completion_condition": "round_12_reached"
+    },
+    {
+      "index": 4,
+      "role": "resolution",
+      "scene": "万历十六年正月初一。你在织机前写下这一年最后一行字：'万历十五年，沈氏二十八，阿宝六岁，织机三台，欠银三两，邻人尚在。' 窗外鸡鸣，新的一年开始了。",
+      "npc_ids": ["fm_wife", "fm_son"],
+      "option_directions": [
+        {"text": "把账本锁起来，明年再算", "path_hint": "epilogue_ledger"},
+        {"text": "出去走走，看看盛泽的新年", "path_hint": "epilogue_outside"},
+        {"text": "回头看一眼妻儿，然后关灯", "path_hint": "epilogue_family"},
+        {"text": "（合上账本，闭目养神）", "path_hint": "epilogue_inner_voice"}
+      ],
+      "knowledge_ids": ["kn_year_end_wanli_15"],
+      "completion_condition": "round_16_reached"
+    }
+  ],
+  "differentiation": {
+    "_description": "Build × 节点分化（v2.8.0 段四）：同 seed 不同 Build 体验不同。endgame 走 4 条内心独白路径（inner_voice / ledger / outside / family）",
+    "守乡人": {
+      "node_3_scene": "除夕夜。你与沈氏、阿宝围坐。沈氏终于开口：'相公，这一年你守着织机、守着家，我和阿宝都记着。'你听着，眼眶一热。阿宝趴在膝上睡了。窗外爆竹声稀，远处的狗在叫。",
+      "node_3_options": [
+        {"text": "明年还守在这里，织机就是咱的根", "path_hint": "epilogue_family"},
+        {"text": "沈氏，你辛苦了，明年我也帮着你缫丝", "path_hint": "epilogue_family"},
+        {"text": "抱着阿宝，给沈氏也倒杯热茶", "path_hint": "epilogue_family"}
+      ],
+      "node_4_scene": "你在织机前写下这一年最后一行字：'万历十五年，守着盛泽这片地。明年还守。' 窗外鸡鸣三遍，沈氏已在灶间热粥。"
+    },
+    "外望人": {
+      "node_3_scene": "除夕夜。你与沈氏、阿宝围坐。沈氏终于开口：'相公，李秀才说你今年织的春丝卖到了苏州城，了不起。'你点点头，脑海中浮现苏州河边的客商。明年或许可以去更远的地方看看。",
+      "node_3_options": [
+        {"text": "明年开春就去苏州，看看商路", "path_hint": "epilogue_outside"},
+        {"text": "先把盛泽的春蚕做完，再图大事", "path_hint": "epilogue_ledger"},
+        {"text": "把今年的账先理一理，明年有本钱", "path_hint": "epilogue_ledger"}
+      ],
+      "node_4_scene": "你在织机前写下这一年最后一行字：'万历十五年，盛泽的春丝走向苏州。明年，去看看更远的地方。' 窗外鸡鸣，阿宝醒来问：'爹，明天去哪？' 你说：'明天还早。'"
+    }
+  },
+  "ending_paths": {
+    "_description": "🆕 v2.10.1 endgame 4 条收束路径",
+    "epilogue_inner_voice": "内心独白：玩家全季选择回顾，沈氏、阿宝、织机、邻人的印象串联成内心独白",
+    "epilogue_ledger": "算账：玩家审视全年 cash/debt/库存/邻人关系，给出'赢家/输家/持平'评价",
+    "epilogue_outside": "出外：玩家立志明年走向苏州/南京/更远商路，呼应 W85 收束节点",
+    "epilogue_family": "家庭：玩家与妻儿共度除夕，明年继续守家"
+  }
+}

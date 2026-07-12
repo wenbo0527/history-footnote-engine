@@ -12,14 +12,14 @@ from pathlib import Path
 BLUEPRINTS_DIR = Path("eras/wanli1587")
 
 
-def test_chapter1_to_9_blueprints_exist():
-    """chapter 1-9 蓝图文件都应存在"""
-    for i in range(1, 10):
+def test_chapter1_to_10_blueprints_exist():
+    """chapter 1-10 蓝图文件都应存在"""
+    for i in range(1, 11):
         path = BLUEPRINTS_DIR / f"chapter{i}_blueprint.json"
         assert path.exists(), f"missing {path}"
 
 
-@pytest.mark.parametrize("chapter_id", list(range(1, 10)))
+@pytest.mark.parametrize("chapter_id", list(range(1, 11)))
 def test_blueprint_json_valid(chapter_id):
     """每个蓝图 JSON 应可解析"""
     path = BLUEPRINTS_DIR / f"chapter{chapter_id}_blueprint.json"
@@ -27,7 +27,7 @@ def test_blueprint_json_valid(chapter_id):
     assert isinstance(data, dict)
 
 
-@pytest.mark.parametrize("chapter_id", list(range(1, 10)))
+@pytest.mark.parametrize("chapter_id", list(range(1, 11)))
 def test_blueprint_required_fields(chapter_id):
     """每个蓝图应有必需字段"""
     path = BLUEPRINTS_DIR / f"chapter{chapter_id}_blueprint.json"
@@ -39,7 +39,7 @@ def test_blueprint_required_fields(chapter_id):
     assert "differentiation" in data
 
 
-@pytest.mark.parametrize("chapter_id", list(range(1, 10)))
+@pytest.mark.parametrize("chapter_id", list(range(1, 11)))
 def test_blueprint_has_4_nodes(chapter_id):
     """每个蓝图应有 4 个 node (introduction / escalation / climax / resolution)"""
     path = BLUEPRINTS_DIR / f"chapter{chapter_id}_blueprint.json"
@@ -52,7 +52,7 @@ def test_blueprint_has_4_nodes(chapter_id):
     assert "resolution" in roles
 
 
-@pytest.mark.parametrize("chapter_id", list(range(1, 10)))
+@pytest.mark.parametrize("chapter_id", list(range(1, 11)))
 def test_blueprint_node_structure(chapter_id):
     """每个 node 字段应完整"""
     path = BLUEPRINTS_DIR / f"chapter{chapter_id}_blueprint.json"
@@ -66,7 +66,7 @@ def test_blueprint_node_structure(chapter_id):
         assert len(node["option_directions"]) >= 3
 
 
-@pytest.mark.parametrize("chapter_id", list(range(1, 10)))
+@pytest.mark.parametrize("chapter_id", list(range(1, 11)))
 def test_blueprint_meta_required(chapter_id):
     """meta 字段应包含关键 spec 字段"""
     path = BLUEPRINTS_DIR / f"chapter{chapter_id}_blueprint.json"
@@ -79,7 +79,7 @@ def test_blueprint_meta_required(chapter_id):
     assert "suggested_template" in meta
 
 
-@pytest.mark.parametrize("chapter_id", list(range(1, 10)))
+@pytest.mark.parametrize("chapter_id", list(range(1, 11)))
 def test_blueprint_differentiation(chapter_id):
     """differentiation 应包含 2 个 build 路径"""
     path = BLUEPRINTS_DIR / f"chapter{chapter_id}_blueprint.json"
@@ -91,7 +91,7 @@ def test_blueprint_differentiation(chapter_id):
 def test_blueprint_chapter_ids_unique():
     """chapter_id 应唯一"""
     ids = set()
-    for i in range(1, 10):
+    for i in range(1, 11):
         path = BLUEPRINTS_DIR / f"chapter{i}_blueprint.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["chapter_id"] not in ids, f"duplicate chapter_id={data['chapter_id']}"
@@ -99,18 +99,30 @@ def test_blueprint_chapter_ids_unique():
 
 
 def test_blueprint_chapter_ids_sequential():
-    """chapter_id 应 1-9 连续"""
-    for i in range(1, 10):
+    """chapter_id 应 1-10 连续"""
+    for i in range(1, 11):
         path = BLUEPRINTS_DIR / f"chapter{i}_blueprint.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["chapter_id"] == i, f"chapter{i} has chapter_id={data['chapter_id']}"
 
 
 def test_blueprint_titles_distinct():
-    """9 个 chapter title 应不同"""
+    """10 个 chapter title 应不同"""
     titles = []
-    for i in range(1, 10):
+    for i in range(1, 11):
         path = BLUEPRINTS_DIR / f"chapter{i}_blueprint.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         titles.append(data["chapter_title"])
     assert len(titles) == len(set(titles)), "duplicate titles"
+
+
+def test_chapter10_is_endgame():
+    """chapter 10 应是 endgame（is_endgame=true）"""
+    data = json.loads((BLUEPRINTS_DIR / "chapter10_blueprint.json").read_text(encoding="utf-8"))
+    assert data["meta"].get("is_endgame") is True
+    assert "ending_paths" in data
+    # 4 条 endgame 路径
+    assert len(data["ending_paths"]) >= 4
+    # 4 路径: inner_voice / ledger / outside / family
+    for path in ["epilogue_inner_voice", "epilogue_ledger", "epilogue_outside", "epilogue_family"]:
+        assert path in data["ending_paths"]

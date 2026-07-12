@@ -24,6 +24,7 @@
     size?: Size;
     loading?: boolean;
     disabled?: boolean;
+    fullWidth?: boolean;       // 🆕 v2.10.1: 全宽按钮（用于登录/注册/表单底部）
     children: Snippet;
   }
 
@@ -32,6 +33,7 @@
     size = 'md',
     loading = false,
     disabled = false,
+    fullWidth = false,
     children,
     type = 'button',
     ...rest
@@ -49,6 +51,7 @@
   class:btn-md={size === 'md'}
   class:btn-lg={size === 'lg'}
   class:btn-loading={loading}
+  class:btn-full-width={fullWidth}
   disabled={disabled || loading}
   aria-busy={loading}
   {...rest}
@@ -170,6 +173,12 @@
   /* Loading */
   .btn-loading {
     pointer-events: none;
+  }
+  /* 🆕 fullWidth: 100% 宽度 */
+  .btn-full-width {
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
   .btn-content-loading {
     opacity: 0.6;
