@@ -31,13 +31,14 @@ export interface WizardState {
 }
 
 // 🆕 v2.0：身份预设表
-export const IDENTITY_PRESETS: Record<Identity, {
+// 🆕 v2.10.1 fix: 改为 Partial（4 个已用 identity，其他 3 个留待后续添加）
+export const IDENTITY_PRESETS: Partial<Record<Identity, {
   name: string;
   gender: Gender;
   icon: string;
   desc: string;
   profile: PresetProfile;
-}> = {
+}>> = {
   weaving_male: {
     name: '织工',
     gender: 'male',

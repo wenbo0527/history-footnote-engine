@@ -216,7 +216,7 @@
       chapterNumber={1}
       totalChapters={($game as any)?.total_chapters ?? 10}
       summary={firstNarrative?.narrative?.slice(0, 200) ?? ''}
-      eraName={$game?.era_name ?? $game?.era_id ?? ''}
+      eraName={$game?.city ?? '万历十五年'}
       onStart={handleStartChapter}
     />
   {/if}
@@ -260,8 +260,8 @@
             <PlateMap sessionId={$game.session_id} />
             <ChapterTimeline
               sessionId={$game.session_id}
-              currentChapter={$game.current_chapter ?? 0}
-              totalChapters={$game.total_chapters ?? 10}
+              currentChapter={($game as any)?.current_chapter ?? 0}
+              totalChapters={($game as any)?.total_chapters ?? 10}
             />
             <MetricsPanel />
           </div>

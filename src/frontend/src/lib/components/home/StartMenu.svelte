@@ -57,7 +57,9 @@
       // 🆕 v2.7+: 已登录/游客都用真 account_id 拉取，不再回退到 'default'
       // （首页已保证游客有 guest_id；若仍为空表示后端不可用 → 返回空列表）
       const accountId = currentAccountId ?? '';
-      archives = await listArchives(accountId);
+      // 🆕 v2.10.1 fix: listArchives 返回 {count, sessions}，不是数组
+      const response = await listArchives(accountId);
+      archives = response.sessions;
     } catch (e) {
       archives = [];
     } finally {

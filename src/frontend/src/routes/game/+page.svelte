@@ -157,11 +157,12 @@
     </div>
   </div>
 
-  <CharacterWikiModal bind:open={wikiOpen} onclose={() => wikiOpen = false} />
-  <RecapModal bind:open={recapOpen} onclose={() => recapOpen = false} />
-  <GlossaryModal bind:open={glossaryOpen} onclose={() => glossaryOpen = false} />
-  <FeedbackModal bind:open={feedbackOpen} onclose={() => feedbackOpen = false} />
-  <SettingsModal bind:open={settingsOpen} onclose={() => settingsOpen = false} />
+  <!-- 🆕 v2.10.1 fix: 用 onclose 替代 bind:open (svelte-check 报 non-bindable) -->
+  <CharacterWikiModal open={wikiOpen} onclose={() => wikiOpen = false} />
+  <RecapModal open={recapOpen} onclose={() => recapOpen = false} />
+  <GlossaryModal open={glossaryOpen} onclose={() => glossaryOpen = false} />
+  <FeedbackModal open={feedbackOpen} onclose={() => feedbackOpen = false} />
+  <SettingsModal open={settingsOpen} onclose={() => settingsOpen = false} />
 {:else if loadError}
   <div class="game-error">
     <p>⚠ {loadError}</p>

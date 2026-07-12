@@ -23,8 +23,8 @@
 
   let { sessionId, onHistoryClick }: Props = $props();
 
-  let state = $state<ChapterStateResponse | null>(null);
-  let error = $state<string | null>(null);
+  let state: ChapterStateResponse | null = $state(null);
+  let error: string | null = $state(null);
 
   async function refresh() {
     if (!sessionId) return;

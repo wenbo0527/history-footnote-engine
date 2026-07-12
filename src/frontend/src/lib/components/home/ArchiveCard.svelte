@@ -42,14 +42,10 @@
     </div>
     <div class="archive-card-meta">
       <span class="archive-card-era">{eraName}</span>
-      <span class="archive-card-year">万历{archive.year - 1573}年</span>
-      <span class="archive-card-round">第 {archive.round} 回合</span>
+      <!-- 🆕 v2.10.1 fix: Archive 类型无 year/cash/debt 字段，只显示 current_round -->
+      <span class="archive-card-round">第 {archive.current_round} 回合</span>
     </div>
-    <div class="archive-card-stats">
-      <span class="archive-card-stat">💰 {archive.cash.toFixed(2)} 两</span>
-      <span class="archive-card-stat">💳 {archive.debt.toFixed(2)} 两</span>
-    </div>
-    <div class="archive-card-time">{formatTime(archive.updated_at)}</div>
+    <div class="archive-card-time">{formatTime(archive.last_saved_at)}</div>
   </button>
 
   {#if ondelete}

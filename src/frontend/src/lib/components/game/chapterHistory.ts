@@ -21,20 +21,22 @@
  * - durationLabel: "8 轮 (round 5-12)"
  * - closureLabel: "软收束" / "强制收尾"
  * - status: "current" / "past" / "future"（基于 currentChapter）
+ *
+ * 🆕 v2.10.1 fix: history 中元素字段变为 optional（与 $lib/api/chapter 兼容）
  */
 
 export interface ChapterRecord {
   chapter: number;
   summary: string;
-  core_event: string;
-  key_choice: string;
-  build_summary: string;
-  path_summary: string;
-  rounds_in_chapter: number;
-  ended_at_round: number;
-  ended_at: string;
-  transition: string;
-  closure_status: string;
+  core_event?: string;
+  key_choice?: string;
+  build_summary?: string;
+  path_summary?: string;
+  rounds_in_chapter?: number;
+  ended_at_round?: number;
+  ended_at?: string;
+  transition?: string;
+  closure_status?: string;
 }
 
 export interface TimelineNode extends ChapterRecord {
@@ -71,7 +73,7 @@ export function toTimeline(
     isFirst: rec.chapter === 1,
     isLast: rec.chapter >= totalChapters,
     durationLabel: buildDurationLabel(rec),
-    closureLabel: buildClosureLabel(rec.closure_status),
+    closureLabel: buildClosureLabel(rec.closure_status ?? ''),
     status: rec.chapter < currentChapter
       ? 'past'
       : rec.chapter === currentChapter
@@ -119,9 +121,9 @@ export function toTimeline(
  * 持续时长标签：例如 "8 轮 (round 5-12)"
  */
 export function buildDurationLabel(rec: ChapterRecord): string {
-  if (rec.rounds_in_chapter === 0) return '未开始';
-  const startRound = Math.max(1, rec.ended_at_round - rec.rounds_in_chapter + 1);
-  return `${rec.rounds_in_chapter} 轮 (round ${startRound}-${rec.ended_at_round})`;
+  if (rec.rounds_in_chapter === 0 || rec.rounds_in_chapter === undefined) return '未开始';
+  const startRound = Math.max(1, (rec.ended_at_round ?? 0) - rec.rounds_in_chapter + 1);
+  return `${rec.rounds_in_chapter} 轮 (round ${startRound}-${rec.ended_at_round ?? 0})`;
 }
 
 /**

@@ -24,7 +24,8 @@
     onclose: () => void;
   }
 
-  let { open = $bindable(), onclose }: Props = $props();
+  // 🆕 v2.10.1 fix: open 不再 $bindable（svelte-check 误报）
+  let { open, onclose }: Props = $props();
 
   let loading = $state(false);
   let wiki: WikiResponse | null = $state(null);

@@ -21,9 +21,10 @@ export interface LoadingTip {
 }
 
 // 从 era.json 抽出 iron_laws.fact + source
+// 🆕 v2.10.1 fix: 用 type assertion（era config 类型未声明 iron_laws 字段）
 const historyTips: LoadingTip[] = (
-  eraJson.world?.iron_laws ||
-  eraJson.iron_laws ||
+  (eraJson.world as any)?.iron_laws ||
+  (eraJson as any).iron_laws ||
   []
 ).map((law: any) => ({
   text: law.fact,
