@@ -24,6 +24,7 @@
   import { Chapter, Divider, Button, Seal, Spinner, toast } from '$lib/components/design-system';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  import LoginForm from './LoginForm.svelte';
 
   let mode = $state<'login' | 'register'>('login');
   let username = $state('');
@@ -172,83 +173,23 @@
       {/if}
     </p>
 
-    <form
-      class="login-form"
-      onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}
-    >
-      <input
-        type="text"
-        class="login-input"
-        placeholder="用户名（如：沈青山）"
-        bind:value={username}
-        onkeydown={handleKeydown}
-        disabled={loading || lockSeconds > 0}
-        maxlength="20"
-        autocomplete="username"
-      />
-
-      {#if mode === 'register'}
-        <input
-          type="text"
-          class="login-input login-input-invite"
-          placeholder="邀请码（如：INV-XXXX-XXXX）"
-          bind:value={inviteCode}
-          onkeydown={handleKeydown}
-          disabled={loading || lockSeconds > 0}
-          maxlength="20"
-          autocomplete="off"
-        />
-      {/if}
-
-      <input
-        type="password"
-        class="login-input"
-        placeholder="密码（至少 6 字符）"
-        bind:value={password}
-        onkeydown={handleKeydown}
-        disabled={loading || lockSeconds > 0}
-        maxlength="64"
-        autocomplete={mode === 'login' ? 'current-password' : 'new-password'}
-      />
-
-      {#if error}
-        <div class="login-error" role="alert">
-          <span class="login-error-icon" aria-hidden="true">⚠</span>
-          <span>{error}</span>
-          {#if mode === 'login' && error.includes('账户不存在')}
-            <button type="button" class="login-error-link" onclick={handleSwitchMode}>
-              立即注册 →
-            </button>
-          {/if}
-        </div>
-      {/if}
-
-      <Button
-        type="submit"
-        variant="primary"
-        size="lg"
-        disabled={!username.trim() || !password || (mode === 'register' && !inviteCode.trim()) || loading || lockSeconds > 0}
-        loading={loading}
-        fullWidth
-      >
-        {#if lockSeconds > 0}
-          锁定中 ({lockSeconds}s)
-        {:else if mode === 'login'}
-          进入万历年
-        {:else}
-          创建账户
-        {/if}
-      </Button>
-
-      <button
-        type="button"
-        class="login-switch"
-        onclick={handleSwitchMode}
-        disabled={loading}
-      >
-        {mode === 'login' ? '没有账户？立即注册' : '已有账户？返回登录'}
-      </button>
-    </form>
+    <LoginForm
+      mode={mode}
+      loading={loading}
+      disabled={!username.trim() || !password || (mode === 'register' && !inviteCode.trim())}
+      lockSeconds={lockSeconds}
+      error={error}
+      username={username}
+      password={password}
+      inviteCode={inviteCode}
+      switchLink={mode === 'login'}
+      onsubmit={handleSubmit}
+      onusername={(v) => (username = v)}
+      onpassword={(v) => (password = v)}
+      oninvite={(v) => (inviteCode = v)}
+      onswitchmode={handleSwitchMode}
+      onkeydown={handleKeydown}
+    />
 
     <Divider variant="dashed" spacing="md" />
 
