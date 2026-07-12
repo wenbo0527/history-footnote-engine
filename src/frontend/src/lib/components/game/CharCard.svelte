@@ -11,6 +11,7 @@
   import { game } from '$lib/stores';
   import { fateEvents } from '$lib/stores/fate-events';
   import FateCardDetailModal from '../modals/FateCardDetailModal.svelte';
+  import FateHandSection from './FateHandSection.svelte';
 
   interface Props {
     character: Character;
@@ -25,10 +26,6 @@
 
   // 🆕 v2.7 命运卡：从 game store 拉（不再依赖外部 prop）
   const fateHand: FateCard[] = $derived($game?.fate_hand ?? []);
-  const unusedFate = $derived(fateHand.filter(c => !c.used));
-  const usedFate = $derived(fateHand.filter(c => c.used));
-  // 最多显示 3 张（剩余的折叠）
-  const visibleFate = $derived(unusedFate.slice(0, 3));
 
   // 🆕 v2.10.1 W80: 卡包模式 - 点击 chip 弹详情窗
   let selectedCard = $state<FateCard | null>(null);
@@ -110,47 +107,7 @@
 
       <!-- 🆕 v2.7: 命运卡预览（始终可见，玩家一打开就看到自己的卡） -->
       {#if fateHand.length > 0}
-        <section class="char-card-section char-card-fate">
-          <h4 class="char-card-section-title">
-            🎴 我的命运
-            <span class="char-card-fate-count">{unusedFate.length} / {fateHand.length} 未用</span>
-          </h4>
-          {#if visibleFate.length > 0}
-            <div class="char-card-fate-list">
-              {#each visibleFate as c (c.id)}
-                <button
-                  type="button"
-                  class="char-card-fate-chip"
-                  style="--card-color: {c.color}"
-                  title={c.description + '（点击查看详情）'}
-                  onclick={() => handleChipClick(c)}
-                >
-                  <!-- 🆕 v2.10.1 W81: 整卡缩略图 -->
-                  <img
-                    src={(c as any).image_url || `/fate/${c.id}.webp`}
-                    alt={c.name}
-                    class="char-card-fate-thumb"
-                    onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                  />
-                  <span class="char-card-fate-name">{c.name}</span>
-                </button>
-              {/each}
-              {#if unusedFate.length > 3}
-                <span class="char-card-fate-more">+{unusedFate.length - 3} 张</span>
-              {/if}
-            </div>
-          {/if}
-          {#if usedFate.length > 0}
-            <div class="char-card-fate-used">
-              <span class="char-card-fate-used-label">已用：</span>
-              {#each usedFate as c (c.id)}
-                <span class="char-card-fate-chip char-card-fate-chip-used" style="--card-color: {c.color}" title={c.description}>
-                  <span class="char-card-fate-icon" aria-hidden="true">{c.icon}</span>
-                </span>
-              {/each}
-            </div>
-          {/if}
-        </section>
+        <FateHandSection fateHand={fateHand} onchipclick={handleChipClick} />
       {/if}
     </div>
   {/if}
