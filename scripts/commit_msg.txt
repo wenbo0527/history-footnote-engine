@@ -1,42 +1,23 @@
-v2.10.1 W71: 输入验证放宽 + 前端错误显示修复
+v2.10.1 W72: 修复章节开场遮罩在每回合都重复显示
 
-问题分析（自由输入无正常返回）：
+问题：wanli1587_20260712_155758 session 在玩家输入后
+章节开场遮罩又重新出现。
 
-P1 玩家英文输入被拒（input_validator.py:149）
-- 之前 NO_CHINESE regex → 任何英文/数字/拉丁字符直接 400
-- 玩家感受："输入了但没反应"
+根因（GameView.svelte:46-65）：
+- 原检测：用 recent_narratives[lastIndex].round 作为 stateKey
+- 玩家输入 → 后端追加新 narrative round=2
+- stateKey 从 session_id-1 变 session_id-2
+- → 触发 showChapterIntro = true → 重新显示章节页
 
-P2 2 字中文误判
-- 之前 ≤2 字中文 + 无动作字 → 拒
-- 玩家感受："正常的'好的''行啊'被拒"
+修复（GameView.svelte:46+）：
+- 改用 round_number === 1 作为唯一条件
+- 首次进入（round_number === 1）→ 显示开场
+- 之后（round_number > 1）→ 不再显示
+- stateKey 简化为 session_id（每 session 一次性）
 
-P3 前端 400 错误不显示
-- normalizeError() 创建新 Error 丢了 err.data
-- GameView catch 块 err.data 永远 undefined
-- 玩家感受："提交没任何反馈"
-
-修复：
-
-P1（input_validator.py:149+）：
-- 短英文（≤10 字符）→ 通过（让 LLM 理解）
-- 长英文（>10 字符）→ 警告 meta_query
-- 玩家"go" "ok" "yes" "hello" 全部可用
-
-P2（input_validator.py:163+）：
-- 仅 1 字中文 + 非动作字 → 拒
-- 2 字中文全部通过
-- 玩家"好的""行啊""可以"都可用
-
-P3（client.ts:84+）：
-- normalizeError 保留 err.data（不再丢）
-- GameView 区分 400（输入问题，warning + 重新输入）
-  vs 500（系统错误，error + 稍后重试）
-
-测试：
-- W71: 9/10 输入验证测试 PASS（覆盖 11 个真实场景）
-- 前端 173 PASSED 0 回归
+测试：173 PASSED 0 回归
 
 影响：
-- 英文/数字/拉丁短句现在可玩
-- 2 字中文"好的"通过
-- 错误消息完整显示（含 suggestion）
+- 新 session round=1 → 显示章节开场（首次）
+- 旧 session（已 round > 1）→ 不显示开场
+- 玩家输入后 → 不再弹章节页
