@@ -52,13 +52,27 @@ def handle_GET_chapter_state(handler, query) -> bool:
             })
             return True
 
-        current_chapter = cs.current_chapter
+        # 🆕 v2.10.2 fix: chapter_state 在 load 后可能是 dict（反序列化丢失 dataclass 类型）
+        # 用 cs.get(...) 兼容 dict，用 getattr(...) 兼容 dataclass
+        if isinstance(cs, dict):
+            current_chapter = cs.get("current_chapter", 0)
+            current_node = cs.get("current_node", 1)
+            chapter_start_round = cs.get("chapter_start_round", 1)
+            blueprint = cs.get("blueprint")
+            last_closure_status = cs.get("last_closure_status", "INIT")
+        else:
+            current_chapter = cs.current_chapter
+            current_node = cs.current_node
+            chapter_start_round = cs.chapter_start_round
+            blueprint = cs.blueprint
+            last_closure_status = cs.last_closure_status
+
         active = current_chapter > 0
         # 计算节点进度（如 1/4 → 25%）
-        if active and cs.blueprint:
-            meta = cs.blueprint.get("meta", {}) if isinstance(cs.blueprint, dict) else {}
+        if active and blueprint:
+            meta = blueprint.get("meta", {}) if isinstance(blueprint, dict) else {}
             node_count = int(meta.get("suggested_node_count", 4)) if meta else 4
-            progress_pct = round(cs.current_node / node_count * 100, 1) if node_count > 0 else 0
+            progress_pct = round(current_node / node_count * 100, 1) if node_count > 0 else 0
         else:
             node_count = 4
             progress_pct = 0.0
@@ -66,17 +80,17 @@ def handle_GET_chapter_state(handler, query) -> bool:
         handler._json(200, {
             "active": active,
             "current_chapter": current_chapter,
-            "current_node": cs.current_node,
+            "current_node": current_node,
             "node_count": node_count,
-            "chapter_start_round": cs.chapter_start_round,
+            "chapter_start_round": chapter_start_round,
             "round_number": game.state.round_number,
-            "rounds_elapsed": max(0, game.state.round_number - cs.chapter_start_round + 1) if active else 0,
-            "last_closure_status": cs.last_closure_status,
+            "rounds_elapsed": max(0, game.state.round_number - chapter_start_round + 1) if active else 0,
+            "last_closure_status": last_closure_status,
             "progress_pct": progress_pct,
             # 🆕 v2.8.0 段四 Build 字段
             "player_build": getattr(game.state, "player_build", ""),
             # 🆕 v2.8.0 段三 路径字段
-            "main_path_focus": getattr(game.state.path_state, "main_path_focus", "") if hasattr(game.state, "path_state") else "",
+            "main_path_focus": _get_path_focus(game),
             # 🆕 v2.8.0 段五 板块张力（取第一个 shifting 板块）
             "active_plate": _first_shifting_plate(game),
         })
@@ -96,11 +110,22 @@ def handle_GET_chapter_blueprint(handler, query) -> bool:
 
     try:
         cs = getattr(game.state, "chapter_state", None)
-        if cs is None or not cs.blueprint:
+        if cs is None:
             handler._json(200, {"active": False, "nodes": [], "meta": None})
             return True
 
-        blueprint = cs.blueprint
+        # 🆕 v2.10.2 fix: 兼容 dict / dataclass 两种 chapter_state 形态
+        if isinstance(cs, dict):
+            blueprint = cs.get("blueprint")
+            current_node = cs.get("current_node", 1)
+        else:
+            blueprint = cs.blueprint
+            current_node = cs.current_node
+
+        if not blueprint:
+            handler._json(200, {"active": False, "nodes": [], "meta": None})
+            return True
+
         # 🔁 仅返回当前节点的简单形式（前端一次只展示一个）
         handler._json(200, {
             "active": True,
@@ -108,7 +133,7 @@ def handle_GET_chapter_blueprint(handler, query) -> bool:
             "chapter_title": blueprint.get("chapter_title", ""),
             "chapter_subtitle": blueprint.get("chapter_subtitle", ""),
             "transition_hint": blueprint.get("transition_hint", "season"),
-            "current_node": cs.current_node,
+            "current_node": current_node,
             "nodes": blueprint.get("nodes", []),
             "meta": blueprint.get("meta", {}),
         })
@@ -174,10 +199,25 @@ def _first_shifting_plate(game) -> str:
     ps = getattr(game.state, "plate_state", None)
     if ps is None:
         return ""
-    for pid, status in (ps.statuses or {}).items():
+    # 🆕 v2.10.2 fix: plate_state 也可能是 dict（反序列化后）
+    if isinstance(ps, dict):
+        statuses = ps.get("statuses") or {}
+    else:
+        statuses = ps.statuses or {}
+    for pid, status in statuses.items():
         if status in ("shifting", "collapsed"):
             return pid
     return ""
+
+
+def _get_path_focus(game) -> str:
+    """🆕 v2.10.2 fix: 拿 main_path_focus（兼容 dict / dataclass）"""
+    ps = getattr(game.state, "path_state", None)
+    if ps is None:
+        return ""
+    if isinstance(ps, dict):
+        return ps.get("main_path_focus", "")
+    return getattr(ps, "main_path_focus", "")
 
 
 def handle_GET_plate_map(handler, query) -> bool:
