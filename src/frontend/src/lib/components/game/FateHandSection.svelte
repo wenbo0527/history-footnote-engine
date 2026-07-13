@@ -41,7 +41,7 @@
         >
           <!-- 🆕 v2.10.1 W81: 整卡缩略图 -->
           <img
-            src={(c as any).image_url || `/fate/${c.id}.webp`}
+            src={c.image_url || `/fate/${c.id}.webp`}
             alt={c.name}
             class="char-card-fate-thumb"
             onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}

@@ -51,7 +51,7 @@
    * game.identity 在 GameState 类型中不存在；用 character?.identity 兜底
    */
   const gameRoleName = $derived.by(() => {
-    const id = (game as any).character?.identity || (game as any).identity;
+    const id = game.character?.identity;
     const name = game.character?.name || '织工';
     if (id === 'weaving_male') return `织工·${name}`;
     if (id === 'weaving_female') return `织女·${name}`;

@@ -9,6 +9,90 @@
 
 ---
 
+## [v2.10.3] - 2026-07-12
+
+### 🆕 P1 全量优化：safe_route + dm_skills 拆分 + unwrap 工具
+
+> **范围**：W52 清单 P1 全量完成 + review 阶段补漏
+> **commit**：`9871520` · 20 文件 / +1968 -1268
+> **测试**：unwrap.test.ts 11/11 PASS · dm_skills 拆分独立验证 13/13 PASS · safe_route 装饰器 5 场景全过
+> **类型**：tsc --noEmit 全局 0 mapper/unwrap 错误
+
+#### ✨ P1-A safe_route 装饰器 + dispatch 兜底（根治"模式 A"）
+
+- **`@safe_route(scope="...")` 装饰器**（[handler_base.py](file:///Users/mac/Documents/trae_projects/history_footnote/src/history_footnote/web_server/handler_base.py#L130-L182)）
+  - 把 80 处 `except Exception` 样板（log + error_id + 500）抽到一处
+  - handler 只关心成功路径，失败统一处理
+  - BaseException（KeyboardInterrupt）正常上抛
+- **dispatch 层兜底**（[router_registry.py](file:///Users/mac/Documents/trae_projects/history_footnote/src/history_footnote/web_server/router_registry.py)）
+  - `dispatch_GET` / `dispatch_POST` 包 try/except + `_safe_dispatch_error`
+  - 即使 handler 写崩也返 500 + error_id 而非 connection 断开
+- **示范改造**：`handle_POST_dilemma` 装饰器版（-8 行样板）
+- **测试**：[tests/test_safe_route.py](file:///Users/mac/Documents/trae_projects/history_footnote/tests/test_safe_route.py)（11 用例，覆盖装饰器 + dispatch + 静态资源）
+
+#### ✨ P1-B dm_skills.py 1229 行 → 11 文件子包
+
+- **拆分模式**（参考 dm_agent v1.7.30 拆分）
+- **新结构**（[src/history_footnote/dm_skills/](file:///Users/mac/Documents/trae_projects/history_footnote/src/history_footnote/dm_skills/)）：
+  - `types.py`（109 行）：8 个 SKILL dataclass + DMContext
+  - `skill_1_scene.py`（208 行）：SKILL-1 读场判断（含 ROUTE_KEYWORDS）
+  - `skill_2_pacing.py`（195 行）：SKILL-2 节奏控制（含 TIME_MODES + 问询判定）
+  - `skill_3_lead.py`（68 行）：SKILL-3 线索投放
+  - `skill_4_history.py`（97 行）：SKILL-4 史实锚定
+  - `skill_5_voice.py`（74 行）：SKILL-5 价值观发声
+  - `skill_6_failure.py`（46 行）：SKILL-6 失败叙事化
+  - `skill_7_verdict.py`（182 行）：SKILL-7 三层裁判（含 INTENT 词典）
+  - `skill_8_frame.py`（37 行）：SKILL-8 认知框架锁定
+  - `director.py`（251 行）：run_all_skills + _build_skill_directive + 旧接口
+  - `__init__.py`（125 行）：100% re-export 公开符号
+- **向后兼容**：所有 `from history_footnote.dm_skills import X` 调用方式不变
+- **最大文件**：251 行（原 1229 行）—— 解 monolith
+
+#### ✨ P1-C unwrap 工具 + GameState 类型补全
+
+- **`unwrap.ts` 集中解包**（[unwrap.ts](file:///Users/mac/Documents/trae_projects/history_footnote/src/frontend/src/lib/api/unwrap.ts)）
+  - `unwrap<T>()` / `unwrapAs<T>()` / `pick(obj, path, fallback)`
+  - 让散落 41 处 `as any` 有集中收容点
+- **GameState 类型补全**（[types.ts](file:///Users/mac/Documents/trae_projects/history_footnote/src/frontend/src/lib/api/types.ts)）
+  - 补 9 字段：`round_number` / `current_date` / `value_shifts` / `pending_city_change` / `current_chapter` / `total_chapters` / `recent_narratives` / `selected_identity` / `player_gender`
+- **mapper.ts 类型守卫**
+  - `narrowIdentity` / `narrowGender` / narrative type / urgency 类型守卫
+  - 消除 4 处 `as any`
+- **测试**：[unwrap.test.ts](file:///Users/mac/Documents/trae_projects/history_footnote/src/frontend/src/lib/api/unwrap.test.ts)（11 个 vitest 全 PASS）
+
+#### 🧹 仓库瘦身（顺带）
+
+- 清理 374 个 `__pycache__` 目录与 4950 个 `.pyc` 文件
+- `.gitignore` 新增 `scripts/_archive/`（v1.6.x 早期调试脚本归档）
+- `.gitignore` 新增 `runtime/accounts/`（本地开发账号/邀请码）
+- git rm --cached 32 个文件（本地保留历史，仅移除 git 索引）
+
+---
+
+## [v2.10.2] - 2026-07-12
+
+### 🆕 W52 followup: 14 commits · 13 个 BUG 修复 · 0 回归
+
+> **重点**：用户反馈的 500 错误全清 + 旧代码审计 + svelte-check 22→0
+> **完整总结**：[docs/log/2026-07-12-v2.10.2-followup-summary.md](file:///Users/mac/Documents/trae_projects/history_footnote/docs/log/2026-07-12-v2.10.2-followup-summary.md)
+
+#### 🐛 13 个 BUG 修复（用户报 5 + 预测 8）
+
+- `/api/chapter/state` `/api/chapter/blueprint` 500 → chapter.py dict/dataclass 兼容
+- `/api/chapter/plate` PlateRegistry 警告 → _first_shifting_plate 兼容
+- CharacterWikiModal "关系详注"区为空 → 改用 `wiki.relationships` 派生
+- ArchiveCard "未知" 人物 → 后端兜底返回 `character_name`/`character_occupation`
+- RecapModal / CharacterCard / FateCardDetailModal 8 处 optional/identity 兜底
+
+#### 📊 测试规模
+
+- 后端单元测试：702 PASSED + 1 skipped
+- 前端 vitest：20 文件 / 200 测试 PASSED
+- 本会话新增测试：26（9 relationshipNotes + 17 recapSafe）
+- svelte-check errors：22 → 0（-100%）
+
+---
+
 ## [v2.10.1] - 2026-07-12
 
 ### 🆕 W85 涌现式章节架构（Phase 1 + Phase 2）+ W52 P0 修复

@@ -44,7 +44,7 @@
           },
           action_points_current: res.new_ap,
           last_voice_options: res.new_voice_options
-        } as any);
+        });
       }
       // 2) 通知 heard 新解锁
       if (res.newly_heard && res.newly_heard.length > 0) {

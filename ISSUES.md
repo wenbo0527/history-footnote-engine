@@ -284,6 +284,72 @@ def test_npc_consistency_simulation():
 
 ## v2.10.x 系列问题
 
+### Issue #8: 60 处 `as any` 散落 .svelte 组件（v2.10.3 P1-C 修复）
+
+**问题描述**：
+> 60 处 `as any` 散落在 .svelte 组件和 api/mapper.ts 中（运行时 41 处 + 测试 19 处），违反 TypeScript strict 原则，且所有 `($game as any).pending_city_change` 这类模式暴露：**后端返字段，类型没声明**。
+
+**根因**：
+- mapper.ts 只透传约 60% 字段，**9 个高频字段完全丢失**：`round_number` / `current_date` / `value_shifts` / `pending_city_change` / `current_chapter` / `total_chapters` / `recent_narratives` / `selected_identity` / `player_gender`
+- .svelte 里被迫 `($game as any).xxx` 兜底
+- `as any` 在 v2.10.2 followup BUG 根因分析占 44%
+
+**修复方案（v2.10.3 P1-C）**：
+1. **GameState 类型补全**（[types.ts](file:///Users/mac/Documents/trae_projects/history_footnote/src/frontend/src/lib/api/types.ts)）：加 9 字段声明
+2. **mapper.ts 透传**：补 BackendState 字段 + 增类型守卫 `narrowIdentity` / `narrowGender` / narrative type / urgency
+3. **unwrap 工具**（[unwrap.ts](file:///Users/mac/Documents/trae_projects/history_footnote/src/frontend/src/lib/api/unwrap.ts)）：集中解包函数（unwrap / unwrapAs / pick）作为逃生舱
+4. **逐文件清理**：`GameView.svelte`（9 处）/ `CharacterWikiModal.svelte`（7 处）/ `FateCardDetailModal.svelte`（3 处）/ `FateHandSection.svelte`（1 处）/ `ShareCardButton.svelte`（1 处）/ `LocationPanel.svelte`（1 处）
+
+**结果**：
+- 运行时 `as any`：41 → 15（-63%）
+- 前端 TS error：1 → 0（顺手修了 design-system/index.ts toast export 错）
+- unwrap.test.ts 11/11 PASS
+
+**残留**（合理）：
+- mapper.ts 5 处（TS `.includes` 限制，已注释）
+- unwrap.ts 2 处（.includes narrowing）
+- types.ts 1 处（pre-existing）
+
+---
+
+### Issue #9: `dm_skills.py` 1229 行 monolith（v2.10.3 P1-B 修复）
+
+**问题描述**：
+> `dm_skills.py` 单文件 1229 行，包含 8 个 SKILL 模块 + 4 个综合函数。所有改动都在一文件 = merge conflict 高发 + 新成员 onboard 难。
+
+**修复方案**：
+- 参考 `dm_agent.py` v1.7.30 拆分模式 → `dm_skills.py` 拆为 `dm_skills/` 子包
+- 11 个文件：types.py（109）+ skill_1_scene（208）+ skill_2_pacing（195）+ skill_3_lead（68）+ skill_4_history（97）+ skill_5_voice（74）+ skill_6_failure（46）+ skill_7_verdict（182）+ skill_8_frame（37）+ director（251）+ __init__（125）
+- `__init__.py` 全公开符号 re-export（100% 向后兼容）
+
+**结果**：
+- 最大单文件 251 行（原 1229）
+- 独立 verify 脚本 13/13 通过
+- 12 个 import 站点全部不受影响
+
+---
+
+### Issue #10: 80 处 `except Exception` 样板（v2.10.3 P1-A 修复）
+
+**问题描述**：
+> 17 个 router 文件里共有 ~80 处 `except Exception` 样板（log + error_id + 500），每个 handler 末尾都重复 4 行。**漏写 = 500 但 connection 断**（v2.10.2 followup 14 BUG 中 5 个属此类）。
+
+**修复方案**：
+- **装饰器** `@safe_route(scope="...")`（[handler_base.py](file:///Users/mac/Documents/trae_projects/history_footnote/src/history_footnote/web_server/handler_base.py#L130-L182)）
+- **dispatch 兜底**（[router_registry.py](file:///Users/mac/Documents/trae_projects/history_footnote/src/history_footnote/web_server/router_registry.py)）：`dispatch_GET/POST` 包 try/except + `_safe_dispatch_error`
+- **示范**：`handle_POST_dilemma` 改造为装饰器版（-8 行样板）
+- **测试**：[tests/test_safe_route.py](file:///Users/mac/Documents/trae_projects/history_footnote/tests/test_safe_route.py)（11 用例）
+
+**双层防护**：
+- L1 装饰器：handler 主动加 → 样板代码消失 + error_id 带 scope
+- L2 dispatch 兜底：handler 没装饰也保护 → 不抢 404 + 仍返 500 + 不断连
+
+**结果**：
+- 5 个独立场景全过（成功透传 / 异常 / _json 失败 / GET 风格 / KeyboardInterrupt 上抛）
+- 后续 79 处样板可机械改造
+
+---
+
 ### Issue #7: 章节蓝图 chapter2-10 缺失导致玩家卡死 (v2.10.1 W52 P0-1)
 
 **问题描述**：

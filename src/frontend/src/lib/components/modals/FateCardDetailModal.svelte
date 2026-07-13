@@ -44,8 +44,8 @@
                     : card.use_type === 'emergency' ? 'emergency'
                     : 'immediate') as 'immediate' | 'round_start' | 'emergency';
       const res = await fateUse($game.session_id, card.id, context);
-      if ((res as any).updated_state) {
-        gameActions.set((res as any).updated_state);
+      if (res.state) {
+        gameActions.set({ ...$game, ...res.state } as typeof $game);
       }
       toast.success(`已使用：${card.name}`);
       onclose();
@@ -69,7 +69,7 @@
   function getCardImageUrl(card: FateCard | null): string {
     if (!card) return '/fate/card_back.svg';
     // 后端在 image_url 字段（可能没有，用 fallback）
-    const url = (card as any).image_url || `/fate/${card.id}.webp`;
+    const url = card.image_url || `/fate/${card.id}.webp`;
     // 如果已经是完整 URL（http/https）直接用
     if (url.startsWith('http')) return url;
     // 相对路径 → 加上 / 前缀

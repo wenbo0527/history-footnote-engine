@@ -40,15 +40,15 @@
   const relationshipNotes = $derived.by(() => {
     if (!wiki) return [];
     const notes: Array<{ key: string; name: string; value: string }> = [];
-    const rels = (wiki as any).relationships || {};
+    const rels = wiki.relationships || {};
     for (const [name, info] of Object.entries(rels)) {
       if (typeof info === 'string') {
         notes.push({ key: name, name, value: info });
       } else if (info && typeof info === 'object') {
         // info 可能是 {relation: '家人', level: 5, note: '...'}
-        const value = (info as any).note
-          || (info as any).relation
-          || (info as any).level
+        const value = info.note
+          || info.relation
+          || info.level
           || JSON.stringify(info);
         notes.push({ key: name, name, value: String(value) });
       }
@@ -78,7 +78,7 @@
     error = null;
     try {
       // 🆕 v2.6.2: getCharacterWiki 返回扩展数据（含 npc_relations/fate_npc_effects/active_buffs）
-      const res = await getCharacterWiki($game.session_id) as any;
+      const res = await getCharacterWiki($game.session_id);
       wiki = res.wiki ?? res;
       npcRelations = res.npc_relations ?? [];
       fateNpcEffects = res.fate_npc_effects ?? [];
@@ -121,14 +121,14 @@
   );
 
   // NPC（来自 wiki）—— 🆕 v2.10.2 fix: WikiResponse union 类型没有 characters 字段
-  const npcs = $derived(((wiki as any)?.characters ?? []) as WikiCharacter[]);
+  const npcs = $derived((wiki?.characters ?? []) as WikiCharacter[]);
 
   // 合并去重：家人优先（按 name + identity 标识）
   const allChars = $derived.by(() => {
     const map = new Map<string, WikiCharacter & { isFamily?: boolean; affinity?: number }>();
     // 优先放家人
     for (const f of familyChars) {
-      map.set(f.name, f as any);
+      map.set(f.name, f);
     }
     // NPC 不同名才加入
     for (const n of npcs) {

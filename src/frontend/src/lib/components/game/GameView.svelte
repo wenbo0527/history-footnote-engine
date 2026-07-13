@@ -54,7 +54,7 @@
 
   $effect(() => {
     if (!$game) return;
-    const round = ($game as any).round_number ?? 0;
+    const round = $game.round_number ?? 0;
     const stateKey = `${$game.session_id}`;
     // 仅在 round_number === 1（即首次进入）显示开场
     // round > 1 表示之前已游玩过，不应再显示
@@ -73,7 +73,7 @@
   // 🆕 v2.10.1 W77: 城市变更确认
   $effect(() => {
     if (!$game) return;
-    const pending = ($game as any).pending_city_change;
+    const pending = $game.pending_city_change;
     if (pending) {
       // 自动弹出确认（避免被遮罩）
     }
@@ -114,7 +114,7 @@
         intent_text: voice.intent_text ?? voice.voice_name,
       });
       gameActions.set(updated);
-      const warning = (updated as any).soft_warning;
+      const warning = updated.soft_warning;
       if (warning) toast.warning(warning.message);
       // 🆕 v2.6 检查应急状态
       checkEmergency();
@@ -139,7 +139,7 @@
         text
       });
       gameActions.set(updated);
-      const warning = (updated as any).soft_warning;
+      const warning = updated.soft_warning;
       if (warning) toast.warning(warning.message);
     } catch (e) {
       const err = e as Error & { status?: number; data?: any };
@@ -210,11 +210,11 @@
 {#if $game}
   <!-- 🆕 v2.10.1 W69: 章节开场遮罩（开场 narrative round=0 时显示） -->
   {#if showChapterIntro}
-    {@const firstNarrative = ($game as any)?.recent_narratives?.[0] ?? null}
+    {@const firstNarrative = $game?.recent_narratives?.[0] ?? null}
     <ChapterIntro
       chapterTitle={firstNarrative?.summary ?? '万历十五年'}
       chapterNumber={1}
-      totalChapters={($game as any)?.total_chapters ?? 10}
+      totalChapters={$game?.total_chapters ?? 10}
       summary={firstNarrative?.narrative?.slice(0, 200) ?? ''}
       eraName={$game?.city ?? '万历十五年'}
       onStart={handleStartChapter}
@@ -222,12 +222,12 @@
   {/if}
 
   <!-- 🆕 v2.10.1 W77: 城市变更确认弹窗 -->
-  {#if ($game as any)?.pending_city_change}
+  {#if $game?.pending_city_change}
     <CityChangeModal
       open={true}
-      fromCity={($game as any).pending_city_change.from_city}
-      toCity={($game as any).pending_city_change.to_city}
-      narrative={($game as any).pending_city_change.narrative ?? ''}
+      fromCity={$game.pending_city_change.from_city}
+      toCity={$game.pending_city_change.to_city}
+      narrative={$game.pending_city_change.narrative ?? ''}
       onConfirm={handleConfirmCity}
       onReject={handleRejectCity}
     />
@@ -260,8 +260,8 @@
             <PlateMap sessionId={$game.session_id} />
             <ChapterTimeline
               sessionId={$game.session_id}
-              currentChapter={($game as any)?.current_chapter ?? 0}
-              totalChapters={($game as any)?.total_chapters ?? 10}
+              currentChapter={$game?.current_chapter ?? 0}
+              totalChapters={$game?.total_chapters ?? 10}
             />
             <MetricsPanel />
           </div>
@@ -272,7 +272,7 @@
       </div>
       <ActionPanel
         voices={$game.last_voice_options ?? []}
-        valueLevels={($game as any).value_shifts ?? {}}
+        valueLevels={$game.value_shifts ?? {}}
         sessionId={$game.session_id}
         onselect={handleSelectVoice}
         onfreetext={handleFreeInput}
