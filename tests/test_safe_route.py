@@ -6,6 +6,7 @@
 3. dispatch_GET / dispatch_POST 的兜底层对未装饰 handler 同样生效
 4. dispatch_GET 静态资源 / 根路径兜底
 5. dispatch 对未注册 path 返回 False（不抢 Handler 的 404）
+6. 🆕 v2.10.4 P3-A：低风险 router 已装饰器化 + 高风险 router 保留手写样板
 
 依赖注意：
 - 装饰器测试只依赖 handler_base.py（轻量）
@@ -130,14 +131,6 @@ class TestSafeRoute(unittest.TestCase):
 
 @unittest.skipUnless(_has_langchain_core(), "需要 langchain_core 才能 import router_registry")
 class TestDispatchSafetyNet(unittest.TestCase):
-    def _setup_dispatch(self, monkeypatch_routes: dict | None = None):
-        """注入测试路由到 GET_ROUTES / POST_ROUTES"""
-        from history_footnote.web_server import router_registry
-        if monkeypatch_routes is not None:
-            router_registry.GET_ROUTES.update(monpatch_routes.get("GET", {}))
-            router_registry.POST_ROUTES.update(monpatch_routes.get("POST", {}))
-        return router_registry
-
     def test_dispatch_get_undecorated_handler_raises(self):
         """未装饰 handler 抛 Exception → dispatch 层兜底 500"""
         from history_footnote.web_server import router_registry
@@ -235,6 +228,56 @@ class TestDispatchBuiltinPaths(unittest.TestCase):
         self.assertTrue(result)
         # html 响应 — 不一定含 "status=200" 字面，但 _html 一定不发 error
         self.assertNotIn("status=500", h.wfile.getvalue().decode())
+
+
+# ============================================================
+# 4. 🆕 v2.10.4 P3-A：低风险 router 装饰器化回归测试
+# ============================================================
+
+@unittest.skipUnless(_has_langchain_core(), "需要 langchain_core 才能 import handler_base（包级副作用）")
+class TestP3ALowRiskRouters(unittest.TestCase):
+    """P3-A 改造验证：低风险 router 已装饰器化"""
+
+    def test_tasks_router_uses_safe_route(self):
+        from history_footnote.web_server.routers import tasks
+        # 装饰过的函数（@wraps）会有 __wrapped__ 属性指向原函数
+        self.assertTrue(hasattr(tasks.handle_POST_task_complete, "__wrapped__"),
+                        "handle_POST_task_complete 应被 @safe_route 装饰")
+
+    def test_state_router_uses_safe_route(self):
+        from history_footnote.web_server.routers import state
+        self.assertTrue(hasattr(state.handle_GET_state, "__wrapped__"),
+                        "handle_GET_state 应被 @safe_route 装饰")
+
+    def test_eras_router_uses_safe_route(self):
+        from history_footnote.web_server.routers import eras
+        self.assertTrue(hasattr(eras.handle_GET_eras, "__wrapped__"),
+                        "handle_GET_eras 应被 @safe_route 装饰")
+        self.assertTrue(hasattr(eras.handle_GET_identities, "__wrapped__"),
+                        "handle_GET_identities 应被 @safe_route 装饰")
+
+
+@unittest.skipUnless(_has_langchain_core(), "需要 langchain_core 才能 import handler_base（包级副作用）")
+class TestRemainingHandcodedEx(unittest.TestCase):
+    """P3-A 决策：剩余样板保留（业务异常 / 非标 API 响应）
+
+    验证：account.py / session.py / input.py / misc.py / chapter.py 这些 router
+    仍保留 except Exception 样板（因为含业务异常或非标 API 响应）
+    它们的保护由 dispatch 兜底（P1-A）承担
+    """
+
+    def test_account_module_imports(self):
+        """account.py 仍存在 + register 含业务异常，保留手写样板"""
+        from history_footnote.web_server.routers import account
+        # account.handle_POST_account_register 不应被装饰（保留业务异常）
+        # 它的 except 里有迁移逻辑 + 非标 str(e) 响应
+        self.assertFalse(hasattr(account.handle_POST_account_register, "__wrapped__"),
+                        "account.register 含业务异常，保留手写样板")
+
+    def test_session_module_imports(self):
+        from history_footnote.web_server.routers import session
+        self.assertFalse(hasattr(session.handle_POST_session_load, "__wrapped__"),
+                        "session.load 含 401/404 业务异常，保留手写样板")
 
 
 if __name__ == "__main__":

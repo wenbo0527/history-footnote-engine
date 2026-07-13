@@ -5,11 +5,11 @@ POST /api/task/add      — 手动添加任务
 """
 from __future__ import annotations
 
-from history_footnote.web_server.handler_base import logger, safe_error_id
+from history_footnote.web_server.handler_base import safe_route
 from history_footnote.web_server.views.session import _get_or_load_session
 
 
-"""POST /api/task/complete — 标记任务完成"""
+@safe_route(scope="task/complete")
 def handle_POST_task_complete(handler, body) -> bool:
     sid = body.get("session_id")
     title = body.get("title", "").strip()
@@ -20,33 +20,28 @@ def handle_POST_task_complete(handler, body) -> bool:
     if not game:
         handler._json(404, {"error": "session not found"})
         return True
-    try:
-        from history_footnote.sidebar_parser import mark_task_completed
-        new_active, completed, found = mark_task_completed(
-            game.state.active_tasks, title, game.state.round_number
-        )
-        if not found:
-            handler._json(404, {
-                "session_id": sid,
-                "title": title,
-                "status": "not_found",
-                "message": "任务不存在或已完成",
-            })
-            return True
-        game.state.active_tasks = new_active
-        game.state.completed_tasks.extend(completed)
-        handler._json(200, {
+    from history_footnote.sidebar_parser import mark_task_completed
+    new_active, completed, found = mark_task_completed(
+        game.state.active_tasks, title, game.state.round_number
+    )
+    if not found:
+        handler._json(404, {
             "session_id": sid,
             "title": title,
-            "status": "completed",
-            "completed_round": game.state.round_number,
-            "active_count": len(new_active),
-            "completed_count": len(game.state.completed_tasks),
+            "status": "not_found",
+            "message": "任务不存在或已完成",
         })
-    except Exception as e:
-        error_id = safe_error_id()
-        logger.exception(f"[task/complete] {error_id} failed: {e}")
-        handler._json(500, {"error": "task complete failed", "error_id": error_id})
+        return True
+    game.state.active_tasks = new_active
+    game.state.completed_tasks.extend(completed)
+    handler._json(200, {
+        "session_id": sid,
+        "title": title,
+        "status": "completed",
+        "completed_round": game.state.round_number,
+        "active_count": len(new_active),
+        "completed_count": len(game.state.completed_tasks),
+    })
     return True
 
 
