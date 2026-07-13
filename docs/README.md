@@ -3,6 +3,20 @@
 > **新开发者入口**：从 [`../README.md`](../README.md) 开始。
 > **本目录**包含所有项目文档,按职责分层(v2.10.2 重新整理)。
 
+## 🆕 2026-07-13 v2.10.3 + v2.10.4 整理
+
+> 4 commits / 68 文件 / +2387 -6530 / 2 tag
+> 详见 [log/2026-07-13-HFE-v2.10.3-4-总结.md](log/2026-07-13-HFE-v2.10.3-4-总结.md)
+>
+> **核心改动**：
+> - v2.10.3 P1 全量：safe_route 装饰器 + dm_skills.py 拆分（1229→11 文件）+ unwrap 工具（as any 60→15）
+> - v2.10.4 P3 持续：低风险 router 装饰器化 + game_state 拆分评估
+>
+> **新文档**：
+> - [log/2026-07-13-HFE-v2.10.3-4-总结.md](log/2026-07-13-HFE-v2.10.3-4-总结.md)
+> - [log/2026-07-13-HFE-game-state-split-assessment.md](log/2026-07-13-HFE-game-state-split-assessment.md)
+> - [log/2026-07-12-HFE-W52-优化清单-v1.1.md](log/2026-07-12-HFE-W52-优化清单-v1.1.md) — 状态同步
+
 ## 🆕 2026-07-12 v2.10.2 W52 followup 整理
 
 > 13 BUG 修 / 22 svelte-check errors 清 / 4 文档新增
