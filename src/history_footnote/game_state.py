@@ -624,7 +624,8 @@ class GameState:
 
     def append_narrative(self, round_number: int, narrative: str, summary: str,
                           player_input: str = "", chosen_voice: str = "",
-                          current_date: str = "", chapter_id: int = 0) -> None:
+                          current_date: str = "", chapter_id: int = 0,
+                          narrative_type: str = "response") -> None:
         """追加一回合的叙事到历史
 
         🆕 v1.6.3 双层保留：
@@ -640,6 +641,10 @@ class GameState:
         🆕 v2.10.1 W84: 记录章节（按故事弧切分）
         - chapter_id: 当前章节（来自 chapter_state.current_chapter）
         - 前端按章节分目录（更符合故事结构）
+
+        🆕 v2.10.4-patch3: 记录 narrative 类型（让前端 mapper 准确识别）
+        - narrative_type: "opening"（开局）/ "story"（章节叙事）/ "response"（玩家行动后）/"system"（系统）
+        - 默认 "response"（向后兼容）
         """
         entry = {
             "round": round_number,
@@ -649,6 +654,7 @@ class GameState:
             "chosen_voice": chosen_voice,
             "current_date": current_date,
             "chapter_id": chapter_id,  # 🆕 W84
+            "type": narrative_type,  # 🆕 v2.10.4-patch3
         }
         self.narrative_recent.append(entry)
         self.narrative_history.append(entry)  # 兼容旧字段

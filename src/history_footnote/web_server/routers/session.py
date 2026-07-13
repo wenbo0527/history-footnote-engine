@@ -104,7 +104,8 @@ def handle_POST_start(handler, body) -> bool:
         game._print_opening()
     opening_text = buf.getvalue().strip()
     if opening_text:
-        game.state.append_narrative(0, opening_text, "开场")
+        # 🆕 v2.10.4-patch3: 明确标记 round 0 是 opening（之前 type 字段为 null，靠前端 fallback）
+        game.state.append_narrative(0, opening_text, "开场", narrative_type="opening")
         # 🆕 v2.7.2：开场也提取 fact，让第 1 回合能接上文
         try:
             from history_footnote.narrative_facts_extractor import extract_facts_from_narrative
