@@ -17,6 +17,7 @@ from history_footnote.web_server.handler_base import (
     extract_last_consumed,
     logger,
     safe_error_id,
+    safe_route,
 )
 from history_footnote.web_server.views.format_state import detect_intent, format_state
 from history_footnote.web_server.views.session import _get_or_load_session, session_get, session_pop
@@ -26,34 +27,30 @@ from history_footnote.web_server.views.session import _get_or_load_session, sess
 # /api/dilemma — 从 narrative 提取困境（不依赖 session）
 # ============================================================
 
+@safe_route(scope="dilemma")
 def handle_POST_dilemma(handler, body) -> bool:
     text = body.get("text", "")
-    try:
-        import re
-        dilemma_match = re.search(r"【当前困境】\s*(.+?)(?=【|$)", text, re.DOTALL)
-        dilemma = dilemma_match.group(1).strip() if dilemma_match else ""
-        question_match = re.search(r"([^。！？\n]*[？\?])", text)
-        question = question_match.group(1).strip() if question_match else ""
-        context = text.strip()[-80:] if text else ""
-        if dilemma and question:
-            placeholder = f"【当前困境】\n{dilemma[:200]}\n\n{question}"
-        elif question:
-            placeholder = question
-        elif dilemma:
-            placeholder = f"【当前困境】\n{dilemma[:200]}\n\n你想做什么？"
-        else:
-            placeholder = f"……{context}\n\n你想做什么？"
-        handler._json(200, {
-            "placeholder": placeholder[:300],
-            "dilemma": dilemma[:200],
-            "question": question,
-            "has_dilemma": bool(dilemma),
-            "has_question": bool(question),
-        })
-    except Exception as e:
-        error_id = safe_error_id()
-        logger.exception(f"[dilemma] {error_id} failed: {e}")
-        handler._json(500, {"error": "dilemma extraction failed", "error_id": error_id})
+    import re
+    dilemma_match = re.search(r"【当前困境】\s*(.+?)(?=【|$)", text, re.DOTALL)
+    dilemma = dilemma_match.group(1).strip() if dilemma_match else ""
+    question_match = re.search(r"([^。！？\n]*[？\?])", text)
+    question = question_match.group(1).strip() if question_match else ""
+    context = text.strip()[-80:] if text else ""
+    if dilemma and question:
+        placeholder = f"【当前困境】\n{dilemma[:200]}\n\n{question}"
+    elif question:
+        placeholder = question
+    elif dilemma:
+        placeholder = f"【当前困境】\n{dilemma[:200]}\n\n你想做什么？"
+    else:
+        placeholder = f"……{context}\n\n你想做什么？"
+    handler._json(200, {
+        "placeholder": placeholder[:300],
+        "dilemma": dilemma[:200],
+        "question": question,
+        "has_dilemma": bool(dilemma),
+        "has_question": bool(question),
+    })
     return True
 
 

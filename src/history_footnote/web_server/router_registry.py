@@ -11,10 +11,19 @@
 调用约定：
 - 路由 handler 必须通过 handler._json() 返回响应
 - handler 内部不直接用 self.client_address，统一用 handler._rate_limit_or_429()
+
+🆕 v2.10.3 dispatch 层兜底：
+- dispatch_GET / dispatch_POST 统一 try/except 捕获未装饰 handler 的崩溃
+- 推荐 handler 用 @safe_route(scope=...) 装饰器获得更精准的 error_id 标签
 """
 from __future__ import annotations
 
+import logging
 from urllib.parse import parse_qs
+
+from history_footnote.web_server.handler_base import safe_error_id
+
+_dispatch_logger = logging.getLogger("history_footnote.web_server.dispatch")
 
 from history_footnote.web_server.routers import (
     account as _account,
@@ -165,14 +174,22 @@ def dispatch_GET(handler, path: str, query: str) -> bool:
     """按 GET_ROUTES 派发；返回 True 表示已处理（包括发 404）。
 
     没有命中的 path 不视为已处理，由 Handler 返回 404 兜底。
+
+    🆕 v2.10.3：handler 抛任何 Exception → dispatch 层兜底 + 500 + error_id
     """
     # 静态资源（/static/*）— 必须先匹配
     if path.startswith("/static/"):
-        handler._serve_static(path)
+        try:
+            handler._serve_static(path)
+        except Exception as e:
+            _safe_dispatch_error(handler, e, scope=f"GET {path}")
         return True
     if path == "/" or path == "/index.html":
         from history_footnote.web_server.static_assets import INDEX_HTML
-        handler._html(INDEX_HTML)
+        try:
+            handler._html(INDEX_HTML)
+        except Exception as e:
+            _safe_dispatch_error(handler, e, scope=f"GET {path}")
         return True
     handler_fn = GET_ROUTES.get(path)
     if handler_fn is None:
@@ -181,19 +198,45 @@ def dispatch_GET(handler, path: str, query: str) -> bool:
     #   handle_GET_xxx(handler)         — 无 query 参数（如 /metrics /health）
     #   handle_GET_xxx(handler, query)   — 需 query 参数（带 ?xxx=）
     sig = _inspect_signature(handler_fn)
-    if sig == 1:
-        handler_fn(handler)
-    else:
-        handler_fn(handler, query)
+    try:
+        if sig == 1:
+            handler_fn(handler)
+        else:
+            handler_fn(handler, query)
+    except Exception as e:
+        # handler 未装饰 @safe_route 时：dispatch 层兜底
+        _safe_dispatch_error(handler, e, scope=f"GET {path}", fn_name=handler_fn.__name__)
     return True
 
 
 def dispatch_POST(handler, path: str, body: dict) -> bool:
+    """🆕 v2.10.3：handler 抛任何 Exception → dispatch 层兜底 + 500 + error_id"""
     handler_fn = POST_ROUTES.get(path)
     if handler_fn is None:
         return False
-    handler_fn(handler, body)
+    try:
+        handler_fn(handler, body)
+    except Exception as e:
+        _safe_dispatch_error(handler, e, scope=f"POST {path}", fn_name=handler_fn.__name__)
     return True
+
+
+def _safe_dispatch_error(handler, e: Exception, scope: str, fn_name: str = "") -> None:
+    """dispatch 层兜底：log + 500 + error_id
+
+    仅在 handler 未装饰 @safe_route 时才会触发（装饰过的 handler 自己处理）。
+    """
+    error_id = safe_error_id()
+    suffix = f" ({fn_name})" if fn_name else ""
+    _dispatch_logger.exception(f"[dispatch] {scope}{suffix} {error_id} failed: {e}")
+    try:
+        handler._json(500, {
+            "error": f"{scope} failed",
+            "error_id": error_id,
+        })
+    except Exception:
+        # 连接已断等极端情况 — 静默吞掉（无法发 500）
+        _dispatch_logger.exception(f"[dispatch] {scope} {error_id} failed to send error response")
 
 
 def _inspect_signature(fn) -> int:

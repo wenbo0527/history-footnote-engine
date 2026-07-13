@@ -6,7 +6,21 @@
  *
  * 🆕 v1.7.30 联调发现
  */
-import type { GameState, FamilyMember, Skill, Character, SidebarData, TimelineEvent, Narrative, FinancialStatus, Task, Deadline } from './types';
+import type { GameState, FamilyMember, Skill, Character, SidebarData, TimelineEvent, Narrative, FinancialStatus, Task, Deadline, Identity, Gender } from './types';
+
+// v2.10.3 类型守卫：后端返回 string，需 narrow 到有限 union
+const VALID_IDENTITIES: readonly Identity[] = [
+  'weaving_male', 'weaving_female', 'merchant_male', 'merchant_female',
+  'farmer_male', 'farmer_female', 'scholar_male',
+];
+const VALID_GENDERS: readonly Gender[] = ['male', 'female'];
+
+function narrowIdentity(s: string | undefined): Identity {
+  return s && (VALID_IDENTITIES as readonly string[]).includes(s) ? s as Identity : 'weaving_male';
+}
+function narrowGender(s: string | undefined): Gender {
+  return s && (VALID_GENDERS as readonly string[]).includes(s) ? s as Gender : 'male';
+}
 
 // 后端 family_members 字段
 interface BackendFamilyMember {
@@ -116,6 +130,15 @@ interface BackendState {
   fate_event_flags?: string[];
   npc_relations?: Record<string, number>;
   active_buffs?: any[];
+  // 🆕 v2.10.3: 补充字段声明（消除 .svelte 里 ($game as any) 兜底）
+  soft_warning?: { type: string; message: string; suggestion?: string };
+  pending_city_change?: {
+    from_city: string;
+    to_city: string;
+    narrative?: string;
+  };
+  current_chapter?: number;
+  total_chapters?: number;
 }
 
 /**
@@ -149,10 +172,15 @@ export function mapBackendState(b: BackendState): GameState {
   for (let i = _recentList.length - 1; i >= 0; i--) {
     if (!isPanelEntry(_recentList[i])) { latest = _recentList[i]; break; }
   }
+  // v2.10.3 类型安全：Narrative.type 是有限 union，运行时做 narrow
+  const VALID_NARRATIVE_TYPES = ['opening', 'story', 'response', 'system'] as const;
+  const narrativeType = (latest && VALID_NARRATIVE_TYPES.includes(latest.type as any))
+    ? latest.type as 'opening' | 'story' | 'response' | 'system'
+    : 'opening';
   const narrative: Narrative | null = latest ? {
     round: latest.round,
     content: latest.narrative,
-    type: (latest.type as any) ?? 'opening',
+    type: narrativeType,
     created_at: latest.created_at ?? new Date().toISOString()
   } : null;
 
@@ -164,10 +192,13 @@ export function mapBackendState(b: BackendState): GameState {
   }));
 
   // 5. sidebar
+  const VALID_URGENCY = ['low', 'medium', 'high'] as const;
   const sidebar: SidebarData = {
     active_tasks: (b.sidebar_data?.active_tasks ?? []).map((t: BackendTask): Task => ({
       title: t.title,
-      urgency: (t.urgency as any) ?? 'low'
+      urgency: (VALID_URGENCY.includes(t.urgency as any)
+        ? t.urgency
+        : 'low') as 'low' | 'medium' | 'high',
     })),
     upcoming_deadlines: (b.sidebar_data?.upcoming_deadlines ?? []).map((d: BackendDeadline): Deadline => ({
       name: d.name,
@@ -211,8 +242,8 @@ export function mapBackendState(b: BackendState): GameState {
     // 🆕 行动点（v2.0 设计补充）—— 让"过日子"循环可感知
     action_points_current: b.action_points_current ?? 3,
     action_points_max: b.action_points_max ?? 3,
-    identity: b.selected_identity as any,
-    gender: b.player_gender as any,
+    identity: narrowIdentity(b.selected_identity),
+    gender: narrowGender(b.player_gender),
     era_id: b.era_id,
     timeline,
     sidebar,
@@ -227,15 +258,33 @@ export function mapBackendState(b: BackendState): GameState {
     narrative_history: (b.recent_narratives ?? []).slice(0, -1).map(n => ({
       round: n.round,
       content: n.narrative,
-      type: (n.type as any) ?? 'turn',
+      // v2.10.3 类型安全：narrow 到 Narrative.type 有限 union
+      type: (VALID_NARRATIVE_TYPES.includes(n.type as any)
+        ? n.type as 'opening' | 'story' | 'response' | 'system'
+        : 'response') as 'opening' | 'story' | 'response' | 'system',
       created_at: n.created_at ?? new Date().toISOString()
     })),
     last_voice_options,
     // 🆕 v1.7.32 透传 soft_warning：让前端 GameView 能 toast.warning(message)
     // 否则 server-side 给玩家的软提示（low_relevance/meta_query 等）会静默丢失
-    soft_warning: (b as any).soft_warning ?? undefined,
+    soft_warning: b.soft_warning ?? undefined,
+    // 🆕 v2.10.3 补全字段：消除 Svelte 里 ($game as any) 兜底
+    // 后端 format_state.py 已有这些字段，mapper 之前没透传
+    round_number: b.round_number,
+    current_date: b.current_date,
+    value_shifts: b.value_shifts ?? {},
+    pending_city_change: b.pending_city_change ?? undefined,
+    // 🆕 v2.10.3 章节制字段（format_state chapter 块）
+    current_chapter: b.current_chapter ?? 0,
+    total_chapters: b.total_chapters ?? 10,
+    // 🆕 v2.10.3 recent_narratives 完整列表（之前只取最新）
+    recent_narratives: b.recent_narratives ?? [],
+    // 🆕 v2.10.3 性格 / 自定义字段
+    selected_identity: b.selected_identity,
+    player_gender: b.player_gender,
   } as GameState;
 }
+
 
 // 关系翻译
 function translateRelation(r: string): string {

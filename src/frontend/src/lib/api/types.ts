@@ -301,6 +301,21 @@ export interface GameState {
   active_buffs?: ActiveBuff[];
   // 🆕 v2.5 全局 seed
   seed?: number;
+
+  // 🆕 v2.10.3 补全字段（消除 ($game as any) 兜底）
+  round_number?: number;
+  current_date?: string;
+  value_shifts?: Record<string, number>;
+  pending_city_change?: {
+    from_city: string;
+    to_city: string;
+    narrative?: string;
+  };
+  current_chapter?: number;
+  total_chapters?: number;
+  recent_narratives?: any[];
+  selected_identity?: string;
+  player_gender?: string;
 }
 
 // ============ Archive 存档 ============

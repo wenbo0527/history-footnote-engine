@@ -128,6 +128,61 @@ def safe_send_json_error(handler: BaseHTTPRequestHandler, e: Exception, scope: s
 
 
 # ============================================================
+# 🆕 v2.10.3 safe_route 装饰器
+# 根治"模式 A：except Exception 吞异常"的样板重复
+# ============================================================
+
+from functools import wraps
+from typing import Callable, TypeVar
+
+F = TypeVar("F", bound=Callable[..., bool])
+
+
+def safe_route(scope: str) -> Callable[[F], F]:
+    """装饰器：把 handler 的样板 try/except 抽出来
+
+    解决的问题：
+    - 17 个 router 文件里共有 ~80 处 `except Exception` 样板（log + error_id + 500）
+    - 每个 handler 末尾都要重复 4 行；漏写 = 500 但 connection 断
+    - 本装饰器让 handler 只关心成功路径，失败统一处理
+
+    用法：
+        @safe_route(scope="dilemma")
+        def handle_POST_dilemma(handler, body) -> bool:
+            ...  业务逻辑（不再 try/except）
+            handler._json(200, {...})
+            return True
+
+    行为约定：
+    - 成功：调用 handler 函数本身（其返回的 bool 直接返回）
+    - handler 内部 Exception：log + error_id + 500 JSON，返回 True（避免 dispatch 二次尝试）
+    - handler._json() 自身异常：log + 返回 True
+    - BaseException（如 KeyboardInterrupt）：原样上抛
+    """
+
+    def decorator(fn: F) -> F:
+        @wraps(fn)
+        def wrapper(handler, *args) -> bool:
+            try:
+                return fn(handler, *args)
+            except Exception as e:
+                error_id = safe_error_id()
+                logger.exception(f"[{scope}] {error_id} failed: {e}")
+                try:
+                    handler._json(500, {
+                        "error": f"{scope} failed",
+                        "error_id": error_id,
+                    })
+                except Exception:
+                    logger.exception(f"[{scope}] {error_id} failed to send error response")
+                return True
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
+
+
+# ============================================================
 # Mixin：所有 handler 实例共享这些工具
 # ============================================================
 
