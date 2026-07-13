@@ -23,9 +23,10 @@ from typing import Optional
 
 # 🆕 v1.7.10 版本信息
 # 单一权威：所有版本号都从这里读
-VERSION = "1.7.27"
-VERSION_NAME = "v1.7.27 - 内测版"  # 显示给用户
-BUILD_DATE = "2026-07-05"
+# 🆕 v2.10.4 同步：与 config.APP_VERSION 保持一致
+VERSION = "2.10.4"
+VERSION_NAME = "v2.10.4 - safe_route + dm_skills 拆分 + unwrap 工具"  # 显示给用户
+BUILD_DATE = "2026-07-13"
 IS_BETA = True  # 内测标识
 
 

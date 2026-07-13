@@ -65,8 +65,8 @@ def _getenv_bool(key: str, default: bool) -> bool:
 # 版本号（与 issue_reporter.py 保持同步）
 # ⚠️ 升级版本时同时修改这两个文件
 # 未来可改为 issue_reporter → config 的单向依赖
-APP_VERSION = _getenv_str("APP_VERSION", "2.7.0")
-APP_VERSION_NAME = _getenv_str("APP_VERSION_NAME", "v2.7 - 命运卡完整闭环")
+APP_VERSION = _getenv_str("APP_VERSION", "2.10.4")
+APP_VERSION_NAME = _getenv_str("APP_VERSION_NAME", "v2.10.4 - safe_route + dm_skills 拆分 + unwrap 工具")
 APP_IS_BETA = _getenv_bool("APP_IS_BETA", True)
 
 
