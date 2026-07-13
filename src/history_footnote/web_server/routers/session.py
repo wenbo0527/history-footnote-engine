@@ -128,22 +128,66 @@ def handle_POST_start(handler, body) -> bool:
     # 🆕 v1.7.22: start 时不注入 freetext 占位
     state = format_state(game)
     state.pop("last_voice_options", None)
+    # 🆕 v2.10.5: 开局 voice_options 异步生成
+    # 之前：_context_aware_voices 同步阻塞 2-6s（LLM 调用）
+    # 改造：立即返回空 list + 标记 "voice_options_pending=True"
+    #      后台线程生成后注入 game.state.last_voice_options
+    #      前端通过 SSE /api/voice/stream 或 GET /api/state 轮询获取
+    # 总用户感知延迟：5-15s → 1-2s
     state["last_voice_options"] = []
-    # 🆕 v1.7.32: 开局也要生成"脑海中的声音"，否则 format_state 兜底只塞一个
-    # 「自由输入」，玩家首屏只剩单个选项（Bug：开头没有声音）
-    # 🆕 v2.3: 传 game 给 LLM 驱动（基于开场叙事的具体情境生成 3-4 个可执行动作）
+    state["voice_options_pending"] = True  # 新增字段，前端可读
+    game.state.last_voice_options = []
+
     if opening_text:
-        try:
-            from history_footnote.web_server.routers.input import _context_aware_voices
-            opening_voices = _context_aware_voices(opening_text, game=game)
-            if opening_voices:
-                state["last_voice_options"] = list(opening_voices)
-                game.state.last_voice_options = list(opening_voices)
-                logger.info(
-                    f"[start] 注入 {len(opening_voices)} voice_options (context-aware from opening)"
-                )
-        except Exception as e:
-            logger.exception(f"[start] 开场 voice_options 注入失败: {e}")
+        # 🆕 v2.10.5: 用线程池异步生成 voice_options
+        # 不阻塞 POST /start 响应
+        import threading
+        def _async_generate_voices():
+            try:
+                from history_footnote.web_server.routers.input import _context_aware_voices
+                logger.info(f"[start] async voice_options 线程启动 (sid={game.session.session_id[:8]}...)")
+                voices = _context_aware_voices(opening_text, game=game)
+                if voices:
+                    game.state.last_voice_options = list(voices)
+                    logger.info(
+                        f"[start] async voice_options 完成 ({len(voices)} 个)"
+                    )
+                # 标记 pending=False
+                game.state.voice_options_pending = False
+            except Exception as e:
+                logger.exception(f"[start] async voice_options 失败: {e}")
+                game.state.voice_options_pending = False
+
+        threading.Thread(
+            target=_async_generate_voices,
+            daemon=True,
+            name=f"voices-{game.session.session_id[:8]}",
+        ).start()
+
+        # 🆕 v2.10.5: 第 1 章蓝图预生成（让玩家首次输入不阻塞）
+        # 之前：chapter_state.active=False, current_chapter=0（开局阶段）
+        #      玩家首次输入 → _run_round → pre_step → advance_to_chapter(1)
+        #      → 章节蓝图生成（LLM 3-10s）→ 玩家等待
+        # 改造：start 阶段后台预生成 chapter 1，玩家首次输入直接进入 chapter
+        # 总用户感知延迟：3-10s 减少
+        def _async_prepare_chapter():
+            try:
+                logger.info(f"[start] async chapter 1 蓝图预生成启动 (sid={game.session.session_id[:8]}...)")
+                if hasattr(game, "_chapter_coordinator"):
+                    game._chapter_coordinator.advance_to_chapter(1)
+                    logger.info(f"[start] async chapter 1 预生成完成 (current_chapter={game.state.chapter_state.current_chapter})")
+                else:
+                    # v2.10.5 兜底：老 game_loop 没 _chapter_coordinator 时静默
+                    logger.debug(f"[start] game 无 _chapter_coordinator，跳过 chapter 预生成")
+            except Exception as e:
+                # 不致命：玩家首次输入会再次尝试 advance
+                logger.warning(f"[start] async chapter 1 预生成失败（fallback 到 lazy 初始化）: {e}")
+
+        threading.Thread(
+            target=_async_prepare_chapter,
+            daemon=True,
+            name=f"chapter-{game.session.session_id[:8]}",
+        ).start()
 
     # 🆕 v2.7: session 创建后立即存档（保证命运卡等持久化）
     # 之前：玩家调 /api/start → 抽卡 + 叙事，但 state 没保存到磁盘

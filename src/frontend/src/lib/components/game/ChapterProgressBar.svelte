@@ -54,8 +54,11 @@
 
   onMount(() => {
     refresh();
-    // 每 30 秒刷新一次（章节状态变化频率低）
-    const id = setInterval(refresh, 30000);
+    // 🆕 v2.10.5: 30s → 5s（让 chapter 切跃点更快反映到 UI）
+    // 之前：玩家首次输入 → chapter 切换 → 30s 内 UI 不更新
+    // 优化：5s 轮询（chapter 切换最长 5s 可见）
+    // 后续 v2.10.6 可加 SSE 推送（实时）
+    const id = setInterval(refresh, 5000);
     return () => clearInterval(id);
   });
 

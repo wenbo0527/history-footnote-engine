@@ -261,6 +261,8 @@ class GameState:
 
     # === 🐛 v1.5.1 P1 Issue 5 修复：voice_options 持久化（用于加载存档后恢复） ===
     last_voice_options: list[dict] = field(default_factory=list)  # 最后一次 DM 返回的 voice_options
+    # 🆕 v2.10.5: 异步生成标识（让前端知道"还在 LLM 中"）
+    voice_options_pending: bool = False  # True = 后台线程正在生成 voice_options
 
     def to_dict(self) -> dict:
         return asdict(self)

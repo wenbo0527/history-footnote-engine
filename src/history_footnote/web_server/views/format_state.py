@@ -126,6 +126,9 @@ def format_state(game) -> dict:
         "pending_city_change": getattr(s, "pending_city_change", None),
         # 🐛 v1.5.1 P1 Issue 5 修复：暴露 last_voice_options 给前端
         "last_voice_options": list(getattr(s, "last_voice_options", []) or []),
+        # 🆕 v2.10.5: 暴露 voice_options_pending 给前端
+        # True = 后台线程还在生成 voice_options（前端可显示"思考中"）
+        "voice_options_pending": bool(getattr(s, "voice_options_pending", False)),
         # 🆕 v1.7.26 侧边栏固化面板数据
         "sidebar_data": build_sidebar_data(s, recent_narr),
         # 🆕 v1.7.28：已完成任务计数（前端展示 + 弹层入口）

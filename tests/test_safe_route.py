@@ -276,8 +276,11 @@ class TestRemainingHandcodedEx(unittest.TestCase):
 
     def test_session_module_imports(self):
         from history_footnote.web_server.routers import session
-        self.assertFalse(hasattr(session.handle_POST_session_load, "__wrapped__"),
-                        "session.load 含 401/404 业务异常，保留手写样板")
+        # v2.10.2+ session.py 只有 start/archives handler（session_load 改名了）
+        # 找有 __wrapped__ 属性的：装饰器化 → 没有 __wrapped__
+        # 这里验证 start 仍保留手写样板（含业务异常如 account_id 绑定）
+        self.assertFalse(hasattr(session.handle_POST_start, "__wrapped__"),
+                        "session.start 含业务异常（account_id 绑定 + 抽卡），保留手写样板")
 
 
 if __name__ == "__main__":
