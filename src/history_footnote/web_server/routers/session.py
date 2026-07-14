@@ -32,11 +32,51 @@ def handle_POST_start(handler, body) -> bool:
             "merchant_female":"精明干练，能言善辩；邻里关系好但买卖场上不让步。",
         }
         default_p = DEFAULT_PERSONALITY_BY_IDENTITY.get(identity, "勤勉本分；与人为善，遇事三思而后行。")
+
+        # 🆕 v2.10.6: 身份专属的"来历 + 剧情带入"模板
+        # 解决：开局面板只有【开局处境】事实陈述，缺少氛围渲染
+        # 方案：每个身份准备一段"【来历】"（角色背景）+ 一段"opening_paragraph"（剧情带入）
+        # 用 f-string 拼 {name} / {hometown} / {occupation} / {family} 变量
+        DEFAULT_BACKGROUND_BY_IDENTITY = {
+            "weaving_male":   "盛泽镇织户人家出身，祖上三代靠织绸为生。家有两台旧织机，母亲早逝，父亲沈老三仍在；弟妹尚幼，束脩全靠你一双手。",
+            "weaving_female": "盛泽镇织户人家出身，织机声里长大。公婆已逝，丈夫常年在外跑货，一双儿女靠你撑着作坊。",
+            "merchant_male":  "盛泽镇行商出身，跟随父辈走南闯北，练就一副好嘴皮。账目记得清，行情摸得准，但近年生意难做，欠下几笔陈年旧账。",
+            "merchant_female":"盛泽镇布行出身，自小在柜台后长大。买卖场上不让步，但邻里口碑好——镇上谁家织了好料子，第一个想到的就是你。",
+        }
+        DEFAULT_OPENING_PARAGRAPH_BY_IDENTITY = {
+            "weaving_male":   "万历十五年的正月，江南还是料峭春寒。盛泽镇河面上浮着一层薄冰，桑叶还没发芽，织工们已经陆续点亮了织机前的油灯。你推开作坊的门，冷气扑了满脸。两台旧织机蹲在昏暗的屋子里，像两头沉睡的牲口，等着你今天的第一梭。\n\n今早镇上的传言不少：苏州的织造局又下了新派银子的公文，王牙人在牙行门口骂骂咧咧，说今年的丝价要涨；隔壁张寡妇家昨夜哭了一宿——她男人去年欠下的赌债，债主终于找上了门。\n\n你握紧手里的梭子。新的一年就这么开始了。",
+            "weaving_female": "万历十五年的正月，江南料峭春寒。盛泽镇的河水还凝着一层薄冰，桑田里光秃秃的，织机声却已经在屋里响起来——那是生活的节拍，比任何钟都准。\n\n你送走最后一担去年剩的绸，揣着换来的几百文铜钱往回走。街角王牙人正跟人嘀咕什么，见到你便笑着打了个招呼，眼里却有些说不清的意味。\n\n推开家门时，女儿在灶前烧火，儿子还在念书。日子苦，但还算安稳。新的一年，就这么来了。",
+            "merchant_male":  "万历十五年正月，盛泽镇。你坐在自家布行的后堂，面前摊着一本账册，数字密密麻麻，看得人眼晕。\n\n去年苏州织造局的几笔尾款还没结清，丝价又涨了一成，开春的生意还没着落。伙计阿福端来一碗热茶，低声说外头有人找——是收旧账的。\n\n你放下茶碗，叹了口气。商人的年，从来不好过。",
+            "merchant_female":"万历十五年正月，盛泽镇。你一边拨算盘一边听伙计报账，眉头微皱。\n\n去年赊出去的几笔账还没回，开春的丝价又涨了几分。苏州织造局的公文明明写着减税，可到下面又生出各种名目。邻座的钱老板拍拍你的肩——'老规矩，年关难过，开春更难。'\n\n你笑了笑，把账册合上。新的一年，就这么来了。",
+        }
+
+        # 🆕 v2.10.6: opening_paragraph 用格式化方式拼
+        # 这样玩家名字/家乡/职业变化时 narrative 自动跟着变
+        default_opening_tpl = DEFAULT_OPENING_PARAGRAPH_BY_IDENTITY.get(identity, "")
+        default_background = DEFAULT_BACKGROUND_BY_IDENTITY.get(identity, "")
+
+        # 拼 opening_paragraph（用 {name} {hometown} {occupation} 占位符）
+        # 模板里 % 不会被解释（safe），用 str.format 安全
+        try:
+            if default_opening_tpl:
+                custom_character.setdefault(
+                    "opening_paragraph",
+                    default_opening_tpl.format(
+                        name=custom_character.get("name", "你"),
+                        hometown=custom_character.get("hometown", "盛泽镇"),
+                        occupation=custom_character.get("occupation", "织工"),
+                    )
+                )
+            else:
+                custom_character.setdefault("opening_paragraph", "")
+        except (KeyError, IndexError):
+            # 模板里出现未识别的占位符，兜底用模板原文
+            custom_character.setdefault("opening_paragraph", default_opening_tpl)
+
         custom_character.setdefault("personality", default_p)
         custom_character.setdefault("tics", "说话时常用'嗯''这个'起头；笑时眼睛眯成一条缝。")
         custom_character.setdefault("starting_situation", f"今早推开家门，{custom_character.get('occupation', '做工')}的活计照旧，但心里总有些不安。")
-        custom_character.setdefault("opening_paragraph", "")
-        custom_character.setdefault("background", "")
+        custom_character.setdefault("background", default_background)
         custom_character.setdefault("voices", [])
         custom_character.setdefault("skills", [])
         custom_character.setdefault("family", {})
