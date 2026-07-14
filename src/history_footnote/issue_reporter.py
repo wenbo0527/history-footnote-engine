@@ -24,8 +24,8 @@ from typing import Optional
 # 🆕 v1.7.10 版本信息
 # 单一权威：所有版本号都从这里读
 # 🆕 v2.10.4 同步：与 config.APP_VERSION 保持一致
-VERSION = "2.10.6"
-VERSION_NAME = "v2.10.6 - 开局剧情带入（4 段模板 + 氛围文案）"  # 显示给用户
+VERSION = "2.10.7"
+VERSION_NAME = "v2.10.7 - 修 2 个 Svelte 错误 (archives + voice_id)"  # 显示给用户
 BUILD_DATE = "2026-07-13"
 IS_BETA = True  # 内测标识
 

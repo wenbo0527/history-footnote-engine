@@ -218,7 +218,13 @@ export function mapBackendState(b: BackendState): GameState {
   const yearMax = yearCurrent >= 1601 ? yearCurrent : 1601;  // era 默认到 1601
 
   // 7. 声音
-  const last_voice_options = b.last_voice_options ?? [];
+  // 🆕 v2.10.7: 兜底 voice_id 防止 duplicate key
+  // 后端 LLM 偶尔返的 dict 缺 voice_id → mapper 不处理会让 Svelte 报 each_key_duplicate
+  const last_voice_options = (b.last_voice_options ?? []).map((v: any, i: number) => ({
+    voice_id: v.voice_id || v.id || `voice_${i}`,
+    voice_name: v.voice_name || v.name || '未命名选项',
+    intent_text: v.intent_text || v.text || '',
+  }));
 
   // 8. account_username（后端没返，用 session_id 前缀）
   const account_username = b.session_id?.split('_')[0] ?? 'demo';

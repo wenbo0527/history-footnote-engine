@@ -289,10 +289,13 @@ def handle_GET_archives(handler, query) -> bool:
                 "archived": getattr(s, "archived", False),
                 "archived_at": getattr(s, "archived_at", ""),
             })
-        handler._json(200, {"archives": out})
+        # 🆕 v2.10.7: 返 sessions 字段（之前 archives 字段）
+        # 前端 StartMenu.svelte:64 archives = response.sessions
+        # 之前后端返 archives，前端拿 sessions → undefined.length 报错
+        handler._json(200, {"sessions": out, "archives": out, "count": len(out)})
     except Exception as e:
         logger.exception("[/api/archives] 失败: %s", e)
-        handler._json(500, {"error": f"列出存档失败: {e}", "archives": []})
+        handler._json(500, {"error": f"列出存档失败: {e}", "sessions": [], "archives": []})
     return True
 
 
