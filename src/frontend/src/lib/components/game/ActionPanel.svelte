@@ -513,127 +513,76 @@
     text-align: center;
   }
 
-  /* 单个胶囊（pill） */
-  .voice-pill {
-    position: relative;
-    flex: 0 0 auto;
-    max-width: 240px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: var(--color-paper);
-    border: 1px solid var(--color-ink-faint);
-    border-radius: 18px;
-    cursor: pointer;
-    transition: all var(--duration-normal) var(--ease-ink);
-    overflow: hidden;
-  }
+  /* 🆕 v2.10.8: 删除重复 voice-pill 样式（移到 VoicePill.svelte 后这里变死代码）
+     - 之前 ActionPanel 和 VoicePill 都定义了同一套 .voice-pill-* 类
+     - 实际渲染的是子组件 VoicePill.svelte（Svelte 5 自动 scope 类名）
+     - 这里保留的是死代码，且和子组件定义冲突，导致 mobile 上 popover 样式不对
+     - 删掉 120 行，统一由 VoicePill.svelte 负责 */
 
-  .voice-pill:hover:not(:disabled) {
-    background: var(--color-paper-aged);
-    border-color: var(--pill-color, var(--color-bronze));
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(58, 42, 26, 0.1);
-    z-index: 10;  /* 浮层在 hover 时不被兄弟截断 */
-  }
-
-  .voice-pill:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .voice-pill-loud {
-    border-color: var(--pill-color, var(--color-bronze));
-    box-shadow: 0 0 0 1px var(--pill-color, var(--color-bronze));
-  }
-
-  .voice-pill-bar {
-    flex: 0 0 3px;
-    align-self: stretch;
-    border-radius: 2px;
-  }
-
-  .voice-pill-main {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    min-width: 0;
-  }
-
-  .voice-pill-name {
-    font-family: var(--font-display);
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--color-ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-  }
-
-  .voice-pill-intent {
-    font-family: var(--font-body);
-    font-size: 11px;
-    color: var(--color-ink-light);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-  }
-
-  .voice-pill-stars {
-    flex: 0 0 auto;
-    font-family: var(--font-numeric);
-    font-size: 10px;
-    letter-spacing: -1px;
-  }
-
-  .voice-pill-freetext {
-    border-color: var(--color-cinnabar);
-    background: var(--color-paper-aged);
-  }
-
-  .voice-pill-freetext .voice-pill-name {
-    color: var(--color-cinnabar);
-  }
-
-  /* hover 浮层：内心独白 */
-  .voice-pill-popover {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    min-width: 220px;
-    max-width: 320px;
-    padding: var(--space-2) var(--space-3);
-    background: var(--color-paper);
-    border: 1px solid var(--color-bronze);
-    border-left: 3px solid var(--color-bronze);
-    border-radius: var(--radius-sm);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    font-family: var(--font-body);
-    font-size: var(--text-xs);
-    font-style: italic;
-    line-height: var(--leading-snug);
-    color: var(--color-ink);
-    z-index: 100;
-    pointer-events: none;
-    white-space: normal;
-  }
-
-  .voice-pill-popover-mark {
-    margin-right: 4px;
-    font-style: normal;
-    opacity: 0.6;
-  }
-
+  /* ============================================================
+   * 🆕 v2.10.8 移动端适配
+   * - 输入框字号 ≥ 16px（防 iOS 自动放大）
+   * - 发送按钮 ≥ 44×44（iOS HIG 最小可点击区域）
+   * - 自由心声按钮同步放大
+   * - 脑海声音条横向滚动更顺滑
+   * ============================================================ */
   @media (max-width: 767px) {
-    .voice-pill {
-      max-width: 180px;
+    .action-panel {
+      padding: var(--space-2);
     }
-    .voice-pill-name,
-    .voice-pill-intent {
-      max-width: 140px;
+
+    /* 输入条：字号 16px（防 iOS 放大），按钮区域更大 */
+    .input-bar-row {
+      padding: 2px 2px 2px var(--space-2);
+      gap: var(--space-1);
+    }
+    .input-bar-field {
+      font-size: 16px;          /* iOS Safari 自动放大的阈值 */
+      padding: var(--space-2) 0;
+    }
+    .input-bar-freetext-btn {
+      width: 40px;
+      height: 40px;
+    }
+    .input-bar-send {
+      width: 44px;
+      height: 44px;              /* iOS HIG 最小可点击区域 */
+    }
+
+    /* 自由心声模式：底部加 safe area 适配 */
+    .input-bar-freetext-wrap {
+      padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+    }
+    .input-bar-textarea {
+      font-size: 16px;           /* 防 iOS 放大 */
+    }
+
+    /* 脑海声音：横向滚动条更顺滑 */
+    .voices-strip {
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+    .voices-strip-label {
+      font-size: var(--text-2xs, 11px);
+    }
+    .voices-strip-rail {
+      flex: 1 1 100%;
+      order: 2;
+      gap: var(--space-1);
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+    }
+  }
+
+  /* 极窄屏（≤360）输入条更紧凑 */
+  @media (max-width: 360px) {
+    .input-bar-freetext-btn {
+      width: 36px;
+      height: 36px;
+    }
+    .input-bar-send {
+      width: 40px;
+      height: 40px;
     }
   }
 </style>

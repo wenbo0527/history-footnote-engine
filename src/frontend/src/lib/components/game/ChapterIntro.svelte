@@ -156,4 +156,39 @@
     color: var(--color-ink-light, #6a5a4a);
     opacity: 0.7;
   }
+
+  /* 🆕 v2.10.8: mobile 适配（≤767）
+     - 浮层宽度从 90% 改为 94%，左右 padding 缩小
+     - 标题字号缩小，避免在 ≤360 屏宽上折行挤压按钮
+     - 按钮区域 ≥ 44px（iOS HIG 最小可点击） */
+  @media (max-width: 767px) {
+    .chapter-intro-card {
+      width: 94%;
+      max-width: none;
+      padding: var(--space-5, 20px) var(--space-4, 16px);
+    }
+    .chapter-intro-title {
+      font-size: var(--text-2xl, 22px);
+    }
+    .chapter-intro-summary {
+      font-size: var(--text-sm, 13px);
+      line-height: 1.6;
+    }
+    .chapter-intro-button {
+      padding: var(--space-3, 12px) var(--space-5, 20px);
+      font-size: var(--text-base, 14px);
+      min-height: 44px;
+    }
+  }
+
+  /* 极窄屏（≤360）进一步压缩 */
+  @media (max-width: 360px) {
+    .chapter-intro-card {
+      width: 96%;
+      padding: var(--space-4, 16px) var(--space-3, 12px);
+    }
+    .chapter-intro-title {
+      font-size: var(--text-xl, 18px);
+    }
+  }
 </style>

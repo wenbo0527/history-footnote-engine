@@ -45,6 +45,21 @@
   // 🆕 v2.9.x W50: admin 模式开关（URL ?admin=true）
   const showAdminTools = isAdminMode();
 
+  // 🆕 v2.10.8: 移动端检测（matchMedia 在 SSR 下不可用，所以 typeof window 兜底）
+  const isMobile = $derived(typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+  // mobile 默认折叠角色卡（避免横向滚动条里塞两个横向布局组件）
+  let charCardCollapsed = $state(false);
+  let sidebarOpen = $state(false);
+  $effect(() => {
+    if (isMobile) {
+      charCardCollapsed = true;
+      sidebarOpen = false;
+    } else {
+      charCardCollapsed = false;
+      sidebarOpen = true;
+    }
+  });
+
   // 🆕 v2.10.1 W69: 章节开场遮罩
   // 后端 /api/state 返：round_number（总回合）+ recent_narratives[0].round (0=开场)
   // 检测策略：仅在 round_number === 1 时显示开场（之后不再显示）
@@ -235,14 +250,31 @@
 
   <div class="game-view" data-loading={$isLoading}>
     <!-- 左栏：档案 + 任务 + 备忘（豆包式侧栏） -->
-    <aside class="game-sidebar">
-      <CharCard
-        character={$game.character}
-        family={$game.family}
-        skills={$game.skills}
-        collapsible={true}
-      />
-      <SidebarPanel game={$game} />
+    <aside class="game-sidebar" class:game-sidebar-collapsed={!sidebarOpen}>
+      <!-- 🆕 v2.10.8: mobile 切换按钮（折叠/展开左栏） -->
+      {#if isMobile}
+        <button
+          type="button"
+          class="game-sidebar-toggle"
+          onclick={() => (sidebarOpen = !sidebarOpen)}
+          aria-expanded={sidebarOpen}
+          aria-label={sidebarOpen ? '收起侧栏' : '展开侧栏'}
+        >
+          <span class="game-sidebar-toggle-icon" aria-hidden="true">{sidebarOpen ? '▾' : '▸'}</span>
+          <span>{sidebarOpen ? '收起档案' : '展开档案'}</span>
+        </button>
+      {/if}
+      {#if sidebarOpen}
+        <div class="game-sidebar-content">
+          <CharCard
+            character={$game.character}
+            family={$game.family}
+            skills={$game.skills}
+            collapsible={true}
+          />
+          <SidebarPanel game={$game} />
+        </div>
+      {/if}
     </aside>
 
     <!-- 右栏：叙事区 + 行动面板（输入条固定底部） -->
@@ -386,7 +418,9 @@
   }
 
   /* ============================================================
-   * Mobile (≤ 767): 左栏折叠为顶部横条
+   * 🆕 v2.10.8 Mobile (≤ 767): 左栏折叠 + 顶部切换按钮
+   * - 之前：横向滚动条塞 2 个组件 → CharCard/SidebarPanel 横向布局冲突
+   * - 现在：默认折叠，点按钮展开；展开后纵向堆叠（垂直滚动）
    * ============================================================ */
   @media (max-width: 767px) {
     .game-view {
@@ -396,14 +430,18 @@
       gap: var(--space-2);
     }
     .game-sidebar {
-      max-height: 200px;
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
+      /* 折叠时紧凑（仅按钮），展开时占满但有最大高度避免遮住叙事 */
+      max-height: 60vh;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
-    .game-sidebar :global(.char-card),
-    .game-sidebar :global(.sidebar-panel) {
-      flex: 0 0 240px;
+    .game-sidebar-collapsed {
+      max-height: auto;
+    }
+    .game-sidebar-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
     }
   }
 
@@ -449,6 +487,32 @@
   }
   .plate-map-container {
     margin-bottom: var(--space-2);
+  }
+
+  /* 🆕 v2.10.8: mobile sidebar 切换按钮 */
+  .game-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-paper-aged);
+    border: 1px solid var(--color-bronze);
+    border-radius: var(--radius-sm);
+    color: var(--color-bronze-dark);
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-ink);
+    min-height: 44px;             /* iOS HIG 最小可点击区域 */
+  }
+  .game-sidebar-toggle:hover {
+    background: var(--color-paper);
+    color: var(--color-cinnabar);
+  }
+  .game-sidebar-toggle-icon {
+    display: inline-block;
+    font-size: var(--text-sm);
+    line-height: 1;
   }
 
   /* 🆕 v2.9.x W50: admin 面板样式 */

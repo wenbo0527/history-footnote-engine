@@ -171,11 +171,23 @@
     color: var(--color-ink);
     line-height: 1.5;
     white-space: normal;
-    width: 240px;
+    width: max(240px, 70vw);   /* 🆕 v2.10.8: 至少 240px 但不超过视口 70% */
+    max-width: 320px;
     z-index: 10;
   }
   .voice-pill-popover-mark {
     color: var(--color-bronze-dark);
     margin-right: 4px;
+  }
+
+  /* 🆕 v2.10.8: mobile 上 popover 紧贴边缘，避免被切 */
+  @media (max-width: 767px) {
+    .voice-pill-popover {
+      left: 0;
+      right: auto;
+      transform: none;
+      width: min(280px, calc(100vw - var(--space-4)));
+      max-width: none;
+    }
   }
 </style>
