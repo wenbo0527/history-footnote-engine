@@ -9,6 +9,155 @@
 
 ---
 
+## [v2.10.8] - 2026-07-15
+
+### 🆕 移动端适配 5 处 + 文档归档整理
+
+> **范围**：补足 v2.10.5/6/7 之后移动端遗漏的 5 处响应式问题 + 文档清理
+> **commit**：`c15cf64` · 4 文件 / +180 -120（ActionPanel 删 120 行死代码 + 4 组件 mobile CSS）
+> **测试**：回归测试 701/711 PASS（98.6%）+ 后端 API 烟测 6/6 + vite build 0 error
+> **详细**：[docs/log/2026-07-15-v2.10.8-mobile-cleanup.md](docs/log/2026-07-15-v2.10.8-mobile-cleanup.md)
+
+#### ✨ P0：删死代码 + iOS HIG 输入条
+
+- **ActionPanel.svelte**：删除 120 行重复 `.voice-pill-*` 样式（已迁移到 VoicePill.svelte）
+  - 之前 ActionPanel + VoicePill 都定义同一套类名，Svelte 5 自动 scope 后变成冲突
+  - mobile 上 popover 样式不对
+  - 删掉后统一由 VoicePill.svelte 负责
+- **输入条 mobile 适配**：
+  - `font-size: 16px`（防 iOS Safari 自动放大输入框）
+  - 发送按钮 `44×44`（iOS HIG 最小可点击区域）
+  - 自由心声按钮同步放大到 40×40
+
+#### ✨ P1：sidebar 折叠 + popover 宽度
+
+- **GameView.svelte**：mobile 默认折叠左侧栏
+  - 之前横向滚动条里塞两个横向布局组件（CharCard + SidebarPanel）→ 视觉错乱
+  - 现在加 sidebar 切换按钮（默认折叠），展开后纵向堆叠
+  - 切换按钮 `min-height: 44px` 满足 iOS HIG
+- **VoicePill.svelte**：popover 宽度自适应
+  - 桌面：`width: max(240px, 70vw); max-width: 320px`
+  - mobile：`width: min(280px, calc(100vw - var(--space-4)))`，紧贴左边不被切
+- **ChapterIntro.svelte**：mobile padding 缩小
+  - 桌面：`padding: var(--space-7) var(--space-6)`
+  - mobile：`padding: var(--space-5) var(--space-4)`，标题字号 → `text-2xl`
+  - ≤360 屏宽进一步压缩到 `text-xl` + `space-4 space-3`
+
+#### 🧹 文档归档整理
+
+- 新建 `docs/_archive/`（项目级归档）
+- git mv 9 个过期文档到 `docs/_archive/`：
+  - 根目录：`RELEASE_NOTES_v2.8.0.md` · `CREATE_GITHUB_RELEASE.md` · `WORK_SUMMARY.md`
+  - docs/ 根：`CHANGELOG_v1.7.28_29.md` · `CHANGELOG_v1.7.30.md` · `INTEGRATION_P2_v1.7.30.md` · `INTEGRATION_TODO.md` · `stress_test_report_v1.7.28.md` · `调研成果汇报.md`
+- 重写 `README.md`（v2.10.8 最新状态）
+
+---
+
+## [v2.10.8-rc1] - 2026-07-15
+
+### 🆕 一键启停脚本 `scripts/dev-server.sh`
+
+> **commit**：`595c857` · 1 文件 / +368 行
+> **目的**：替代手动启停（kill + nohup + disown + lsof 这一串命令）
+
+#### 支持命令
+
+| 命令 | 说明 |
+|---|---|
+| `start [dev\|spa]` | 启动后端 + 前端（默认 dev，可选静态 SPA）|
+| `stop` | 停止两个服务（SIGTERM 5s → SIGKILL）|
+| `restart` | 重启 |
+| `status` | 状态 + 健康检查（curl / 验证后端）|
+| `logs` | tail 后端 + 前端日志 |
+| `open` | 浏览器打开前端（macOS open）|
+| `build` | 构建前端生产产物 |
+
+#### 实现细节
+
+- `nohup + & + disown` 三件套，进程脱离 Trae sandbox 进程组
+- 端口检测：`lsof -ti :PORT` 查 LISTEN 进程
+- PID 文件：`/tmp/hfe_backend.pid` / `/tmp/hfe_frontend.pid` + 模式记录
+- 健康检查：status 时后端跑 `curl --max-time 3` 验证 200/404
+- 优雅 stop：SIGTERM 5 秒 → SIGKILL 兜底
+
+---
+
+## [v2.10.7] - 2026-07-14
+
+### 🆕 修 2 个 Svelte 错误（archives 字段 + voice_id 兜底）
+
+> **commit**：`cac2294` · 5 文件 / +81 -7
+> **测试**：[tests/test_v2107_svelte_bugfix.py](tests/test_v2107_svelte_bugfix.py) 2/2 PASS
+
+#### 🐛 Bug 1：StartMenu.svelte:541 `TypeError: Cannot read properties of undefined (reading 'length')`
+
+- **症状**：浏览器控制台报 `archives.length === 0` 报错
+- **根因**：后端 `/api/archives` 返 `{"archives": out}`，前端 `StartMenu.svelte:64` 拿 `response.sessions` → undefined
+- **修复**：[session.py:handle_GET_archives](src/history_footnote/web_server/routers/session.py)
+  - 同时返 `sessions` + `archives` + `count` 三字段（前端 + 兼容）
+
+#### 🐛 Bug 2：ActionPanel.svelte `Svelte error: each_key_duplicate` (key undefined)
+
+- **症状**：LLM 偶尔返的 voice_options 缺 voice_id，Svelte key 重复 undefined
+- **根因**：`_llm_generate_voices` LLM 偶尔漏写 voice_id
+- **修复**：[mapper.ts](src/frontend/src/lib/api/mapper.ts)
+  - 兜底 `voice_id = v.voice_id || v.id || \`voice_${i}\``
+
+---
+
+## [v2.10.6] - 2026-07-14
+
+### 🆕 开局剧情带入完整 6 段（欢迎 + 名字 + 来历 + 处境 + 剧情带入 + 日期）
+
+> **commit**：`76f9a59` · 1 文件 / +60
+> **测试**：[tests/test_v2106_opening_narrative.py](tests/test_v2106_opening_narrative.py) 8/8 PASS
+> **关联**：[docs/log/2026-07-13-HFE-round-0-opening-spec.md](docs/log/2026-07-13-HFE-round-0-opening-spec.md)
+
+#### ✨ 4 段身份专属开场叙事
+
+- [session.py](src/history_footnote/web_server/routers/session.py) 新增：
+  - `DEFAULT_BACKGROUND_BY_IDENTITY`（4 个身份来历）
+  - `DEFAULT_OPENING_PARAGRAPH_BY_IDENTITY`（4 个身份开场叙事，200+ 字）
+- `setdefault` 模板用 `str.format(name, hometown, occupation)` 拼
+- 玩家进游戏第 0 回合立刻有"剧情带入"文案（万历十五年的正月、织机、桑叶、王牙人等场景细节）
+
+#### 4 个身份专属模板
+
+| Identity | 开场关键词 |
+|---|---|
+| `weaving_male` | 万历十五年、织机、梭子、桑叶、王牙人 |
+| `weaving_female` | 万历十五年、作坊、织机 |
+| `merchant_male` | 万历十五年、账目、丝价 |
+| `merchant_female` | 万历十五年、柜台、伙计 |
+
+---
+
+## [v2.10.5] - 2026-07-13
+
+### 🆕 异步开局 + 版本号同步
+
+> **commit**：`86188b6` · 3 文件 / +13 -3
+> **测试**：[tests/test_v2105_async_start.py](tests/test_v2105_async_start.py) 9/9 PASS
+
+#### ✨ 异步开局支持
+
+- `/api/start` 改异步处理，避免 LLM 慢启动时阻塞 HTTP
+- thread pool 预生成 voice_options / chapter 数据
+
+#### 版本号同步
+
+- [src/history_footnote/config.py](src/history_footnote/config.py) 同步到 v2.10.5
+- [src/history_footnote/issue_reporter.py](src/history_footnote/issue_reporter.py) 同步到 v2.10.5
+
+---
+
+## [v2.10.4] - 2026-07-13
+
+> **范围**：W52 followup P3（game_state 拆分评估 + 低风险 router 装饰器化）
+> **详见**：[docs/log/2026-07-13-HFE-game-state-split-assessment.md](docs/log/2026-07-13-HFE-game-state-split-assessment.md)
+
+---
+
 ## [v2.10.3] - 2026-07-12
 
 ### 🆕 P1 全量优化：safe_route + dm_skills 拆分 + unwrap 工具

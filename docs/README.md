@@ -3,6 +3,20 @@
 > **新开发者入口**：从 [`../README.md`](../README.md) 开始。
 > **本目录**包含所有项目文档,按职责分层(v2.10.2 重新整理)。
 
+## 🆕 2026-07-15 v2.10.8 移动端适配 + 文档归档整理
+
+> 5 组件 mobile 适配 + dev-server.sh 一键启停 + 9 文档归档 + README/CHANGELOG 同步
+> 详见 [log/2026-07-15-v2.10.8-mobile-cleanup.md](log/2026-07-15-v2.10.8-mobile-cleanup.md)
+>
+> **核心改动**：
+> - v2.10.8 移动端 5 处：ActionPanel 删死代码 + iOS HIG 输入条 + GameView sidebar 折叠 + VoicePill popover 宽度 + ChapterIntro padding
+> - v2.10.8-rc1 dev-server.sh：一键启停 8 命令（start/stop/restart/status/logs/open/build）
+> - 文档归档：新建 [_archive/](_archive/README.md) 项目级目录，git mv 9 个过期文档
+>
+> **新文档**：
+> - [log/2026-07-15-v2.10.8-mobile-cleanup.md](log/2026-07-15-v2.10.8-mobile-cleanup.md)
+> - [_archive/README.md](_archive/README.md) — 项目级归档索引
+
 ## 🆕 2026-07-13 v2.10.3 + v2.10.4 整理
 
 > 4 commits / 68 文件 / +2387 -6530 / 2 tag
