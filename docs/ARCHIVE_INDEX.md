@@ -5,6 +5,7 @@
 > - 想看历史版本的 CHANGELOG → 查 `_archive/`
 > - 想参考调研报告是否被项目采纳 → 查 `log/unused-references/` (未采纳) 或 `log/used-references/` (已采纳)
 > - 想看历史时代包的设计稿 → 查 `eras/<era_id>/archive/`
+> - 想看后续版本规划（v2.10.12+）→ 查 `plans/ROADMAP.md`
 
 ---
 

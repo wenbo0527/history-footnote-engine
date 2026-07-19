@@ -4,6 +4,8 @@
 > **本目录**包含所有项目文档,按职责分层(v2.10.2 重新整理)。
 >
 > 🆕 **v2.10.9**: [ARCHIVE_INDEX.md](ARCHIVE_INDEX.md) — 5 个归档目录（_archive/architecture archive/eras archive/log used/unused-references）统一索引
+>
+> 🆕 **v2.10.11**: [plans/ROADMAP.md](plans/ROADMAP.md) — 后续版本路线图（v2.10.12 / v2.10.13 / v2.11 / v3.0）
 
 ## 🆕 2026-07-15 v2.10.8 移动端适配 + 文档归档整理
 
@@ -80,6 +82,9 @@ docs/
 │   ├── v2.10.2-comprehensive-test.md       ← 综合测试
 │   ├── v2.10.2-bug-prevention-analysis.md  ← BUG 模式分析
 │   └── v2.10.2-frontend-audit.md          ← 前端审计
+│
+├── plans/                         ← 🆕 v2.10.11+ 后续版本规划
+│   └── ROADMAP.md                  ← v2.10.12 / v2.10.13 / v2.11 / v3.0
 │
 ├── deploy/                        ← 🆕 部署 / 运维
 │   └── DEPLOYMENT_GUIDE.md        ← 5 步 + 10 问题
