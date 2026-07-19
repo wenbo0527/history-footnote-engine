@@ -141,7 +141,14 @@ def handle_POST_generate_world_dwell(handler, body) -> bool:
 def handle_GET_version(handler) -> bool:
     try:
         from history_footnote.issue_reporter import get_version_info
-        handler._json(200, get_version_info())
+        info = get_version_info()
+        # 🆕 v2.10.10：附上前端路径诊断（部署排错用）
+        try:
+            from history_footnote.web_server.static_assets import frontend_paths_info
+            info["frontend"] = frontend_paths_info()
+        except Exception as e:
+            info["frontend_error"] = str(e)
+        handler._json(200, info)
     except Exception as e:
         handler._json(500, {"error": "version fetch failed", "detail": str(e)})
     return True

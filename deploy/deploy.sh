@@ -133,16 +133,19 @@ build_frontend() {
   fi
   sudo -u "$APP_USER" npm run build
 
-  # 同步到 /var/www/hfe/（nginx root）
+  # 🆕 v2.10.10：路径统一
+  # SvelteKit build 产物 → /var/www/hfe/build/
+  # （nginx.conf 里 location / 指向这里）
   mkdir -p /var/www/hfe
   rsync -a --delete "$APP_DIR/src/frontend/build/" /var/www/hfe/build/
 
-  # 同步静态资源（命运卡 / 角色 / 场景图）
+  # SvelteKit 静态资源（命运卡 / 角色 / 场景图）
+  # → /var/www/hfe/static/
   if [[ -d "$APP_DIR/src/frontend/static" ]]; then
     rsync -a --delete "$APP_DIR/src/frontend/static/" /var/www/hfe/static/
   fi
 
-  ok "前端已构建并部署到 /var/www/hfe/"
+  ok "前端已构建并部署到 /var/www/hfe/ (build/ + static/)"
 }
 
 install_systemd() {

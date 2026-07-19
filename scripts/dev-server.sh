@@ -160,7 +160,8 @@ start_frontend() {
       return 1
     fi
     info "启动前端（SPA 静态模式，port $FRONTEND_PORT，log: $FRONTEND_LOG）..."
-    nohup python /tmp/spa_server.py "$FRONTEND_PORT" src/frontend/build \
+    # 🆕 v2.10.10：spa_server.py 从 /tmp/ 移入 scripts/（之前临时文件丢失）
+    nohup python "$PROJECT_ROOT/scripts/spa_server.py" "$FRONTEND_PORT" src/frontend/build \
       > "$FRONTEND_LOG" 2>&1 &
   else
     info "启动前端（Vite dev 模式，port $FRONTEND_PORT，log: $FRONTEND_LOG）..."

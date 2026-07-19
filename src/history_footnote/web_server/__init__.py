@@ -55,10 +55,29 @@ from history_footnote.web_server.views.session import (
 )
 
 # ===== Static assets =====
-from history_footnote.web_server.static_assets import INDEX_HTML
+from history_footnote.web_server.static_assets import (
+    INDEX_HTML,
+    frontend_paths_info,
+)
 
 # ===== Logger =====
 from history_footnote.web_server.handler_base import logger
+
+# 🆕 v2.10.10：启动时打印前端路径诊断（便于部署时排错）
+try:
+    info = frontend_paths_info()
+    if not info["index_html_exists"]:
+        logger.warning(
+            "[v2.10.10] SvelteKit build 缺失：%s — 部署前请先 cd src/frontend && npm run build",
+            info["build_dir"],
+        )
+    else:
+        logger.info(
+            "[v2.10.10] 前端: build_dir=%s static_dir_exists=%s",
+            info["build_dir"], info["static_dir_exists"],
+        )
+except Exception as e:
+    logger.warning(f"[v2.10.10] 前端路径诊断失败（忽略）: {e}")
 
 # ===== Router registry =====
 from history_footnote.web_server.router_registry import dispatch_GET, dispatch_POST

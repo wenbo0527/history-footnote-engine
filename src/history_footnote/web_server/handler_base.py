@@ -247,13 +247,28 @@ class HandlerBaseMixin:
         self.wfile.write(body)
 
     def _serve_static(self, path: str):
-        """服务 /static/ 下的静态资源（防止路径穿越攻击）"""
-        from history_footnote.web import STATIC_DIR
+        """服务 /static/ 下的静态资源（防止路径穿越攻击）
+
+        🆕 v2.10.10：路径统一指向 SvelteKit 前端。
+        - /static/* → src/frontend/static/（命运卡 / 角色 / 场景图）
+        - /static/* 同时也支持 build/ 子目录（vite 产物的 hashed chunks）
+        """
+        from history_footnote.web_server.static_assets import (
+            STATIC_DIR as _SVELTE_STATIC,
+            _FRONTEND_BUILD_DIR,
+        )
+
         rel = path[len("/static/"):]
         if ".." in rel or rel.startswith("/"):
             self._json(400, {"error": "invalid path"})
             return
-        file_path = STATIC_DIR / rel
+
+        # 优先级 1：SvelteKit frontend static（命运卡 / 角色 / 场景图）
+        file_path = _SVELTE_STATIC / rel
+        # 优先级 2：SvelteKit build 内嵌资源（build/_app/* 等）
+        if not file_path.exists() or not file_path.is_file():
+            file_path = _FRONTEND_BUILD_DIR / rel
+
         if not file_path.exists() or not file_path.is_file():
             self._json(404, {"error": "not found", "path": rel})
             return
