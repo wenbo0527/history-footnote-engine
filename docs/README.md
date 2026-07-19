@@ -2,6 +2,8 @@
 
 > **新开发者入口**：从 [`../README.md`](../README.md) 开始。
 > **本目录**包含所有项目文档,按职责分层(v2.10.2 重新整理)。
+>
+> 🆕 **v2.10.9**: [ARCHIVE_INDEX.md](ARCHIVE_INDEX.md) — 5 个归档目录（_archive/architecture archive/eras archive/log used/unused-references）统一索引
 
 ## 🆕 2026-07-15 v2.10.8 移动端适配 + 文档归档整理
 
