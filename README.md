@@ -2,17 +2,22 @@
 
 > **AI 当 DM，你当历史里的小人物。** 通过对话体验一个历史时期，历史走势不可改，但你的选择路径完全开放。
 
-## 🎉 v2.10.8 已发布（移动端 + dev 工具全面优化）
+## 🎉 v2.10.10 已发布（SvelteKit 前端真上线）
 
-最新版本（2026-07-15）完成了**移动端全面适配**和**一键启停脚本**：
+最新版本（2026-07-19）完成了**生产部署的真正修复**：
 
-- ✅ **5 处移动端适配**（v2.10.8）：输入条 iOS 安全 + sidebar 折叠 + popover 宽度 + ChapterIntro padding + 删死代码
+- ✅ **v2.10.10 前端切换**（本次）：生产部署从 v1.7.27 旧前端 → SvelteKit v2.x 真实前端
+  - 后端 `INDEX_HTML` 改读 `src/frontend/build/index.html`（2689 bytes vs 旧 1071 bytes）
+  - 删除 `src/history_footnote/web/`（旧 main.css 2264 + main.js 3991 共 6306 行）
+  - 部署路径修复（Dockerfile / deploy.sh / nginx.conf 三方对齐 `build/` 路径）
+  - 新增 `scripts/spa_server.py`（修复 `start spa` 模式 file not found）
+- ✅ **5 处移动端适配**（v2.10.8）：输入条 iOS 安全 + sidebar 折叠 + popover 宽度 + ChapterIntro padding
 - ✅ **dev-server.sh 一键启停**（v2.10.8-rc1）：start/stop/restart/status/logs/open/build 8 命令
 - ✅ **开局剧情带入完整 6 段**（v2.10.6）：欢迎 + 名字 + 来历 + 处境 + 4 段场景叙事 + 日期
 - ✅ **修 2 个 Svelte 错误**（v2.10.7）：archives 字段 + voice_id 兜底
 - ✅ **涌现式章节架构**（v2.10.1）：W85 4 级优先级路由 + JSON 容错
 
-详见 [CHANGELOG.md](CHANGELOG.md) · [docs/log/2026-07-15-v2.10.8-mobile-cleanup.md](docs/log/2026-07-15-v2.10.8-mobile-cleanup.md)
+详见 [CHANGELOG.md](CHANGELOG.md) · [docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md](docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md)
 
 ---
 
@@ -68,14 +73,24 @@ bash scripts/dev-server.sh --help
 ### 方式 2：手动启动
 
 ```bash
-# 1. 后端（端口 8765）
-PYTHONPATH=src python -c "from history_footnote.web_server import run; run()"
+# 🆕 v2.10.10 后端直接服务 SvelteKit 前端生产产物
+# 1. 后端（端口 8765）—— 推荐：自己起前端 dev server
+PYTHONPATH=src python -m history_footnote.web_server
+#             ↑ v2.10.10 之前是 python -c "from ... import run; run()"
 
-# 2. 前端（端口 5173）
+# 2. 前端（端口 5173，三选一）
+# 2a. Vite dev 模式（开发推荐，热重载）
 cd src/frontend && npm install && npm run dev
+# 2b. SPA 静态模式（先 build，再用 spa_server.py 服）
+bash scripts/dev-server.sh build       # 构建 src/frontend/build/
+bash scripts/dev-server.sh start spa   # scripts/spa_server.py 服务 5173
 
-# 访问 http://localhost:5173/ 开始游戏
+# 访问 http://localhost:8765/ 开始游戏（后端直接服务，无需 Vite）
+# 或者 http://localhost:5173/ （如果你启了前端 dev/spa server）
 ```
+
+> 🆕 **v2.10.10 部署架构**：后端单进程同时服务 API + SvelteKit 前端。
+> 不需要单独启 nginx 或 dev server 也能玩。详细：docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md
 
 ### CLI 模式
 

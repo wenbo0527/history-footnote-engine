@@ -9,6 +9,70 @@
 
 ---
 
+## [v2.10.10] - 2026-07-19
+
+### 🆕 前端真上线 — 生产部署 SvelteKit（替代 v1.7.27 旧前端）
+
+诊断报告：[docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md](docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md)
+
+#### 核心改动
+
+- **后端转读 SvelteKit**：`web_server/static_assets.py` 的 `INDEX_HTML` 从
+  `src/history_footnote/web/templates/index.html`（1071 bytes，v1.7.27）
+  改成 `src/frontend/build/index.html`（2689 bytes，SvelteKit v2.x）
+- **静态资源转 SvelteKit**：`web_server/handler_base.py._serve_static` 优先从
+  `src/frontend/static/` 和 `build/_app/` 读（命运卡 / 角色 / 场景图）
+- **新增启动诊断**：`web_server/__init__.py` 启动时打印 `[v2.10.10] 前端: build_dir=...` 日志
+- **`/api/version` 增强**：响应中加 `frontend.{build_dir, index_html_exists, static_dir_exists}` 字段
+
+#### 删除的死代码（-6306 行）
+
+- `src/history_footnote/web/templates/index.html`（v1.7.27 旧主页）
+- `src/history_footnote/web/static/css/main.css`（2264 行 v1.x CSS）
+- `src/history_footnote/web/static/js/main.js`（3991 行 v1.x JS）
+- `src/history_footnote/web/__init__.py`（只导出旧路径常量）
+
+确认无项目代码 import `history_footnote.web`（grep 验证），删除安全。
+
+#### 部署文件三对齐
+
+| 文件 | 改动 |
+|---|---|
+| `Dockerfile` | `COPY --from=frontend-build /build/build/ → /app/src/frontend/build/`；同步 `static/` |
+| `deploy/deploy.sh` | rsync 路径注释清晰化（build/ + static/ 分别到 /var/www/hfe/） |
+| `deploy/nginx.conf` | `location /` root 改为 `/var/www/hfe/build/` + SPA fallback 到 `/index.html`；独立 `location /static/` → alias `/var/www/hfe/static/` |
+
+#### 修复 dev-server.sh spa 模式
+
+- 之前 `bash scripts/dev-server.sh start spa` 报 file not found（脚本引用 `/tmp/spa_server.py`）
+- **新增 `scripts/spa_server.py`**（132 行单文件）：Python `ThreadingHTTPServer`，支持 SPA fallback
+- `scripts/dev-server.sh` 路径更新到 `scripts/spa_server.py`
+
+#### 验证
+
+| 测试 | 结果 |
+|---|---|
+| `GET /` | HTTP 200 + 2689 bytes SvelteKit index.html |
+| `GET /static/character/farmer_female.webp` | HTTP 200 + 34824 bytes（与源文件字节一致） |
+| `GET /api/version` | 200 OK + frontend 诊断字段 |
+| 启动日志 | `[v2.10.10] 前端: build_dir=... static_dir_exists=True` |
+| LLM warmup | ✅ 1326ms 完成 |
+
+#### 用户影响
+
+之前生产部署看到的是 v1.7.27 旧 UI（错位 ~30 版本）。
+现在生产部署看到的是 SvelteKit 最新 UI（移动端 / cookie / 字体 / 错误修复全部生效）。
+
+## [v2.10.9] - 2026-07-19
+
+### 🆕 业务域重分包 + 部署文件 + P2 拆分整理
+
+> 中间过渡版本（无任何变更日志条目，因后续被 v2.10.10 包含）。
+> 4 个 commit：
+> - v2.10.9 P0-1 业务域重分包（game/narrative/llm/account/rule/events/wiki/saves）+ era_schema
+> - v2.10.9 P1 + P2：CLI 拆分 + 路由装饰器 + scripts 拆分 + docs 归档索引 + 回归测试
+> - v2.10.9：部署文件（Dockerfile + .dockerignore + deploy/ + CI/CD）
+
 ## [v2.10.8] - 2026-07-15
 
 ### 🆕 移动端适配 5 处 + 文档归档整理

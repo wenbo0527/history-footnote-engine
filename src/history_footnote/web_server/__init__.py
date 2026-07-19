@@ -208,8 +208,28 @@ def run(host: str = "0.0.0.0", port: int = Server.DEFAULT_PORT):
 
 
 # ============================================================
-# 模块入口：保留 `python -m history_footnote.web_server` 调用方式
+# 模块入口
+#
+# 🆕 v2.10.10：让 `python -m history_footnote.web_server` 能直接跑。
+#
+# 之前只有 `python -c "from history_footnote.web_server import run; run()"`，
+# 不友好。实际入口在 `__main__.py`（依赖 `from .__main__ import main`）。
+#
+# 这里保留 `__name__ == "__main__"` 兜底（防御性），方便 import 测试时模拟入口。
 # ============================================================
 
+def _cli_main():
+    """`python -m history_footnote.web_server` 入口（依赖 `__main__.py`）
+
+    实际 CLI 入口在 __main__.py（package 官方推荐）。
+    这里是防御性兜底，避免包内被 `python -m` 误调时悄悄启动整套 server。
+    """
+    import os
+    if os.environ.get("HFE_WEBSERVER_MAIN_DISABLE") == "1":
+        return
+    from history_footnote.web_server.__main__ import main
+    main()
+
+
 if __name__ == "__main__":
-    run()
+    _cli_main()
