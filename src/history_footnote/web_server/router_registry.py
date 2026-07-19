@@ -191,6 +191,16 @@ def dispatch_GET(handler, path: str, query: str) -> bool:
         except Exception as e:
             _safe_dispatch_error(handler, e, scope=f"GET {path}")
         return True
+    # 🆕 v2.10.10：SvelteKit SPA fallback — 非 /api/* 路径都返回 INDEX_HTML
+    # （让客户端 SvelteKit 路由器接管；/_app/* 静态资源在前面 /static/ 已处理）
+    # 排除 /api/ 让 JSON 路由按 404 处理
+    if not path.startswith("/api/") and not path.startswith("/static/"):
+        from history_footnote.web_server.static_assets import INDEX_HTML
+        try:
+            handler._html(INDEX_HTML)
+        except Exception as e:
+            _safe_dispatch_error(handler, e, scope=f"GET {path}")
+        return True
     handler_fn = GET_ROUTES.get(path)
     if handler_fn is None:
         return False
