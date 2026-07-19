@@ -1,0 +1,65 @@
+# 🆕 v2.10.9 Docker ignore
+# 与 .gitignore 一致 + 额外的本地构建产物
+
+# 环境变量与密钥
+.env
+*.env.local
+*.env.production
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# 项目数据（运行时生成）
+saves/
+runtime/
+logs/
+test_*.log
+*.auto.json
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+
+# 测试覆盖
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 前端构建产物（Dockerfile 会自己构建）
+src/frontend/build/
+src/frontend/node_modules/
+src/frontend/.svelte-kit/
+
+# 文档（不进镜像）
+docs/
+
+# 测试套件（不进镜像，但保留可用于调试）
+# tests/
+
+# 调试脚本（开发期使用）
+scripts/_archive/
+scripts/debug_*.py
+scripts/smoke_*.py

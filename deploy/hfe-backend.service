@@ -1,0 +1,55 @@
+[Unit]
+Description=History Footnote Engine Backend
+Documentation=https://github.com/wenbo0527/history-footnote-engine
+After=network.target
+
+[Service]
+# 🆕 v2.10.9 部署用 systemd 单元
+# 用法：
+#   sudo cp deploy/hfe-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable hfe-backend
+#   sudo systemctl start hfe-backend
+#   sudo systemctl status hfe-backend
+
+Type=simple
+User=hfe
+Group=hfe
+WorkingDirectory=/opt/history-footnote-engine
+
+# venv 里的 python
+ExecStart=/opt/history-footnote-engine/.venv/bin/python \
+    -m history_footnote.web_server \
+    --host 0.0.0.0 \
+    --port 8765
+
+# 环境变量从 .env 读
+EnvironmentFile=/opt/history-footnote-engine/.env
+
+# 自动重启（崩溃后 5s 重启）
+Restart=on-failure
+RestartSec=5s
+
+# 启动限制（30s 内最多重启 5 次）
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# 资源限制
+LimitNOFILE=65536
+
+# 日志输出到 journald（systemctl journalctl -u hfe-backend -f）
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hfe-backend
+
+# 安全加固（最小权限）
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/history-footnote-engine/saves \
+    /opt/history-footnote-engine/runtime \
+    /opt/history-footnote-engine/logs
+
+[Install]
+WantedBy=multi-user.target
