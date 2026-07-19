@@ -240,30 +240,21 @@ def _safe_dispatch_error(handler, e: Exception, scope: str, fn_name: str = "") -
 
 
 def _inspect_signature(fn) -> int:
-    """通过函数名前缀决定参数个数，避开 inspect 反射开销。
+    """决定 handler 函数签名（参数个数）。
 
-    约定：所有 routers 函数遵循 handle_<METHOD>_<name> 命名。
-    - handle_GET_*(): 1 参数（handler）
+    🆕 v2.10.9 P1-2：优先用 handler_base.get_route_signature 读取装饰器标记；
+    没有装饰器时回退到旧的"命名约定"判断（向后兼容）。
+
+    旧逻辑（保留）：
+    - handle_GET_*(): 1 参数（handler）— 但 NO_QUERY_FNS 列表里的除外
     - handle_POST_*: 2 参数（handler, body）
     - handle_GET_*:  2 参数（handler, query）默认
+
+    新装饰器：
+    - @get_route → 2 参数
+    - @get_route(no_query=True) → 1 参数
+    - @post_route → 2 参数
     """
-    name = fn.__name__
-    # 例外列表（不接 query 参数的）
-    NO_QUERY_FNS = {
-        "handle_GET_metrics",
-        "handle_GET_health",
-        "handle_GET_llm_reset_stats",
-        "handle_GET_monitor_health",
-        "handle_GET_monitor_stats",
-        "handle_GET_version",
-        "handle_GET_feedback_categories",
-        "handle_GET_sanitize_patterns",
-    }
-    if name in NO_QUERY_FNS:
-        return 1
-    if name.startswith("handle_POST_"):
-        return 2
-    if name.startswith("handle_GET_"):
-        return 2
-    # 其它：默认 1
-    return 1
+    # 🆕 v2.10.9 P1-2：优先用显式装饰器
+    from history_footnote.web_server.handler_base import get_route_signature
+    return get_route_signature(fn)

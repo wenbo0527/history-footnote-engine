@@ -431,3 +431,103 @@ def extract_last_consumed(dm_output: str, fallback: int = 1) -> tuple[bool, int]
     if m:
         return True, int(m.group(1))
     return True, fallback
+
+
+# ============================================================
+# 🆕 v2.10.9 P1-2: 路由签名装饰器
+#
+# 替代 router_registry._inspect_signature 的"命名约定"判断。
+# 用法：
+#   @get_route  → 函数签名 (handler, query)
+#   @get_route(no_query=True)  → 函数签名 (handler,)
+#   @post_route → 函数签名 (handler, body)
+#
+# 加了装饰器的 handler，签名由装饰器决定；
+# 没加装饰器的 handler 仍然走旧的"命名约定"回退（保持向后兼容）。
+# ============================================================
+
+_GET_NO_QUERY_ATTR = "_hfe_get_no_query"
+
+
+def get_route(fn=None, *, no_query: bool = False):
+    """GET 路由签名装饰器
+
+    支持两种用法：
+        @get_route  → 函数签名 (handler, query)
+        @get_route(no_query=True)  → 函数签名 (handler,)
+
+    Args:
+        fn: 装饰器直接调用形式（@get_route）的目标函数
+        no_query: 装饰器工厂形式（@get_route(no_query=True)）的开关
+
+    Examples:
+        @get_route  # (handler, query)
+        def handle_GET_xxx(handler, query): ...
+
+        @get_route(no_query=True)  # (handler,)
+        def handle_GET_metrics(handler): ...
+    """
+    def _decorate(f):
+        setattr(f, _GET_NO_QUERY_ATTR, no_query)
+        return f
+
+    if fn is None:
+        # 装饰器工厂形式：@get_route(no_query=True)
+        return _decorate
+    # 装饰器直接形式：@get_route
+    return _decorate(fn)
+
+
+def post_route(fn=None):
+    """POST 路由签名装饰器
+
+    支持两种用法：
+        @post_route  → 函数签名 (handler, body)
+        @post_route()  → 同上（显式调用形式）
+
+    Example:
+        @post_route
+        def handle_POST_xxx(handler, body): ...
+    """
+    def _decorate(f):
+        setattr(f, "_hfe_post", True)
+        return f
+    if fn is None:
+        return _decorate
+    return _decorate(fn)
+
+
+def get_route_signature(fn) -> int:
+    """读取 handler 的路由签名（参数个数）。
+
+    优先读装饰器标记；没有标记时回退到旧"命名约定"。
+
+    Returns:
+        1 → (handler,)
+        2 → (handler, query) 或 (handler, body)
+    """
+    # 1. 装饰器标记优先
+    if hasattr(fn, "_hfe_post"):
+        return 2
+    if hasattr(fn, _GET_NO_QUERY_ATTR):
+        return 1 if getattr(fn, _GET_NO_QUERY_ATTR) else 2
+
+    # 2. 命名约定回退（向后兼容）
+    name = fn.__name__
+    if name.startswith("handle_POST_"):
+        return 2
+    if name.startswith("handle_GET_"):
+        # 例外列表（不接 query 参数的）
+        NO_QUERY_FNS = {
+            "handle_GET_metrics",
+            "handle_GET_health",
+            "handle_GET_llm_reset_stats",
+            "handle_GET_monitor_health",
+            "handle_GET_monitor_stats",
+            "handle_GET_version",
+            "handle_GET_feedback_categories",
+            "handle_GET_sanitize_patterns",
+        }
+        return 1 if name in NO_QUERY_FNS else 2
+    # 3. 其它：默认 1
+    return 1
