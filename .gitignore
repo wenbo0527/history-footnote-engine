@@ -28,8 +28,13 @@ env/
 *.swo
 .DS_Store
 
-# 项目特定
-saves/
+# 项目特定（根目录运行时存档，但 src/history_footnote/saves 是 package 代码需要）
+/saves
+saves/*.json
+saves/**/accounts
+
+# 🆕 v2.10.11 旧运行时存档（含 invite_codes/accounts 等）；_private 数据不入库
+src/saves/
 *.json~
 
 # 历史脚本归档（v2.10.9 起归档目录纳入 git 历史，便于回溯）
@@ -56,4 +61,6 @@ concurrent_test.log
 
 # 临时存档
 storage/saves/
-*.auto.json
+
+# 🆕 v2.10.11 e2e 测试运行时进度（每回合持久化的 resume helper，避免入库）
+tests/_e2e_progress/
