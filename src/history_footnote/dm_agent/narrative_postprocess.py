@@ -87,6 +87,14 @@ def postprocess_narrative(
     """
     char_limit = MAX_CHARS_BY_MODE.get(time_mode, DEFAULT_CHAR_LIMIT)
 
+    # 🆕 v2.10.12+: 防御 narrative 是 list/None 等非 str 类型
+    # (LLM 偶尔返回 list，特别是 tool_use content 字段)
+    if not isinstance(narrative, str):
+        try:
+            narrative = str(narrative) if narrative is not None else ""
+        except Exception:
+            narrative = ""
+
     # 1. 检查
     need_retry, reason = check_narrative_quality(narrative, time_mode)
     if not need_retry:
@@ -98,7 +106,14 @@ def postprocess_narrative(
     if retry_fn is not None:
         for retry_i in range(max_retries):
             try:
-                narrative = retry_fn()
+                _retry_narr = retry_fn()
+                # 🆕 v2.10.12+: 防御 retry_fn 返回 list
+                if not isinstance(_retry_narr, str):
+                    try:
+                        _retry_narr = str(_retry_narr) if _retry_narr is not None else ""
+                    except Exception:
+                        _retry_narr = ""
+                narrative = _retry_narr
                 need_retry, _ = check_narrative_quality(narrative, time_mode)
                 if not need_retry:
                     _log.info(

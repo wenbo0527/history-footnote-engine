@@ -507,7 +507,14 @@ class DMAgent(MockHelpersMixin):
             def _retry_fn() -> str:
                 nonlocal result
                 result = self.graph.invoke(initial_state)
-                return result.get("narrative", "")
+                narr = result.get("narrative", "")
+                # 🆕 v2.10.12+: 防御 LLM 返回 list 而非 string
+                if not isinstance(narr, str):
+                    try:
+                        narr = str(narr)
+                    except Exception:
+                        narr = ""
+                return narr
             narrative, _status = postprocess_narrative(
                 narrative, time_mode, retry_fn=_retry_fn, max_retries=2
             )

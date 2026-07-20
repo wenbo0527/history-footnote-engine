@@ -643,22 +643,40 @@ class GameLoop:
 
         # 🆕 v2.10.12+: cash reconciliation（每回合对账）
         # 目的：cr30 实测发现 cash 9.2 → 0 跳变无法对账。
-        # 每个回合结束，从 financial_log 重新算 cash，和当前 state.cash 对比，
-        # 如有 mismatch 立即 DEBUG 级别报警（不阻塞流程）。
+        # 每个回合结束，从 financial_log 重新算 cash = initial + sum(log)，
+        # 和当前 state.cash 对比，如有 mismatch 立即 WARNING。
+        #
+        # 注意：默认 reconcile 用 state.cash 作为 baseline（首次调用时记录 initial）
+        # 以避免依赖 initial_state（不同路径会有不同初始 cash）。
         try:
-            expected_cash = 0.0
+            if not hasattr(self, "_initial_cash_reconcile_baseline"):
+                # 🆕 v2.10.12+: 第一次 reconcile 时记录 baseline = current cash
+                # 因为前面已经过了 initial_state 初始化
+                self._initial_cash_reconcile_baseline = self.state.cash
+                logger.debug(
+                    f"[cash-reconcile] baseline set: {self._initial_cash_reconcile_baseline:.3f}"
+                )
+
+            expected_cash = float(self._initial_cash_reconcile_baseline)
             for fl in self.state.financial_log:
                 if fl.get("type") == "borrow":
-                    continue  # borrow 不动 cash，只动 debt
-                # 🆕 还款特殊：repay 用 debt，不直接 -cash
-                expected_cash += fl.get("amount", 0)
-            if expected_cash > 0:
+                    # borrow: cash 不变，debt += abs(amount) — 累计会计需补 cash
+                    expected_cash += abs(fl.get("amount", 0))  # 实际 cash 走 +amount 路径
+                    continue  # 已经在 +amount 路径里
+                if fl.get("type") == "repay":
+                    # repay: cash -= abs(amount), debt -= abs(amount)
+                    # 我们 state.cash 已经反映了 -cash
+                    # 所以 expected += -abs(amount)，无特殊处理
+                    expected_cash += fl.get("amount", 0)
+                else:
+                    expected_cash += fl.get("amount", 0)
+            if abs(expected_cash) > 0 or abs(self.state.cash) > 0:
                 diff = round(self.state.cash - expected_cash, 3)
                 if abs(diff) > 0.01:
                     logger.warning(
                         f"[cash-reconcile] R{self.state.round_number} "
                         f"state.cash={self.state.cash:.3f} "
-                        f"expected_from_log={expected_cash:.3f} "
+                        f"expected={expected_cash:.3f} "
                         f"diff={diff:+.3f}（mismatch！dev 需查 implicit 资金流出）"
                     )
                 else:
