@@ -376,12 +376,27 @@ export interface PlayerCharacter {
   portrait?: string;
 }
 
+// 🆕 v2.10.11+：补字段（这些字段后端 /api/character_wiki 实际返回）
+export interface WikiRelationship {
+  relation: string;
+  level?: number;
+  note?: string;
+  name?: string;
+}
+
 export interface WikiResponse {
   markdown: string;        // 渲染后的 markdown
   characters: WikiCharacter[];
   updated_at: string;
   // 兼容后端 {session_id, wiki} 格式
   raw_wiki?: Record<string, any>;
+  // 🆕 v2.10.11+：前端 modal 用到的字段
+  relationships?: WikiRelationship[];
+  wiki?: WikiResponse | null;        // 自引用，允许 { session_id, wiki } 嵌套
+  npc_relations?: Array<{ name: string; relation: string; level?: number; note?: string }>;
+  // typed 为 FateNpcEffect[] / ActiveBuff[]（与 WikiResponseExt 一致）
+  fate_npc_effects?: FateNpcEffect[];
+  active_buffs?: ActiveBuff[];
 }
 
 // ============ Dilemma 困境 ============

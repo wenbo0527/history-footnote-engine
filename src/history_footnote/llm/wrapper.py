@@ -322,6 +322,13 @@ class LLMWrapper:
             # 同 provider 重试
             for attempt in range(self.retry_on_same + 1):
                 llm = self._get_llm(provider)
+                # 🆕 v2.10.11+：provider 创建失败（无包 / 无 API key）→ 短路到下个 provider
+                # 不再走整个 timeout 周期才发 AttributeError
+                if llm is None:
+                    error_msg = f"provider '{provider}' unavailable (creation failed earlier — check API key / optional dep)"
+                    errors.append((provider, error_msg, False))
+                    logger.debug(f"[LLMWrapper:{request_id}] skip provider={provider}: not available")
+                    break  # 不重试，直接下个 provider
                 ts_start = time.time()
                 timeout_occurred = False
                 error_msg = None

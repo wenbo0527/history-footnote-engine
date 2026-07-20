@@ -38,7 +38,10 @@ FACT_TYPES = ("character", "fact", "hook", "open_question")
 # open_question: 未解问题（本回合提出但未回答的问题）
 
 MAX_FACTS_PER_SAVE = 50
-EXTRACT_TIMEOUT = 8.0  # 秒
+# 🆕 v2.10.11+：8.0 → 15.0
+# minimax-anthropic API 实测 9-13 秒才能返回 JSON（包含 reasoning + tool_use 解析）
+# 8.0 触发约 1/3 turn timeout，15 留 5s buffer
+EXTRACT_TIMEOUT = 15.0  # 秒
 
 
 @dataclass

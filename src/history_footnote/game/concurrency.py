@@ -269,6 +269,103 @@ class AsyncSaveQueue:
 
 SESSION_POOL = SessionPool(max_sessions=50, session_ttl_seconds=3600)
 # 🆕 v1.7.2 并发配置从 config.py 读（环境变量可覆盖）
+
+# 🆕 v2.10.11+：Session TTL 过期 → dump 到 disk → remove from pool
+# 原因：之前只 remove，没 persist。重启或 30 分钟 TTL 触发后 session 完全丢。
+# 修复：清理前用 save_manager.save_state() 落盘，下次 `_get_or_load_session` 自然 reload。
+import threading as _threading_for_sweep
+import time as _time_for_sweep
+from typing import TYPE_CHECKING as _TYPE_CHECKING_FOR_SWEEP
+if _TYPE_CHECKING_FOR_SWEEP:
+    from history_footnote.saves.storage.save_manager import SaveManager as _SaveManagerType
+
+
+def _sweep_idle_sessions_once() -> int:
+    """每 N 秒由 daemon 调一次：清理过期 session（且落盘存档）
+
+    Returns:
+        清理的 session 数
+    """
+    expired_ids: list[str] = []
+    with SESSION_POOL._pool_lock:
+        now = _time_for_sweep.time()
+        for sid, (game, lock) in list(SESSION_POOL._pool.items()):
+            if now - lock.last_used_at > SESSION_POOL.session_ttl_seconds:
+                expired_ids.append(sid)
+
+    if not expired_ids:
+        return 0
+
+    # 落盘 + 从 pool remove
+    try:
+        from history_footnote.resource_cache import get_save_manager
+        sm = get_save_manager()
+    except Exception as e:
+        logger.warning(f"[SessionPool.sweep] get_save_manager 失败，跳过 persistence: {e}")
+        sm = None
+
+    moved = 0
+    for sid in expired_ids:
+        entry = SESSION_POOL.get(sid)  # 重新拿 — 别的线程可能已经 remove 了
+        if entry is None:
+            continue
+        game = entry[0]
+        # 落盘（idempotent — 重复 save 会覆盖）
+        if sm is not None:
+            try:
+                # SaveManager.save_state 需要 (session, slot, state_data) 三参
+                state_data = game.state.to_dict()
+                # 补 v2.5+ 字段（同 web_server/routers/session.py:248）
+                state_data["fate_hand"] = list(getattr(game.state, "fate_hand", []) or [])
+                state_data["fate_used"] = list(getattr(game.state, "fate_used", []) or [])
+                state_data["fate_event_flags"] = list(getattr(game.state, "fate_event_flags", []) or [])
+                state_data["npc_relations"] = dict(getattr(game.state, "npc_relations", {}) or {})
+                state_data["active_buffs"] = list(getattr(game.state, "active_buffs", []) or [])
+                state_data["seed"] = int(getattr(game.state, "seed", 0) or 0)
+                sm.save_state(game.session, "auto", state_data, summary="sweep:TTL 过期自动存档")
+                logger.info(f"[SessionPool.sweep] 💾 persisted session={sid[:8]} (TTL expired)")
+            except Exception as e:
+                logger.warning(f"[SessionPool.sweep] 持久化 sid={sid[:8]} 失败（仍 remove）: {e}")
+        SESSION_POOL.remove(sid)
+        moved += 1
+    return moved
+
+
+def _sweep_daemon() -> None:
+    """后台 daemon：每 60 秒扫一次过期 session，落盘 → 移除"""
+    while True:
+        try:
+            _time_for_sweep.sleep(60.0)
+        except Exception:
+            return  # e.g. interpreter shutdown
+        try:
+            n = _sweep_idle_sessions_once()
+            if n > 0:
+                logger.info(f"[SessionPool.sweep] 清理 {n} 个过期 session")
+        except Exception as e:
+            logger.warning(f"[SessionPool.sweep] 异常（继续运行）: {e}")
+
+
+# 启动 sweep daemon（线程）。与 LLM_THROTTLE / SAVE_QUEUE 一起模块级常驻。
+_thread_sweep_started = False
+_thread_sweep_lock = _threading_for_sweep.Lock()
+
+
+def ensure_sweep_daemon_started() -> None:
+    """幂等启动 sweep daemon（多次调用安全）"""
+    global _thread_sweep_started
+    with _thread_sweep_lock:
+        if _thread_sweep_started:
+            return
+        t = _threading_for_sweep.Thread(target=_sweep_daemon, daemon=True, name="session-sweep")
+        t.start()
+        _thread_sweep_started = True
+        logger.info("[SessionPool] 启动过期 session 扫描 daemon（每 60s 一次）")
+
+
+# 模块导入即启动（保证 web_server 启动时 sweep 也活）
+ensure_sweep_daemon_started()
+
 from history_footnote.config import Concurrency as _ConcCfg
 LLM_THROTTLE = LLMThrottle(
     max_concurrent=_ConcCfg.MAX_CONCURRENT,

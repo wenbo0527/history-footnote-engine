@@ -32,26 +32,28 @@
   let error = $state<string | null>(null);
   let lastLoadedSessionId = $state<string | null>(null);
   // 🆕 v2.6.2 命运卡数据
-  let npcRelations: Array<[string, number]> = $state([]);
+  // 🆕 v2.10.11+：后端返回 {name, relation, level?, note?} 结构（不是 [string,number] tuple）
+  type NpcRelation = { name: string; relation: string; level?: number; note?: string };
+  let npcRelations: NpcRelation[] = $state([]);
   let fateNpcEffects: FateNpcEffect[] = $state([]);
   let activeBuffs: ActiveBuff[] = $state([]);
 
   // 🆕 v2.10.2 fix: 关系详注派生（用 wiki.relationships 替代后端不存在的 wiki.markdown）
+  // 🆕 v2.10.11+：WikiResponse.relationships 是 WikiRelationship[]（不是 Record）
   const relationshipNotes = $derived.by(() => {
     if (!wiki) return [];
     const notes: Array<{ key: string; name: string; value: string }> = [];
-    const rels = wiki.relationships || {};
-    for (const [name, info] of Object.entries(rels)) {
-      if (typeof info === 'string') {
-        notes.push({ key: name, name, value: info });
-      } else if (info && typeof info === 'object') {
-        // info 可能是 {relation: '家人', level: 5, note: '...'}
-        const value = info.note
-          || info.relation
-          || info.level
-          || JSON.stringify(info);
-        notes.push({ key: name, name, value: String(value) });
+    const rels = wiki.relationships || [];
+    for (const rel of rels) {
+      // WikiRelationship = { relation, level?, note?, name? }
+      const name = rel.name || rel.relation;
+      const value = rel.note
+        || rel.relation
+        || (rel.level !== undefined ? String(rel.level) : '');
+      if (name && value) {
+        notes.push({ key: String(name), name: String(name), value });
       }
+    }
     }
     return notes;
   });
@@ -121,7 +123,8 @@
   );
 
   // NPC（来自 wiki）—— 🆕 v2.10.2 fix: WikiResponse union 类型没有 characters 字段
-  const npcs = $derived((wiki?.characters ?? []) as WikiCharacter[]);
+  // 🆕 v2.10.11+：WikiResponse.characters 已存在（typed）
+  const npcs = $derived(wiki?.characters ?? []);
 
   // 合并去重：家人优先（按 name + identity 标识）
   const allChars = $derived.by(() => {
