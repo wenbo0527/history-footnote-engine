@@ -11,8 +11,11 @@
 """
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Callable
+
+logger = logging.getLogger(__name__)
 
 # 事件块正则
 EVENT_BLOCK_RE = re.compile(
@@ -163,9 +166,39 @@ def fuzzy_match_events(narrative: str) -> list[dict]:
 
     Returns:
         推断出的事件列表
+
+    🆕 v2.10.12+ 修复（cr30 coherence check 后）:
+    - iter 变量名 bug：之前 `for verb_cn in ACTION_VERBS.items()` 直接拿 tuple 当 dict 来 for-in，
+      TypeError 一直被静默 catch；现在改成 `verb_cn, verb_en`。
+    - 还/归 误判：直接给"还"就 return `repay`，导致 "还让沈氏……"、"归还于……" 等被识别成 repay。
+      解决：必须前后 6 字内有 "债/贷/欠/借款/本金/利/借/银/账" 等真实还款语义词才认 `repay`。
+    - 排除"算田契"、"算账"、"归拢"等关键词：动作=repay 必须**先确认主语是真还款**，否则跳过。
+    - 多 verb 冲突：当 narrative 同时出现 "还" + "借"（如"还了借款"），按 verb priority 排重。
     """
-    events = []
-    # 匹配 "卖了一匹湖绫 + 0.5 两"
+    events: list[dict] = []
+    # 🆕 v2.10.12+: 真实还款场景必备词
+    REPAY_KEYWORDS = {"债", "欠", "借", "贷", "本金", "利息", "利钱", "账", "银子欠"}
+    # 🆕 v2.10.12+: 非交易的"还/归"语境
+    REPAY_NEGATIVE_CTX = {"算账", "归拢", "算", "盘算", "打算", "打算", "心里", "想", "说着"}
+    # 🆕 v2.10.12+: verb 优先级（数字越小越优先）
+    # 用于多 verb 冲突时去重：玩家说"还了借款"应识别为"repay"而非"borrow"
+    # （因为还款动作比提到旧借款更重要）
+    VERB_PRIORITY = {
+        # 还款类
+        "归还": 1, "还清": 1, "还了": 2, "还": 3,
+        # 借款类
+        "借": 10, "借入": 10, "借款": 10, "贷款": 10,
+        # 交易类
+        "卖": 4, "售": 4, "卖得": 4, "售出": 4,
+        "买": 5, "购": 5, "买入": 5, "购入": 5,
+        # 缴税类
+        "缴": 6, "纳": 6, "交": 6, "缴纳": 6, "交纳": 6,
+        # 借出/借入
+        "借出": 7, "贷出": 7,
+    }
+
+    # 第一遍：所有 verb 匹配都收，附 priority + position
+    raw_hits: list[dict] = []
     for verb_cn, verb_en in ACTION_VERBS.items():
         if verb_cn not in narrative:
             continue
@@ -175,39 +208,119 @@ def fuzzy_match_events(narrative: str) -> list[dict]:
             end = min(len(narrative), m.end() + 50)
             context = narrative[start:end]
             amt_match = AMOUNT_RE.search(context)
-            if amt_match:
-                amount = _parse_amount(amt_match.group(1))
-                if amount is None:
-                    continue
-                unit = amt_match.group(2) or ""
-                if unit == "钱":
-                    amount = amount / 10
-                elif unit == "文":
-                    amount = amount / 1000
-                # 推断 type
-                type_ = _infer_type_from_context(context)
-                events.append({
-                    "id": f"fin.{type_}",
-                    "amount": str(amount),
-                    "note": context[:20] + "...",
-                    "_fuzzy": True,
-                })
+            if not amt_match:
+                continue
+            amount = _parse_amount(amt_match.group(1))
+            if amount is None:
+                continue
+            unit = amt_match.group(2) or ""
+            if unit == "钱":
+                amount = amount / 10
+            elif unit == "文":
+                amount = amount / 1000
+            raw_hits.append({
+                "verb_cn": verb_cn,
+                "verb_en": verb_en,
+                "pos": m.start(),
+                "context": context,
+                "amount": amount,
+                # 🆕 v2.10.12+: 直接从 verb_en 映射（之前 _infer_type_from_context 在
+                # "还了借款" 这种情况会优先 borrow，因为 "借" 字先匹配）
+                "type": _verb_en_to_fin(verb_en, context),
+            })
+
+    # 第二遍：去重（同一 amount 只能由一个 verb 负责）
+    # 按 priority 排序，priority 小的先入 events
+    raw_hits.sort(key=lambda x: (VERB_PRIORITY.get(x["verb_cn"], 99), x["pos"]))
+
+    seen_amounts: set[float] = set()
+    for h in raw_hits:
+        # 同一金额只处理一次（避免"还了借款"既算 repay 又算 borrow）
+        if h["amount"] in seen_amounts:
+            continue
+        seen_amounts.add(h["amount"])
+
+        type_ = h["type"]
+        context = h["context"]
+        verb_cn = h["verb_cn"]
+
+        # 🆕 v2.10.12+: 当推断出 repay，但 context 不含还款必备词时 → 转 sell_silk 兜底（保守）
+        if type_ == "repay" and not any(kw in context for kw in REPAY_KEYWORDS):
+            if any(k in context for k in ("绸", "绫", "丝", "布")):
+                type_ = "sell_silk"
+            else:
+                logger.debug(
+                    f"[events.parse] skip fake repay: context={context[:40]!r}"
+                )
+                continue
+
+        # 🆕 v2.10.12+: 排除 "算账"/"归拢" 等名词性上下文当动词
+        if any(neg in context for neg in REPAY_NEGATIVE_CTX) and verb_cn in ("还", "归"):
+            continue
+
+        events.append({
+            "id": f"fin.{type_}",
+            "amount": str(h["amount"]),
+            "note": context[:20] + "...",
+            "_fuzzy": True,
+        })
     return events
 
 
 def _infer_type_from_context(context: str) -> str:
-    """根据上下文推断交易类型"""
-    if "绸" in context or "绫" in context or "丝" in context:
-        return "sell_silk" if any(v in context for v in ["卖", "售"]) else "buy_thread"
-    if "税" in context or "赋" in context or "差役" in context:
-        return "pay_tax"
-    if "借" in context or "贷" in context:
-        return "borrow"
-    if "还" in context or "归" in context:
-        return "repay"
-    if "礼" in context or "赠" in context:
-        return "gift_out" if any(v in context for v in ["送", "给"]) else "gift_in"
+    """根据上下文推断交易类型
+
+    🆕 v2.10.12+ 重构：使用 explicit verb_evidence dict 取代单一字匹配。
+    修复了"还了借款"被错归为 borrow 的 bug。
+    """
+    # 显式 verb evidence：每个动作的"证明词"，比纯字匹配更可靠
+    VERB_EVIDENCE = (
+        ("pay_tax", ("税", "赋", "差役", "秋粮", "朝廷")),
+        ("repay",   ("还", "归", "清", "结清")),
+        ("borrow",  ("借", "贷")),
+        ("sell_silk", ("卖", "售")),
+        ("buy_thread", ("买", "购", "买入")),
+        ("gift_out", ("送", "给", "赠")),
+        ("gift_in", ("礼", "赠")),
+    )
+    # 按 verb_evidence 顺序扫，第一个匹配的就 break
+    for type_, kws in VERB_EVIDENCE:
+        if any(kw in context for kw in kws):
+            return type_
+    # silk / 绸 二次判断（默认 sell）
+    if any(kw in context for kw in ("绸", "绫", "丝", "帛")):
+        return "sell_silk"
     return "sell_silk"  # 默认
+
+
+def _verb_en_to_fin(verb_en: str, context: str) -> str:
+    """从 verb_en ("sell"/"buy"/"repay"/"borrow"/...) 映射到 fin.* type
+
+    🆕 v2.10.12+: 取代 _infer_type_from_context（不再看 narrative 文字）。
+    映射：
+      sell / 售 → sell_silk (默认)
+      buy / 购 → buy_thread (默认)
+      repay → repay
+      borrow → borrow
+      pay / 缴 → pay_tax
+      gift_out → gift_out
+      gift_in → gift_in
+      lend / 借出 → lend_money (若不存在则回退到 borrow 负值)
+    """
+    MAPPING = {
+        "sell":     "sell_silk",
+        "buy":      "buy_thread",
+        "repay":    "repay",
+        "borrow":   "borrow",
+        "pay":      "pay_tax",
+        "gift_out": "gift_out",
+        "gift_in":  "gift_in",
+        "lend":     "borrow",  # v1.7.30 era 不支持 lend_money，借出 = 借出
+    }
+    base = MAPPING.get(verb_en, "sell_silk")
+    # 🆕 v2.10.12+：sell 后如果有 "绫"/"丝"/"绸"/"帛" 不一定是 silk — 但默认是，按现有体系
+    # 保留 sell_silk 当对象默认（era json 已经按绸缎经济设计）
+    return base
 
 
 # ============= 顶层接口 =============

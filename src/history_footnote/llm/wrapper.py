@@ -165,6 +165,13 @@ class LLMUsageLogger:
             self._recent.clear()
 
 
+# 🆕 v2.10.12+: Provider 冷却机制（模块级全局状态）
+# 一个 provider 连续失败 COOLDOWN_AFTER 次 → 进入冷却 COOLDOWN_TTL 秒，期间被跳过。
+# 解决：v2.10.11+ 装 langchain_openai 后 deepseek (balance 0) 被激活，每次 invoke 浪费 8-15s 试错。
+_PROVIDER_COOLDOWN: dict[str, float] = {}
+_PROVIDER_FAIL_COUNT: dict[str, int] = {}
+
+
 # 全局单例
 _usage_logger = LLMUsageLogger()
 
@@ -314,18 +321,36 @@ class LLMWrapper:
             RuntimeError: 所有 provider 都失败
         """
         timeout = timeout or self.timeout
+
+        # 模块级 cooldown dict（共用所有 LLMWrapper 实例）
+        global _PROVIDER_COOLDOWN, _PROVIDER_FAIL_COUNT
         request_id = str(uuid.uuid4())[:8]
         errors = []
 
+        # 🆕 v2.10.12+: 已知坏的 provider 在本进程永久跳过
+        # 原因：v2.10.11+ 装 langchain_openai 后，deepseek 余额不足持续报错；
+        # 每次 invoke 浪费时间每个 provider 走 timeout。如果一个 provider 短时间内
+        # （本次进程）连续失败 ≥ COOLDOWN_AFTER 次，进入 cooldown，跳过 (ttl=COOLDOWN_TTL 秒)。
+        COOLDOWN_AFTER = 2
+        COOLDOWN_TTL = 600  # 10 分钟
+
         for provider_idx, provider in enumerate(self.fallback_chain):
+            # 跳过 cooldown 的 provider（不在 self._broken 中查找，因同一名称可重建）
+            now_ts = time.time()
+            cooldown_until = _PROVIDER_COOLDOWN.get(provider, 0)
+            if now_ts < cooldown_until:
+                logger.debug(
+                    f"[LLMWrapper:{request_id}] skip {provider} "
+                    f"(cooldown {(cooldown_until - now_ts):.0f}s left)"
+                )
+                continue
             is_fallback = provider_idx > 0
             # 同 provider 重试
             for attempt in range(self.retry_on_same + 1):
                 llm = self._get_llm(provider)
                 # 🆕 v2.10.11+：provider 创建失败（无包 / 无 API key）→ 短路到下个 provider
-                # 不再走整个 timeout 周期才发 AttributeError
                 if llm is None:
-                    error_msg = f"provider '{provider}' unavailable (creation failed earlier — check API key / optional dep)"
+                    error_msg = f"provider '{provider}' unavailable (creation failed)"
                     errors.append((provider, error_msg, False))
                     logger.debug(f"[LLMWrapper:{request_id}] skip provider={provider}: not available")
                     break  # 不重试，直接下个 provider
@@ -342,6 +367,8 @@ class LLMWrapper:
                     response = self._invoke_with_timeout(llm, messages, timeout)
                     latency_ms = int((time.time() - ts_start) * 1000)
                     success = True
+                    # 🆕 v2.10.12+: 成功重置本 provider 的 fail count
+                    _PROVIDER_FAIL_COUNT.pop(provider, None)
                     usage = extract_usage(response)
                     # 记录日志
                     _usage_logger.log({
@@ -391,8 +418,21 @@ class LLMWrapper:
                     **usage,
                 })
                 errors.append((provider, error_msg, timeout_occurred))
+                # 🆕 v2.10.12+: 累加 fail count，连失败 ≥ COOLDOWN_AFTER 进入 cooldown
+                _PROVIDER_FAIL_COUNT[provider] = _PROVIDER_FAIL_COUNT.get(provider, 0) + 1
+                if _PROVIDER_FAIL_COUNT[provider] >= COOLDOWN_AFTER:
+                    cooldown_until = time.time() + COOLDOWN_TTL
+                    _PROVIDER_COOLDOWN[provider] = cooldown_until
+                    logger.warning(
+                        f"[LLMWrapper:{request_id}] 🧊 COOLDOWN: provider={provider} "
+                        f"进入冷却 {COOLDOWN_TTL}s "
+                        f"（本次进程连续失败 {_PROVIDER_FAIL_COUNT[provider]} 次）"
+                    )
                 # 不重试：直接跳到下个 provider
                 break
+        # 重置成功 provider 的 fail count
+        # （注意：上面 return 时已经退出函数，所以这里只在全失败路径执行）
+        # 一般全失败由 RuntimeError 抛，走不到这里
         # 所有 provider 都失败
         error_summary = "; ".join(
             f"{p}:{'(timeout)' if to else e[:100]}"

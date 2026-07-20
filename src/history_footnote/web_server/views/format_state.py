@@ -90,7 +90,12 @@ def format_state(game) -> dict:
     """
     s = game.state
     recent_narr = []
-    for nh in s.narrative_history[-3:]:
+    # 🆕 v2.10.12+: narrative sliding window 从 3 改为 12 条
+    # 原因（cr30 coherence check 发现）：
+    # - turn 29 京城叙事完全失踪（玩家输入"去京城"但 narrative 没保留）
+    # - 看 financial_log 时无法对应 narrative context
+    # - state 实际 NARRATIVE_RECENT_SIZE = 20，但 format_state 截了 3
+    for nh in s.narrative_history[-12:]:
         recent_narr.append({
             "round": nh.get("round"),
             "summary": nh.get("summary", ""),

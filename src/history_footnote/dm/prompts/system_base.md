@@ -400,6 +400,31 @@ _character_wiki_summary_  // 占位符：运行时填入 Wiki markdown 摘要
 - 城市用 id（"suzhou"，不要"苏州"）
 - 如果本回合无结构化变更 → 输出 `<events/>`（空块，不要省略）
 
+### 🆕 v2.10.12+ 反过度触发规则（防 LLM 自作主张）
+
+**核心原则**：`<events>` 只记录"实际发生的事实"，**不记录"被告知的事实"**。
+
+错误示范（**不要这样**）：
+- ❌ 里长告诉你"春税一两八钱八分" → 输出 `<event id="fin.pay_tax" amount="1.88"/>`  
+  ❌ 这是**告知**，不是**已经支付**。玩家只是被告知有这个税单，**还没选择**。等玩家输入"缴税"再触发。
+- ❌ 路上看见绸缎铺子标"湖绫七钱银/匹" → 输出 `<event id="fin.sell_silk"/>`  
+  ❌ 看见 ≠ 卖。等玩家输入"卖"再记。
+- ❌ 牙人提到"欠款三两" → 输出 `<event id="fin.borrow" amount="3.0"/>`  
+  ❌ 提到 ≠ 借。等真发生动作。
+
+正确示范：
+- ✅ narrative 描写玩家**真的**掏银子 → 写 `<event id="fin.pay_tax" amount="1.88"/>`
+- ✅ narrative 描写玩家**真的**收银 → 写 `<event id="fin.sell_silk"/>`
+- ✅ narrative 描写玩家**真的**签借契 → 写 `<event id="fin.borrow"/>`
+
+**判断标准**：**玩家这回合是否在 narrative 中有"真动作"**（动词 + 动作方向 + 主体是玩家自己）？
+- 只有动作完成了，才计入 `<events>` 块。
+- 只看金额数字、出现提及但没动作的 —— **不**写入 `fin.*` 事件，**也不**写入其他 state-changing event。
+
+**提示来源识别**（防止 LLM 误判）：
+- `"里长说" / "告示" / "门外的标" / "听到"` 等前面是 **被告知/看见**，**不是**动作。
+- 只有 narrative 里出现主角"你"+ 动词（付/掏/收/卖/买/借/还/缴），才触发 fin.*。
+
 **15 类事件 id 前缀**（14 原 + 1 新）：
 - `fin.*` 财务（sell_silk/buy_thread/pay_tax/borrow/repay/...）
 - `city.*` 城市（arrive.{city_id} / leave.{city_id}）

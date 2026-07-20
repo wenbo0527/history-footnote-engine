@@ -641,6 +641,33 @@ class GameLoop:
         )
         self.state.character_wiki = wiki.to_dict()
 
+        # 🆕 v2.10.12+: cash reconciliation（每回合对账）
+        # 目的：cr30 实测发现 cash 9.2 → 0 跳变无法对账。
+        # 每个回合结束，从 financial_log 重新算 cash，和当前 state.cash 对比，
+        # 如有 mismatch 立即 DEBUG 级别报警（不阻塞流程）。
+        try:
+            expected_cash = 0.0
+            for fl in self.state.financial_log:
+                if fl.get("type") == "borrow":
+                    continue  # borrow 不动 cash，只动 debt
+                # 🆕 还款特殊：repay 用 debt，不直接 -cash
+                expected_cash += fl.get("amount", 0)
+            if expected_cash > 0:
+                diff = round(self.state.cash - expected_cash, 3)
+                if abs(diff) > 0.01:
+                    logger.warning(
+                        f"[cash-reconcile] R{self.state.round_number} "
+                        f"state.cash={self.state.cash:.3f} "
+                        f"expected_from_log={expected_cash:.3f} "
+                        f"diff={diff:+.3f}（mismatch！dev 需查 implicit 资金流出）"
+                    )
+                else:
+                    logger.debug(
+                        f"[cash-reconcile] R{self.state.round_number} OK ({self.state.cash:.2f} = {expected_cash:.2f})"
+                    )
+        except Exception as reconcile_err:
+            logger.debug(f"[cash-reconcile] exception: {reconcile_err}")
+
         # === 步骤9：呈现给玩家 ===
         # 先回显玩家输入（明确告知"这是你做的事"）
         print(f"\n> {player_input}")
