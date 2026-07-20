@@ -29,6 +29,14 @@ def _log(logger, msg: str) -> None:
         logger.warning(msg)
 
 
+# 🆕 v2.10.11+：arrive 拦截去重集合（per process）
+# 理由：narrative 缺移动关键词 是 LLM 偶发问题（数据微调就能修），但同一个 session_id+event_id
+# 已经报过不需要再 spam 日志。修法：
+# - 第一次看到：WARNING（开发时能立刻看）
+# - 已报告过：DEBUG（保留信号但不噪）
+_ARRIVE_INTERCEPT_REPORTED: set[tuple[str, str]] = set()
+
+
 # ============= 处理器 =============
 
 def _apply_fin_event(state, event: dict, logger=None) -> bool:
@@ -91,8 +99,21 @@ def _apply_city_event(state, event: dict, logger=None) -> bool:
         travel_keywords = ["船", "行至", "到了", "去了", "来到", "进城", "路过", "坐船", "坐车", "行路", "赶路", "启程", "离开", "动身", "赶去", "抵达"]
         has_travel = any(kw in narrative for kw in travel_keywords)
         if not has_travel:
+            sid = getattr(state, "session_id", "?") if state else "?"
+            eid = str(event.get("id") or "?")
+            key = (str(sid), eid)
             if logger:
-                logger.warning(f"[W77] arrive 拦截：narrative 无移动关键词（id={event.get('id')}, narrative 前 50 字={narrative[:50]!r}）")
+                if key not in _ARRIVE_INTERCEPT_REPORTED:
+                    _ARRIVE_INTERCEPT_REPORTED.add(key)
+                    logger.warning(
+                        f"[W77] arrive 拦截：narrative 无移动关键词（sid={sid[:8]}..., id={eid}, "
+                        f"narrative 前 50 字={narrative[:50]!r}）"
+                    )
+                else:
+                    # 已报告过 — DEBUG 级别（保留信号但不噪）
+                    logger.debug(
+                        f"[W77] arrive 拦截（重复）sid={sid[:8]}..., id={eid}"
+                    )
             return True  # 拦截，不进 pending
         # W77: 写入 pending_city_change，等用户确认
         state.pending_city_change = {

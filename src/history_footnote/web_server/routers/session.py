@@ -213,9 +213,17 @@ def handle_POST_start(handler, body) -> bool:
         def _async_prepare_chapter():
             try:
                 logger.info(f"[start] async chapter 1 蓝图预生成启动 (sid={game.session.session_id[:8]}...)")
-                if hasattr(game, "_chapter_coordinator"):
-                    game._chapter_coordinator.advance_to_chapter(1)
-                    logger.info(f"[start] async chapter 1 预生成完成 (current_chapter={game.state.chapter_state.current_chapter})")
+                coord = getattr(game, "_chapter_coordinator", None)
+                if coord is not None:
+                    # 🆕 v2.10.11+：实际 ChapterCoordinator 方法是 _init_first_chapter / pre_step
+                    if hasattr(coord, "_init_first_chapter"):
+                        coord._init_first_chapter()
+                    else:
+                        coord.pre_step()
+                    logger.info(
+                        f"[start] async chapter 1 预生成完成 "
+                        f"(current_chapter={game.state.chapter_state.current_chapter})"
+                    )
                 else:
                     # v2.10.5 兜底：老 game_loop 没 _chapter_coordinator 时静默
                     logger.debug(f"[start] game 无 _chapter_coordinator，跳过 chapter 预生成")

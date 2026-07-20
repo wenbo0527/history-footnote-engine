@@ -22,8 +22,11 @@
 """
 from __future__ import annotations
 
+import logging
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 # 🆕 单一权威：所有 SKILL 元数据正则
@@ -144,6 +147,16 @@ def extract_json_from_text(text: str) -> Optional[str]:
     """
     if not text:
         return None
+    # 🆕 v2.10.11+：某些 Minimax 端点偶尔返回 list 而非 str（tool_use content）
+    # 防御：转字符串 fallback（不应崩溃，因为已能由下游解析）
+    if not isinstance(text, str):
+        try:
+            text = str(text)
+        except Exception:
+            logger.warning(
+                f"[sanitizer] extract_json_from_text 收到非字符串 (type={type(text).__name__})"
+            )
+            return None
     raw = None
     # 1. markdown 包裹 + 括号深度匹配
     m = JSON_BLOCK_PATTERN.search(text)

@@ -235,18 +235,43 @@ def _safe_dispatch_error(handler, e: Exception, scope: str, fn_name: str = "") -
     """dispatch 层兜底：log + 500 + error_id
 
     仅在 handler 未装饰 @safe_route 时才会触发（装饰过的 handler 自己处理）。
+
+    🆕 v2.10.11+
+    - 客户端在 LLM 30+s 处理时断连接（BrokenPipe / ConnectionReset）极常见
+    - 不再记 ERROR，只记 DEBUG（已断连接不是 server bug）
+    - 同时原 handler 内部的 Broken pipe 也归一化
     """
     error_id = safe_error_id()
     suffix = f" ({fn_name})" if fn_name else ""
+
+    # 🆕 v2.10.11+：连接已断不算 server bug，降低日志级别
+    import errno
+    if isinstance(e, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)) or (
+        hasattr(e, 'errno') and e.errno in (errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED)
+    ):
+        # 客户端已断：DEBUG 级（user friendly 的"无害"事件）
+        _dispatch_logger.debug(
+            f"[dispatch] {scope}{suffix} client disconnected before response: {type(e).__name__}"
+        )
+        return  # 不发 500，客户端不需要
+
     _dispatch_logger.exception(f"[dispatch] {scope}{suffix} {error_id} failed: {e}")
     try:
         handler._json(500, {
             "error": f"{scope} failed",
             "error_id": error_id,
         })
-    except Exception:
+    except Exception as inner:
         # 连接已断等极端情况 — 静默吞掉（无法发 500）
-        _dispatch_logger.exception(f"[dispatch] {scope} {error_id} failed to send error response")
+        # 🆕 v2.10.11+：连接断开是常见情况，只 DEBUG
+        if isinstance(inner, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)) or (
+            hasattr(inner, 'errno') and inner.errno in (errno.EPIPE, errno.ECONNRESET, errno.ECONNABORTED)
+        ):
+            _dispatch_logger.debug(
+                f"[dispatch] {scope} {error_id} client disconnected while sending error: {type(inner).__name__}"
+            )
+        else:
+            _dispatch_logger.exception(f"[dispatch] {scope} {error_id} failed to send error response")
 
 
 def _inspect_signature(fn) -> int:
