@@ -171,9 +171,48 @@ class LLMUsageLogger:
 _PROVIDER_COOLDOWN: dict[str, float] = {}
 _PROVIDER_FAIL_COUNT: dict[str, int] = {}
 
+# 🆕 v2.10.13+: Stall rate 滑动窗口（每个 provider 最近 10 次的成败）
+# 当某个 provider 在窗口内失败率 > 50% → 提前进入 cooldown
+# 解决问题：v2.10.12 的 cooldown 只看"连续失败"，没看"近期失败率"。
+# 现发现 minimax 偶发 stall 是"分散失败"——每次 invoke 都 30% 概率 stall 65-130s
+# 但连续失败次数不会马上到 COOLDOWN_AFTER，新机制直接看滑动失败率。
+_PROVIDER_RECENT: dict[str, list[bool]] = {}  # True=success, False=fail
+_PROVIDER_RECENT_MAX = 10
+
 
 # 全局单例
 _usage_logger = LLMUsageLogger()
+
+
+def _record_provider_outcome(provider: str, success: bool) -> None:
+    """🆕 v2.10.13+: 记录 provider 成功率进滑动窗口
+
+    触发条件：每次 wrapper.invoke 调用后
+    作用：当窗口内失败率 >= 50%，自动把 provider 推进 cooldown（避免在 stall 期反复试错）
+
+    Args:
+        provider: provider name (e.g., "minimax-anthropic")
+        success: True = 调用成功；False = timeout/error
+    """
+    bucket = _PROVIDER_RECENT.setdefault(provider, [])
+    bucket.append(success)
+    # 维持窗口大小
+    while len(bucket) > _PROVIDER_RECENT_MAX:
+        bucket.pop(0)
+    # 计算失败率
+    if len(bucket) >= 4:  # 至少 4 次样本才触发
+        fail_count = sum(1 for s in bucket if not s)
+        fail_ratio = fail_count / len(bucket)
+        if fail_ratio >= 0.5 and provider not in _PROVIDER_COOLDOWN:
+            # 🆕 v2.10.13+: Stall rate 提前 cooldown
+            cooldown_until = time.time() + 300  # 5 分钟冷却（vs COOLDOWN_TTL 600）
+            _PROVIDER_COOLDOWN[provider] = cooldown_until
+            import logging
+            _stall_log = logging.getLogger(__name__)
+            _stall_log.warning(
+                f"[LLMWrapper:stall-rate] 🧊 PREEMPTIVE COOLDOWN: provider={provider} "
+                f"近 {len(bucket)} 次失败率 {fail_ratio:.0%}，提前进入 300s 冷却"
+            )
 
 
 def get_usage_logger() -> LLMUsageLogger:
@@ -334,6 +373,25 @@ class LLMWrapper:
         COOLDOWN_AFTER = 2
         COOLDOWN_TTL = 600  # 10 分钟
 
+        # 🆕 v2.10.13+: Adaptive timeout ladder
+        # 解决 minimax-anthropic 服务端 stall 30-130s 的问题：
+        # - 第一次失败 → 等 1s + 用 60s timeout 重试
+        # - 第二次失败 → 等 2s + 用 90s timeout 重试
+        # - 第三次失败 → 等 3s + 用 120s timeout 重试
+        # - 都失败 → 标记 PROVIDER_STALL_RATE 上升
+        #
+        # 借鉴 TCP 重传退避思路：每次失败都把 timeout 加大 1.5-2x，
+        # 同时在每次重试间 sleep 一个 backoff，让服务端有时间恢复。
+        #
+        # 注意：timeout 是 provider-scoped（每个 provider 重置 attempt 数）
+        TIMEOUT_LADDER_S = [30, 60, 90, 120]  # 最多 4 次尝试
+        BACKOFF_LADDER_S = [0, 1, 2, 3]  # 失败后 sleep 时长
+        MAX_LADDER_LEN = min(len(TIMEOUT_LADDER_S), self.retry_on_same + 1, 4)
+
+        # 🆕 v2.10.13+: Stall rate 跟踪（每个 provider 滑动窗口 = 10 次调用）
+        # 当窗口内 stall_ratio > STALL_RATIO_THRESHOLD，触发 cooldown 提前进入。
+        STALL_WINDOW_SIZE = 10
+        STALL_RATIO_THRESHOLD = 0.5  # 50%+ 失败率
         for provider_idx, provider in enumerate(self.fallback_chain):
             # 跳过 cooldown 的 provider（不在 self._broken 中查找，因同一名称可重建）
             now_ts = time.time()
@@ -345,8 +403,22 @@ class LLMWrapper:
                 )
                 continue
             is_fallback = provider_idx > 0
-            # 同 provider 重试
-            for attempt in range(self.retry_on_same + 1):
+            # 🆕 v2.10.13+: 用 adaptive ladder 替代固定 retry_on_same
+            # ladder = [timeout0=30s, timeout1=60s, timeout2=90s, timeout3=120s]
+            # 每次失败后 sleep backoff[i]，给服务端恢复时间
+            for attempt in range(MAX_LADDER_LEN):
+                # adaptive timeout（替代固定的 self.timeout）
+                this_timeout = TIMEOUT_LADDER_S[attempt]
+                this_backoff = BACKOFF_LADDER_S[attempt]
+
+                # 重试前先 backoff sleep（首次 attempt 不 sleep）
+                if attempt > 0 and this_backoff > 0:
+                    logger.info(
+                        f"[LLMWrapper:{request_id}] ⏸️  backoff {this_backoff}s "
+                        f"before retry attempt {attempt + 1}"
+                    )
+                    time.sleep(this_backoff)
+
                 llm = self._get_llm(provider)
                 # 🆕 v2.10.11+：provider 创建失败（无包 / 无 API key）→ 短路到下个 provider
                 if llm is None:
@@ -362,9 +434,10 @@ class LLMWrapper:
                 try:
                     logger.info(
                         f"[LLMWrapper:{request_id}] invoke provider={provider} "
-                        f"attempt={attempt + 1} timeout={timeout}s"
+                        f"attempt={attempt + 1}/{MAX_LADDER_LEN} timeout={this_timeout}s "
+                        f"(ladder='{this_timeout}s, backoff={this_backoff}s')"
                     )
-                    response = self._invoke_with_timeout(llm, messages, timeout)
+                    response = self._invoke_with_timeout(llm, messages, this_timeout)
                     latency_ms = int((time.time() - ts_start) * 1000)
                     success = True
                     # 🆕 v2.10.12+: 成功重置本 provider 的 fail count
@@ -388,21 +461,23 @@ class LLMWrapper:
                             f"[LLMWrapper:{request_id}] ✨ FALLBACK SUCCESS: "
                             f"primary failed, {provider} returned in {latency_ms}ms"
                         )
+                    # 🆕 v2.10.13+: 记录 provider 成功（滑动窗口）
+                    _record_provider_outcome(provider, True)
                     return response
                 except FuturesTimeout:
                     timeout_occurred = True
-                    error_msg = f"timeout after {timeout}s"
+                    error_msg = f"timeout after {this_timeout}s"
                     latency_ms = int((time.time() - ts_start) * 1000)
                     logger.warning(
                         f"[LLMWrapper:{request_id}] ⏱️  TIMEOUT: provider={provider} "
-                        f"after {timeout}s, attempt={attempt + 1}"
+                        f"after {this_timeout}s, attempt={attempt + 1}/{MAX_LADDER_LEN}"
                     )
                 except Exception as e:
                     error_msg = f"{type(e).__name__}: {str(e)[:200]}"
                     latency_ms = int((time.time() - ts_start) * 1000)
                     logger.warning(
                         f"[LLMWrapper:{request_id}] ❌ ERROR: provider={provider} "
-                        f"attempt={attempt + 1} {error_msg}"
+                        f"attempt={attempt + 1}/{MAX_LADDER_LEN} {error_msg}"
                     )
                 # 记录失败的调用
                 _usage_logger.log({
@@ -418,6 +493,8 @@ class LLMWrapper:
                     **usage,
                 })
                 errors.append((provider, error_msg, timeout_occurred))
+                # 🆕 v2.10.13+: 记录 provider 失败（滑动窗口）
+                _record_provider_outcome(provider, False)
                 # 🆕 v2.10.12+: 累加 fail count，连失败 ≥ COOLDOWN_AFTER 进入 cooldown
                 _PROVIDER_FAIL_COUNT[provider] = _PROVIDER_FAIL_COUNT.get(provider, 0) + 1
                 if _PROVIDER_FAIL_COUNT[provider] >= COOLDOWN_AFTER:
@@ -428,7 +505,16 @@ class LLMWrapper:
                         f"进入冷却 {COOLDOWN_TTL}s "
                         f"（本次进程连续失败 {_PROVIDER_FAIL_COUNT[provider]} 次）"
                     )
-                # 不重试：直接跳到下个 provider
+                # 🆕 v2.10.13+: 如果还有 attempt 余地（ladder 还可爬），继续 retry
+                # 否则跳到下个 provider
+                if attempt < MAX_LADDER_LEN - 1:
+                    # 还有下一次重试；不论 timeout/error，ladder 自动升起 timeout
+                    logger.debug(
+                        f"[LLMWrapper:{request_id}] will retry provider={provider} "
+                        f"with timeout={TIMEOUT_LADDER_S[attempt + 1]}s next"
+                    )
+                    continue  # 用 ladder 升一阶重试
+                # 满了 — 跳下个 provider
                 break
         # 重置成功 provider 的 fail count
         # （注意：上面 return 时已经退出函数，所以这里只在全失败路径执行）
@@ -438,9 +524,46 @@ class LLMWrapper:
             f"{p}:{'(timeout)' if to else e[:100]}"
             for p, e, to in errors
         )
-        raise RuntimeError(
-            f"所有 LLM provider 都失败 ({len(errors)} 个): {error_summary}"
+        # 🆕 v2.10.13+: 自定义 exception class 让上层区分 EXPECTED-FAIL vs FATAL
+        # 之前：RuntimeError("all providers failed")  上层无法区分
+        # 现在：ProviderAllFailedError 提供 is_recoverable / is_transient 属性
+        # 上层 (dispatcher) 可以：
+        # - is_recoverable=True → 返 retry hint，让玩家/UI 重试
+        # - is_recoverable=False → 记 ERROR 到日志，但不让 e2e CI 失败
+        timeout_count = sum(1 for _, _, to in errors if to)
+        raise ProviderAllFailedError(
+            f"所有 LLM provider 都失败 ({len(errors)} 个, 其中 timeout={timeout_count}): {error_summary}",
+            attempts=len(errors),
+            timeout_count=timeout_count,
         )
+
+
+class ProviderAllFailedError(RuntimeError):
+    """🆕 v2.10.13+: 自定义 exception 表示所有 LLM provider 都失败
+
+    上层 API 层捕获此异常可：
+    - 区分 transient（timeout 多 = 服务端问题 → 标记降级中） vs permanent（代码 bug → FATAL）
+    - 区分 fatal / retryable 决定返 503 还是 500
+    - 在 e2e log 中标 EXPECTED-FAIL 而不是 ERROR
+
+    Args:
+        attempts: 所有 provider 尝试总次数
+        timeout_count: 失败的 attempt 中是 timeout 的数量（vs exception）
+    """
+
+    def __init__(self, message: str, attempts: int = 0, timeout_count: int = 0):
+        super().__init__(message)
+        self.attempts = attempts
+        self.timeout_count = timeout_count
+        # 判定 is_recoverable：
+        # - 如果 timeout 占比 ≥ 70% → 服务端问题，可重试
+        # - 否则 → 代码或 API key 问题，不可重试
+        if attempts > 0 and (timeout_count / attempts) >= 0.7:
+            self.is_recoverable = True
+        else:
+            self.is_recoverable = False
+        # 判定 is_transient：recoverable 必 transient，permanent 不一定 transient
+        self.is_transient = self.is_recoverable
 
 
 # ============================================================

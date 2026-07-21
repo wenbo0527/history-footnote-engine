@@ -178,7 +178,14 @@ def handle_POST_input(handler, body) -> bool:
                 game._run_round(pre)
         except Exception as e:
             error_id = safe_error_id()
-            logger.exception(f"[input] {error_id} failed during _run_round: {e}")
+            # 🆕 v2.10.13+: 区分 ProviderAllFailedError（可重试）vs 普通 Exception（代码 bug）
+            # ProviderAllFailedError 表示 LLM 服务端 stall — 是 EXPECTED-FAIL，玩家可以重试
+            # 普通 Exception 是代码 bug — 是 FATAL，玩家改输入也救不了
+            from history_footnote.llm.wrapper import ProviderAllFailedError
+            is_recoverable = isinstance(e, ProviderAllFailedError) and getattr(e, "is_recoverable", False)
+            is_transient = isinstance(e, ProviderAllFailedError) and getattr(e, "is_transient", False)
+            err_class = "EXPECTED-FAIL" if is_recoverable else "FATAL"
+            logger.exception(f"[input] {error_id} failed during _run_round ({err_class}): {e}")
             # 🆕 v2.10.1 W70: 回滚 state（避免 LLM 失败白扣 AP / 跳月 / 改变量）
             try:
                 game.state.action_points_current = _state_snapshot["action_points_current"]
@@ -198,13 +205,28 @@ def handle_POST_input(handler, body) -> bool:
                 logger.info(f"[input] {error_id} 已回滚 state (ap {ap_before}→{game.state.action_points_current}, narrative {target_len}→{cur_len})")
             except Exception as rb_e:
                 logger.exception(f"[input] {error_id} state rollback failed: {rb_e}")
-            # 🆕 v2.7+ 给玩家友好提示（前端 client.ts 优先用 suggestion）
-            handler._json(500, {
-                "error": "game error",
-                "error_id": error_id,
-                "message": "游戏流程异常",
-                "suggestion": "⚙️ DM 推理出错，请稍后重试（行动点已退还，状态已回滚）",
-            })
+            # 🆕 v2.10.13+: 不同错误类型返不同 status code + suggestion
+            if is_recoverable:
+                # 服务端 stall — 503 + retry-after hint + 友好文案
+                handler._json(503, {
+                    "error": "server_stalled",
+                    "error_id": error_id,
+                    "error_class": "EXPECTED-FAIL",
+                    "is_transient": is_transient,
+                    "message": f"DM 服务端暂时繁忙（{getattr(e, 'attempts', 0)} 次重试失败）",
+                    "suggestion": "🌙 服务端暂时休息，请在 30s 后重试（行动点已退还）",
+                    # 给前端额外 hint 减低玩家焦虑
+                    "human_hint": "这不是 bug，是服务端超时。3-5 秒后重试即可。",
+                })
+            else:
+                # 真 bug — 500
+                handler._json(500, {
+                    "error": "game error",
+                    "error_id": error_id,
+                    "error_class": err_class,
+                    "message": "游戏流程异常",
+                    "suggestion": "⚙️ DM 推理出错，请稍后重试（行动点已退还，状态已回滚）",
+                })
             return True
         dm_output = buf.getvalue()
         last = game.state.narrative_history[-1] if game.state.narrative_history else None
