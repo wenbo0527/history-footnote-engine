@@ -643,46 +643,56 @@ class GameLoop:
 
         # 🆕 v2.10.12+: cash reconciliation（每回合对账）
         # 目的：cr30 实测发现 cash 9.2 → 0 跳变无法对账。
-        # 每个回合结束，从 financial_log 重新算 cash = initial + sum(log)，
+        # 每个回合结束，从 financial_log 重新算 cash = sum(log)，
         # 和当前 state.cash 对比，如有 mismatch 立即 WARNING。
         #
-        # 注意：默认 reconcile 用 state.cash 作为 baseline（首次调用时记录 initial）
-        # 以避免依赖 initial_state（不同路径会有不同初始 cash）。
+        # 设计：state.cash 已经被 apply_financial_change() 正确累加了每个 log entry。
+        # 所以理论上 state.cash = initial_cash + sum(log entries)。
+        # 但 initial_cash 未知 → 所以我们观察每回合 state.cash 与 sum(log) 的差（即 implicit initial）
+        # 如果差持续不变（= baseline）→ 说明所有 log 都进入了 cash 累加 → OK
+        # 如果差变化 → 说明有 implicit 资金流出
         try:
-            if not hasattr(self, "_initial_cash_reconcile_baseline"):
-                # 🆕 v2.10.12+: 第一次 reconcile 时记录 baseline = current cash
-                # 因为前面已经过了 initial_state 初始化
-                self._initial_cash_reconcile_baseline = self.state.cash
-                logger.debug(
-                    f"[cash-reconcile] baseline set: {self._initial_cash_reconcile_baseline:.3f}"
-                )
-
-            expected_cash = float(self._initial_cash_reconcile_baseline)
+            sum_log = 0.0
             for fl in self.state.financial_log:
                 if fl.get("type") == "borrow":
-                    # borrow: cash 不变，debt += abs(amount) — 累计会计需补 cash
-                    expected_cash += abs(fl.get("amount", 0))  # 实际 cash 走 +amount 路径
-                    continue  # 已经在 +amount 路径里
+                    # borrow 加 debt 不加 cash（apply_financial_change 走 debt 路径）
+                    continue
                 if fl.get("type") == "repay":
-                    # repay: cash -= abs(amount), debt -= abs(amount)
-                    # 我们 state.cash 已经反映了 -cash
-                    # 所以 expected += -abs(amount)，无特殊处理
-                    expected_cash += fl.get("amount", 0)
+                    # repay: cash -= abs(amount)（apply 已处理）
+                    sum_log += fl.get("amount", 0)
                 else:
-                    expected_cash += fl.get("amount", 0)
-            if abs(expected_cash) > 0 or abs(self.state.cash) > 0:
-                diff = round(self.state.cash - expected_cash, 3)
-                if abs(diff) > 0.01:
-                    logger.warning(
-                        f"[cash-reconcile] R{self.state.round_number} "
-                        f"state.cash={self.state.cash:.3f} "
-                        f"expected={expected_cash:.3f} "
-                        f"diff={diff:+.3f}（mismatch！dev 需查 implicit 资金流出）"
-                    )
-                else:
-                    logger.debug(
-                        f"[cash-reconcile] R{self.state.round_number} OK ({self.state.cash:.2f} = {expected_cash:.2f})"
-                    )
+                    sum_log += fl.get("amount", 0)
+
+            # cash_from_log_only = sum_log + implicit_initial
+            # state.cash = sum_log + implicit_initial
+            # diff = state.cash - sum_log = implicit_initial
+            # 我们观察 diff 是否稳定：
+            # - 第一次 reconcile 时记 baseline = diff
+            # - 后续 reconcile 检查 diff 是否仍 = baseline
+            implicit_initial = round(self.state.cash - sum_log, 4)
+
+            if not hasattr(self, "_cash_reconcile_baseline"):
+                self._cash_reconcile_baseline = implicit_initial
+                logger.debug(
+                    f"[cash-reconcile] baseline implicit_initial={self._cash_reconcile_baseline:.3f} "
+                    f"(state.cash={self.state.cash:.3f}, sum_log={sum_log:.3f})"
+                )
+
+            delta = round(implicit_initial - self._cash_reconcile_baseline, 3)
+            if abs(delta) > 0.01:
+                logger.warning(
+                    f"[cash-reconcile] R{self.state.round_number} "
+                    f"state.cash={self.state.cash:.3f} "
+                    f"sum_log={sum_log:.3f} "
+                    f"implicit_initial={implicit_initial:+.3f} "
+                    f"baseline={self._cash_reconcile_baseline:+.3f} "
+                    f"delta={delta:+.3f}（有新 implicit 资金流入/流出！dev 需查）"
+                )
+            else:
+                logger.debug(
+                    f"[cash-reconcile] R{self.state.round_number} OK "
+                    f"(implicit_initial={implicit_initial:.3f} 稳定)"
+                )
         except Exception as reconcile_err:
             logger.debug(f"[cash-reconcile] exception: {reconcile_err}")
 
