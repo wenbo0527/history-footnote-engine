@@ -6,10 +6,11 @@ POST /api/generate_world_dwell  — LLM 生成世界画卷
 POST /api/version               — 版本信息
 POST /api/feedback              — 反馈提交
 POST /api/feedback_categories   — 反馈分类
+GET  /api/anachronisms          — 🆕 v2.10.14+ 返回本 session 的时代错位报告（dev/QA 用）
 """
 from __future__ import annotations
 
-from history_footnote.web_server.handler_base import logger, safe_error_id
+from history_footnote.web_server.handler_base import get_route, logger, safe_error_id
 from history_footnote.web_server.views.session import session_get, _get_or_load_session
 
 
@@ -201,3 +202,100 @@ def handle_GET_feedback_categories(handler) -> bool:
         logger.exception(f"[feedback_categories] {error_id} failed: {e}")
         handler._json(500, {"error": "categories fetch failed", "error_id": error_id})
     return True
+
+
+# ============================================================
+# 🆕 v2.10.14+: Anachronism（时代错位）报告端点 — dev/QA 用
+# ============================================================
+
+@get_route
+def handle_GET_anachronisms(handler, query):
+    """GET /api/anachronisms?session_id=XXX
+
+    Query params:
+        session_id: 必需
+        level: 可选过滤 "hard" | "soft" | "unclear"（不传 = 全部有命中回合）
+        round: 可选只返特定回合
+        last_n: 可选只返最近 N 条报告
+
+    Returns:
+        {
+          "session_id": "...",
+          "report_count": <total>,
+          "filtered_count": <applied filter 之后的数量>,
+          "summary": {"total_hard", "total_soft", "total_unclear"},
+          "reports": [
+            {"round", "narrative_excerpt", "report": {硬/软/不确定 count + hits[]}},
+            ...
+          ]
+        }
+
+    Example:
+        curl 'http://127.0.0.1:8765/api/anachronisms?session_id=wanli1587_xxx'
+    """
+    # 🆕 query 进来是 URL string (handler.path 的 query 部分)，需自个 parse
+    from urllib.parse import parse_qs
+    qs = parse_qs(query or "")
+    sid = (qs.get("session_id") or [None])[0]
+    if not sid:
+        handler._json(400, {"error": "missing session_id"})
+        return
+
+    # 容错：session 不在内存里就尝试 from-disk 加载
+    if session_get(sid) is None:
+        game = _get_or_load_session(sid)
+        if game is None:
+            handler._json(404, {"error": "session not found"})
+            return
+
+    entry = session_get(sid)
+    if entry is None:
+        handler._json(404, {"error": "session not found"})
+        return
+    game = entry[0]
+
+    # 从 game loop 取报告
+    raw_reports = getattr(game, "_anachronism_reports", []) or []
+
+    # filter by query params
+    level_filter = (qs.get("level") or [None])[0]
+    round_filter = (qs.get("round") or [None])[0]
+    last_n = (qs.get("last_n") or [None])[0]
+
+    filtered = raw_reports
+    if round_filter is not None:
+        try:
+            r_int = int(round_filter)
+            filtered = [r for r in filtered if r.get("round") == r_int]
+        except ValueError:
+            pass
+
+    if level_filter:
+        lvl = level_filter.lower()
+        if lvl in ("hard", "soft", "unclear"):
+            count_key = f"{lvl}_count"
+            filtered = [r for r in filtered if (r.get("report", {}).get(count_key, 0) or 0) > 0]
+
+    if last_n is not None:
+        try:
+            n = int(last_n)
+            filtered = filtered[-n:]
+        except ValueError:
+            pass
+
+    # aggregate summary
+    total_hard = sum((r.get("report", {}).get("hard_count", 0) or 0) for r in raw_reports)
+    total_soft = sum((r.get("report", {}).get("soft_count", 0) or 0) for r in raw_reports)
+    total_unclear = sum((r.get("report", {}).get("unclear_count", 0) or 0) for r in raw_reports)
+
+    handler._json(200, {
+        "session_id": sid,
+        "report_count": len(raw_reports),
+        "filtered_count": len(filtered),
+        "summary": {
+            "total_hard": total_hard,
+            "total_soft": total_soft,
+            "total_unclear": total_unclear,
+        },
+        "reports": filtered,
+    })

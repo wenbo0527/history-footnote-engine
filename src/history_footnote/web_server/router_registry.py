@@ -68,6 +68,8 @@ GET_ROUTES = {
     "/api/feedback_categories": _misc.handle_GET_feedback_categories,
     # 🆕 v2.10.11+：alias — RESTful 风格斜杠路径（新前端用）
     "/api/feedback/categories": _misc.handle_GET_feedback_categories,
+    # 🆕 v2.10.14+：Anachronism 时代错位报告（dev/QA 用）
+    "/api/anachronisms": _misc.handle_GET_anachronisms,
     "/api/llm/stats": _observability.handle_GET_llm_stats,
     "/api/llm/reset_stats": _observability.handle_GET_llm_reset_stats,
     "/api/monitor/health": _observability.handle_GET_monitor_health,
