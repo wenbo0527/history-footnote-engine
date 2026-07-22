@@ -699,6 +699,48 @@ class GameLoop:
         # === 步骤9：呈现给玩家 ===
         # 先回显玩家输入（明确告知"这是你做的事"）
         print(f"\n> {player_input}")
+
+        # 🆕 v2.10.13+: Anachronism（时代错位）检测 — warning + log
+        # 检测 narrative 中是否含现代经商概念（明万历 + 江南丝绸不可能有）。
+        # 目的：让 dev/QA 在事后能看到不合史实之处，逐步清理。
+        # 设计：不阻断叙事，让玩家玩，但 log 警告以备复盘。
+        try:
+            from history_footnote.narrative.anachronism_detector import (
+                detect_anachronisms,
+                log_report as log_anachronism,
+            )
+            _ana_report = detect_anachronisms(narrative)
+            if _ana_report.has_issues:
+                # 给玩家侧留 debug-friendly hint（在控制台而非前端）
+                log_anachronism(
+                    _ana_report,
+                    session_id=getattr(self.state, "session_id", "") or "",
+                    round_number=self.state.round_number,
+                )
+                # 🆕 v2.10.13+: 把报告存到 state 用于 /api/state/anachronisms 端点
+                if not hasattr(self, "_anachronism_reports"):
+                    self._anachronism_reports = []
+                self._anachronism_reports.append({
+                    "round": self.state.round_number,
+                    "narrative_excerpt": narrative[:200],
+                    "report": {
+                        "hard_count": _ana_report.hard_count,
+                        "soft_count": _ana_report.soft_count,
+                        "unclear_count": _ana_report.unclear_count,
+                        "hits": [
+                            {
+                                "level": h.level,
+                                "concept": h.concept,
+                                "matched_term": h.matched_term,
+                                "snippet": h.snippet,
+                            }
+                            for h in _ana_report.hits
+                        ],
+                    },
+                })
+        except Exception as _ana_err:
+            logger.debug(f"[anachronism] exception: {_ana_err}")
+
         self._display_narrative(narrative)
         self._display_state()
 
