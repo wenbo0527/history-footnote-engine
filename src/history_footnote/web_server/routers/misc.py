@@ -255,7 +255,13 @@ def handle_GET_anachronisms(handler, query):
     game = entry[0]
 
     # 从 game loop 取报告
-    raw_reports = getattr(game, "_anachronism_reports", []) or []
+    # 🆕 v2.10.15+: 优先用 state.anachronism_reports（持久化的），
+    #              缺失时回退到 game._anachronism_reports（in-memory，可重启用）
+    raw_reports = (
+        getattr(getattr(game, "state", None), "anachronism_reports", None)
+        or getattr(game, "_anachronism_reports", [])
+        or []
+    )
 
     # filter by query params
     level_filter = (qs.get("level") or [None])[0]

@@ -146,6 +146,13 @@ class GameState:
     # [{"date":"1587年1月","round":1,"type":"sell_silk","amount":+0.5,"note":"卖湖绫一匹","location":"盛泽"}]
     financial_log: list[dict] = field(default_factory=list)
 
+    # 🆕 v2.10.15+: Anachronism 报告（同 financial_log 模式持久化）
+    # 每回合 narrative 检测出的"时代错位"概念（明万历 vs 现代）
+    # [{"round":1,"narrative_excerpt":"...","report":{hard_count/soft_count/unclear_count + hits[]}}]
+    # 之前保存在 GameLoop._anachronism_reports（in-memory，重启丢失）
+    # 现在复制到 GameState，跟 save/load 序列化 → server 重启不丢
+    anachronism_reports: list[dict] = field(default_factory=list)
+
     # === 🆕 v1.7.30 家人结构化 ===
     # 之前 custom_character.family 是 dict（LLM 写），不可信
     # 4 城市集成后，玩家离乡会触发"家人"互动（盛泽有老宅/祖坟/族谱）

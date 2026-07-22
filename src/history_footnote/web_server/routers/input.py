@@ -126,6 +126,31 @@ def handle_POST_input(handler, body) -> bool:
         })
         return True
 
+    # 🆕 v2.10.15+: 玩家输入也扫 anachronism（明万历 + 江南丝绸场景）
+    # 玩家说"我去做空丝绢"这种现代思维用法，应该被识别以便 DM narrative 参考。
+    # 但不阻断（很多玩家会试探/反讽），只在响应里加 input_anachronism warning。
+    # 维护一份"现代思维玩法"清单给 frontend 做 UI 提示。
+    input_anachronism_hits = None
+    try:
+        from history_footnote.narrative.anachronism_detector import (
+            detect_anachronisms, log_report as log_ana,
+        )
+        ana_rep = detect_anachronisms(inp)
+        if ana_rep.has_issues:
+            log_ana(ana_rep, session_id=sid, round_number=-1)  # round=-1 标识玩家输入
+            input_anachronism_hits = {
+                "worst_level": ana_rep.worst_level,
+                "hard_count": ana_rep.hard_count,
+                "soft_count": ana_rep.soft_count,
+                "unclear_count": ana_rep.unclear_count,
+                "hits": [
+                    {"level": h.level, "concept": h.concept, "matched_term": h.matched_term}
+                    for h in ana_rep.hits
+                ],
+            }
+    except Exception as _ia_err:
+        logger.debug(f"[anachronism-input] exception: {_ia_err}")
+
     # 🆕 软提示（low_relevance）→ 不阻断，只在响应里加 warning
     soft_warning = None
     if result.reason == "low_relevance":
@@ -266,6 +291,7 @@ def handle_POST_input(handler, body) -> bool:
             "last_new_date": game.state.current_date if month_advanced else None,
             "dm_output": dm_output,
             "soft_warning": soft_warning,    # 🆕 v1.7.28
+            "input_anachronism_hits": input_anachronism_hits,  # 🆕 v2.10.15+
         })
     return True
 

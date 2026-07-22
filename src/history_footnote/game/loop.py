@@ -718,9 +718,11 @@ class GameLoop:
                     round_number=self.state.round_number,
                 )
                 # 🆕 v2.10.13+: 把报告存到 state 用于 /api/state/anachronisms 端点
+                # 🆕 v2.10.15+: 同步写到 self.state.anachronism_reports，跟 financial_log
+                # 一样持久化（save → JSON → reload），server 重启不丢
                 if not hasattr(self, "_anachronism_reports"):
                     self._anachronism_reports = []
-                self._anachronism_reports.append({
+                report_entry = {
                     "round": self.state.round_number,
                     "narrative_excerpt": narrative[:200],
                     "report": {
@@ -737,7 +739,11 @@ class GameLoop:
                             for h in _ana_report.hits
                         ],
                     },
-                })
+                }
+                self._anachronism_reports.append(report_entry)
+                # 🆕 v2.10.15+: 写 GameState.anachronism_reports（持久化）
+                if hasattr(self.state, "anachronism_reports"):
+                    self.state.anachronism_reports.append(report_entry)
         except Exception as _ana_err:
             logger.debug(f"[anachronism] exception: {_ana_err}")
 
