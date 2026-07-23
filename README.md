@@ -2,22 +2,48 @@
 
 > **AI 当 DM，你当历史里的小人物。** 通过对话体验一个历史时期，历史走势不可改，但你的选择路径完全开放。
 
-## 🎉 v2.10.10 已发布（SvelteKit 前端真上线）
+## 🎉 v2.10.15 已发布（稳定性 + 史实校验双升级）
 
-最新版本（2026-07-19）完成了**生产部署的真正修复**：
+最新版本（2026-07-22）完成了**大规模稳定性 + 史实校验**升级：
 
-- ✅ **v2.10.10 前端切换**（本次）：生产部署从 v1.7.27 旧前端 → SvelteKit v2.x 真实前端
-  - 后端 `INDEX_HTML` 改读 `src/frontend/build/index.html`（2689 bytes vs 旧 1071 bytes）
-  - 删除 `src/history_footnote/web/`（旧 main.css 2264 + main.js 3991 共 6306 行）
-  - 部署路径修复（Dockerfile / deploy.sh / nginx.conf 三方对齐 `build/` 路径）
-  - 新增 `scripts/spa_server.py`（修复 `start spa` 模式 file not found）
-- ✅ **5 处移动端适配**（v2.10.8）：输入条 iOS 安全 + sidebar 折叠 + popover 宽度 + ChapterIntro padding
-- ✅ **dev-server.sh 一键启停**（v2.10.8-rc1）：start/stop/restart/status/logs/open/build 8 命令
-- ✅ **开局剧情带入完整 6 段**（v2.10.6）：欢迎 + 名字 + 来历 + 处境 + 4 段场景叙事 + 日期
-- ✅ **修 2 个 Svelte 错误**（v2.10.7）：archives 字段 + voice_id 兜底
-- ✅ **涌现式章节架构**（v2.10.1）：W85 4 级优先级路由 + JSON 容错
+### 🆕 v2.10.13-15：稳定性三大件
+- ✅ **Adaptive timeout ladder**（v2.10.13）：30s → 60s → 90s → 120s + backoff，把 minimax-anthropic 服务端 30% stall **从 9/30 失败 → 30/30 全过**
+- ✅ **Stall rate 滑动窗口 + PREEMPTIVE COOLDOWN**：窗口 10 次失败率 ≥ 50% → 自动 5 分钟冷却
+- ✅ **ERR-class 分流**：ProviderAllFailedError 自定义 exception + 503 EXPECTED-FAIL vs 500 FATAL
+- ✅ **Baseline 算法修正**（v2.10.13-prep）：cash-reconcile warning 从 +3-1 漂移 → **0 warning**
+- ✅ **叙述提示黑名单**（v2.10.13）：DM 自动跳过"心里盘算具体金额"误触发
 
-详见 [CHANGELOG.md](CHANGELOG.md) · [docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md](docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md)
+### 🆕 v2.10.14-15：史实校验引擎（Anachronism Detector）
+- ✅ **三层分类检测器**（v2.10.14-prep）：HARD 绝对违规 + SOFT 概念存在 + UNCLEAR 玩家可能合理
+- ✅ **`/api/anachronisms` 端点**（v2.10.14）：dev/QA 查询本 session 的史实校验报告
+- ✅ **Reports 持久化**（v2.10.15）：写入 `GameState.anachronism_reports`，server 重启不丢
+- ✅ **玩家输入也扫描**（v2.10.15）：`input_anachronism_hits` 字段识别"现代思维玩法"
+- ✅ **30 回合实测验证**：3 次跑测：21 PASS + 9 stall → 30/30 PASS ✅
+
+### 历史里程碑
+- ✅ **v2.10.10 前端切换**：生产部署从 v1.7.27 旧前端 → SvelteKit v2.x 真实前端
+- ✅ **5 处移动端适配**（v2.10.8）：输入条 iOS 安全 + sidebar 折叠 + popover 宽度
+- ✅ **dev-server.sh 一键启停**（v2.10.8-rc1）
+- ✅ **开局剧情带入完整 6 段**（v2.10.6）
+- ✅ **修 2 个 Svelte 错误**（v2.10.7）
+- ✅ **涌现式章节架构**（v2.10.1）
+
+### 📊 稳定性实测数据（v2.10.13 / v2.10.15 三次 30 回合真 e2e）
+
+| 指标 | v2.10.10 | v2.10.12-followup | **v2.10.13** | **v2.10.15** |
+|---|---|---|---|---|
+| 30 turns 通过率 | 24/30 (LLM stall) | 21/30 (9 stall) | **30/30** ✅ | **30/30** ✅ |
+| 后端 ERROR | 0 | 0 | 0 | 0 |
+| 自适应 timeout 重试 | 0（无 ladder）| 0 | 235 | 270 |
+| PREEMPTIVE COOLDOWN 触发 | — | — | 0 | 0 |
+| cash-reconcile warning | — | 21 (baseline bug) | 0 | 0 |
+| input_anachronism_hits 字段 | — | — | — | ✅ |
+| `/api/anachronisms` 端点 | — | — | ✅ | ✅ |
+| Reports 跨重启保留 | ❌ | ❌ | ❌ | ✅ |
+
+详细：[docs/coherence/2026-07-21-final-stall-analysis.md](docs/coherence/2026-07-21-final-stall-analysis.md) · [docs/coherence/2026-07-22-anachronism-audit.md](docs/coherence/2026-07-22-anachronism-audit.md)
+
+详见 [CHANGELOG.md](CHANGELOG.md) · [docs/coherence/](docs/coherence/) 工作日志
 
 ---
 
@@ -33,19 +59,20 @@
 - **位置系统**（v2.4）：盛泽镇 10 地点 + 邻居系统 + 路遇事件
 - **命运卡系统**（v2.5-v2.7）：抽 5 张开局 + 3 种 use_type + 同 seed 100% 重放
 - **涌现式章节**（v2.10.1）：玩家即兴创造路线，DM 即时生成章节
-- **响应式 UI**（v2.10.8）：iOS HIG 兼容 + 移动端 sidebar 折叠 + 输入条 16px
+- **史实校验引擎**（v2.10.14+）：自动 flag 不符合时代的现代概念
 
 ### 工程层
 
 - **后端**：Python 3.11 + LangChain + dataclass
 - **前端**：Svelte 5 + SvelteKit 2.5+ + Vite 5 + TypeScript
-- **后校验 + 重试 + 兜底**：5 层校验，2 次重试，模板兜底
+- **后校验 + 重试 + 兜底**：5 层校验，ladder retry（30s/60s/90s/120s）+ 模板兜底
 - **5 层并发**：进程级 + 线程级 + 会话级 + LLM 级 + 持久化级
 - **KV 缓存**：Anthropic `cache_control`（ephemeral 5min，节省 70-98% input tokens）
 - **三阶段行为模型**：态势评估 → 叙事生成 → 状态确认
 - **完全可重放**（v2.7）：所有 LLM 调用按 purpose 设 temperature
 - **safe_route 装饰器**（v2.10.3）：80 处 except Exception 样板统一收口
 - **dm_skills 子包**（v2.10.3）：1229 行 monolith → 11 文件
+- **Anachronism Detector**（v2.10.14+）：三层史实校验，写盘持久化
 
 ---
 
@@ -73,47 +100,61 @@ bash scripts/dev-server.sh --help
 ### 方式 2：手动启动
 
 ```bash
-# 🆕 v2.10.10 后端直接服务 SvelteKit 前端生产产物
 # 1. 后端（端口 8765）—— 推荐：自己起前端 dev server
 PYTHONPATH=src python -m history_footnote.web_server
-#             ↑ v2.10.10 之前是 python -c "from ... import run; run()"
 
 # 2. 前端（端口 5173，三选一）
 # 2a. Vite dev 模式（开发推荐，热重载）
 cd src/frontend && npm install && npm run dev
 # 2b. SPA 静态模式（先 build，再用 spa_server.py 服）
-bash scripts/dev-server.sh build       # 构建 src/frontend/build/
-bash scripts/dev-server.sh start spa   # scripts/spa_server.py 服务 5173
+bash scripts/dev-server.sh build
+bash scripts/dev-server.sh start spa
 
 # 访问 http://localhost:8765/ 开始游戏（后端直接服务，无需 Vite）
 # 或者 http://localhost:5173/ （如果你启了前端 dev/spa server）
 ```
 
-> 🆕 **v2.10.10 部署架构**：后端单进程同时服务 API + SvelteKit 前端。
-> 不需要单独启 nginx 或 dev server 也能玩。详细：docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md
+> **v2.10.10 部署架构**：后端单进程同时服务 API + SvelteKit 前端。
+> 详细：docs/deploy/FRONTEND_MISMATCH_ANALYSIS.md
 
 ### CLI 模式
 
 ```bash
 # 跑万历十五年（Mock 模式，无需 API Key）
 python -m history_footnote run wanli1587
-
-# 列出可用时代包
-python -m history_footnote list-eras
 ```
 
 ### 单元测试
 
 ```bash
-# 后端测试套件（v2.10.x 专项 + 基础套件）
-PYTHONPATH=src python tests/test_v2106_opening_narrative.py  # 8 用例
-PYTHONPATH=src python tests/test_v2107_svelte_bugfix.py      # 2 用例
-PYTHONPATH=src python tests/test_v2105_async_start.py       # 9 用例
-PYTHONPATH=src python tests/test_v2101_w66_json_recovery.py # 14 用例
-PYTHONPATH=src python -m pytest tests/ -q --tb=no          # 全量（638 PASS）
+# v2.10.x 稳定性 e2e 测试（cr30 实战）
+PYTHONPATH=src python tests/test_v21011_30r_real_e2e.py --turns 30
 
-# 前端 mapper 测试
-cd src/frontend && npm test -- src/lib/api/mapper.test.ts
+# Anachronism detector 测试
+PYTHONPATH=src python -c "from history_footnote.narrative.anachronism_detector import detect_anachronisms; ..."
+
+# 后端测试套件
+PYTHONPATH=src python -m pytest tests/ -q --tb=no
+```
+
+### 🆕 dev/QA 调试端点（v2.10.14+）
+
+```bash
+# 查询本 session 的史实校验报告（warning + log 不影响游戏）
+curl 'http://127.0.0.1:8765/api/anachronisms?session_id=wanli1587_xxx'
+
+# 响应 JSON:
+# {
+#   "report_count": 5,
+#   "summary": {"total_hard": 0, "total_soft": 1, "total_unclear": 2},
+#   "reports": [{"round", "narrative_excerpt", "report": {...hits[]}}]
+# }
+
+# 过滤：只返 hard hit
+curl '...?session_id=...&level=hard'
+
+# 过滤：只返最近 1 条
+curl '...?session_id=...&last_n=1'
 ```
 
 ---
@@ -249,6 +290,17 @@ history-footnote-engine/
 
 10 个 baseline 失败是 `langchain_openai` 依赖缺失 + `test_safe_route` mock 接口不匹配（与 v2.10.8 无关，**0 影响实际游戏**）。
 
+### 🆕 v2.10.13-15 真 e2e 实测（cr30 实战）
+
+```
+PYTHONPATH=src python tests/test_v21011_30r_real_e2e.py --turns 30
+```
+
+最新 3 次跑测（v2.10.12-followup / v2.10.13 / v2.10.15）全部由真人跑，不 mock：
+- v2.10.12-followup：21/30（9 stall kills）→ ❌
+- **v2.10.13**：**30/30** ✅（ladder 救回 9 个 stall）
+- **v2.10.15**：**30/30** ✅（anachronism 输入扫描 + 持久化）
+
 ### 一键跑全部
 
 ```bash
@@ -351,6 +403,6 @@ MIT
 ## 🔗 相关链接
 
 - 项目主页：http://localhost:5173/（前端）/ http://localhost:8765/（后端 API）
-- 问题反馈：[GitHub Issues](https://github.com/your-org/history-footnote-engine/issues)
+- 问题反馈：[GitHub Issues](https://github.com/wenbo0527/history-footnote-engine/issues)
 - 完整文档：[docs/](docs/)
 - 工作总结：[docs/log/](docs/log/)

@@ -9,6 +9,203 @@
 
 ---
 
+## [v2.10.15] - 2026-07-22
+
+### 🆕 Anachronism 史实校验 — Reports 持久化 + 玩家输入扫描
+
+#### P0: Reports 写盘（之前重启全丢）
+
+- 在 `GameState` 加字段 `anachronism_reports: list[dict]`（跟 `financial_log` 平级）
+- 自动走 `to_dict() → save() → load()` 序列化路径
+- `/api/anachronisms` 端点优先读 `state.anachronism_reports`，回退到 `loop._anachronism_reports`
+- **验证**：5 turn session `wanli1587_20260722_172833` → `saves/.../auto.json`（44403 bytes，含 anachronism_reports 字段）→ kill server 重启 → GET 端点返 200 + 完整数据 ✅
+
+#### P1: 玩家输入也扫 (input_anachronism_hits)
+
+- 在 `handle_POST_input` 收到玩家输入后跑 `detect_anachronisms(inp)`
+- 不阻断（很多玩家会试探/反讽），结果写到响应 JSON
+- 后端 log 用 `round_number=-1` 标识（区别于 narrative 的 `R+round_number`）
+- **实测**：玩家输入 "我想做空三两银子，再办个信用卡押账"
+  ```json
+  "input_anachronism_hits": {
+    "worst_level": "hard",
+    "hard_count": 2,
+    "soft_count": 0,
+    "unclear_count": 0,
+    "hits": [
+      {"level": "hard", "concept": "期货 / 合约交易", "matched_term": "做空"},
+      {"level": "hard", "concept": "信用卡 / 电子支付", "matched_term": "信用卡"}
+    ]
+  }
+  ```
+
+#### 文件变更
+
+- `src/history_footnote/game/state.py` (+8 行)
+- `src/history_footnote/game/loop.py` (+6 行)
+- `src/history_footnote/web_server/routers/input.py` (+25 行)
+- `src/history_footnote/web_server/routers/misc.py` (+6 行)
+
+详见：commit `f0c70e9` · [docs/coherence/2026-07-22-anachronism-audit.md](docs/coherence/2026-07-22-anachronism-audit.md)
+
+---
+
+## [v2.10.14] - 2026-07-22
+
+### 🆕 Anachronism 史实校验引擎 — 端点开放
+
+#### 三层分类检测器
+
+- **HARD**：明万历 + 江南丝绸业**绝对不存在**（期货、股份公司、银行、信用卡、珍妮纺纱机、复式记账等）
+- **SOFT**：概念存在但 narrative 该澄清（月息、增值税率、镖局→保险）
+- **UNCLEAR**：玩家输入可能合理（预定/定金、合本/合伙、电报）
+
+每个概念独立 `reason + first_introduced` 注释（CBOT 1848、VOC 1552、BoE 1694、飞梭 1733、珍妮机 1764 等）。
+
+#### 关键 bug 修（commit `b0ea5cf`）
+
+- 首次实装时 `query.get()` 调用错了（get_route 装饰器注入的是 URL string）
+- 修复：自个 `parse_qs(query)` 解析（参考 `handle_GET_llm_stats` 现有模式）
+
+#### `/api/anachronisms` 端点
+
+```
+GET /api/anachronisms?session_id=XXX[&level=hard|soft|unclear][&round=N][&last_n=N]
+```
+
+```json
+{
+  "report_count": 2,
+  "summary": {"total_hard": 0, "total_soft": 0, "total_unclear": 3},
+  "reports": [
+    {
+      "round": 1,
+      "narrative_excerpt": "...",
+      "report": {
+        "unclear_count": 1,
+        "hits": [{"level": "unclear", "concept": "期货型约定", "matched_term": "定金"}]
+      }
+    }
+  ]
+}
+```
+
+#### 5 turn smoke 验证（session `wanli1587_20260722_124246`）
+
+- 5/5 turns PASS，0 ERROR
+- 2 个回合触发 UNCLEAR（"定金" — 明代有但 narrative 没澄清）
+- 端点返 200 + 完整 data，含 sum + reports[] + hits[]
+- filter (level=unclear / last_n=1) 工作正常
+
+#### 文件变更
+
+- `src/history_footnote/narrative/anachronism_detector.py` (新, 330 行)
+- `src/history_footnote/game/loop.py` (+43 行 hook)
+- `src/history_footnote/web_server/routers/misc.py` (+94 行 endpoint)
+- `src/history_footnote/web_server/router_registry.py` (+2 行 register)
+
+详见：commit `8b05135` + `b0ea5cf` · [docs/coherence/2026-07-22-anachronism-audit.md](docs/coherence/2026-07-22-anachronism-audit.md)
+
+---
+
+## [v2.10.13] - 2026-07-21
+
+### 🆕 Adaptive Timeout Ladder + Stall 防御 + ERR-class 分流
+
+#### 背景
+
+minimax-anthropic 服务端 30% 概率 stall 30-130s，把 9/30 turns 杀掉。
+
+#### P0-1: Adaptive Timeout Ladder
+
+```python
+TIMEOUT_LADDER_S = [30, 60, 90, 120]
+BACKOFF_LADDER_S = [0, 1, 2, 3]
+```
+
+- 第一次失败 → 1s backoff → 60s timeout 重试
+- 第二次失败 → 2s backoff → 90s timeout 重试
+- 第三次失败 → 3s backoff → 120s timeout 重试
+- 借鉴 TCP 重传退避思路
+
+#### P0-2: Stall Rate 滑动窗口 + PREEMPTIVE COOLDOWN
+
+```python
+_PROVIDER_RECENT: dict[str, list[bool]] = {}
+# 窗口 10 次失败率 ≥ 50% → 自动 5 分钟冷却
+```
+
+#### P0-3: ProviderAllFailedError + ERR-class 分流
+
+- 自定义 exception 带 `is_recoverable` + `is_transient`
+- recoverable = timeout 占比 ≥ 70%
+- 输入 handler 分流：
+  - **EXPECTED-FAIL** → 503 + "服务端暂时繁忙，30s 后重试"
+  - **FATAL** → 500 + 普通错误
+
+#### P1: Prompt 黑名单词
+
+加系统 prompt 黑名单词表（"一两二钱" / "预单" / "可以折银" / "欠款" / "打算" / "约定"）+ 自我检查清单 3 问（主体 / 方向 / 金额对应）。
+
+#### 30 回合实测：21 PASS → 30/30 PASS ✅
+
+| 指标 | 第三轮 (v2.10.12-followup) | **v2.10.13** |
+|---|---|---|
+| 30 turns 通过 | 21/30 (9 stall) | **30/30** ✅ |
+| ProviderAllFailedError | (无分类) | **0**（ladder 救回）|
+| TIMEOUT events | 多次累积 | **2** |
+| backoff events | (无 ladder) | **235** |
+| PREEMPTIVE COOLDOWN | (没装) | 0 |
+| cash-reconcile warning | 21 | **0** |
+
+#### 文件变更
+
+- `src/history_footnote/llm/wrapper.py` (+93 行)
+- `src/history_footnote/web_server/routers/input.py` (+27 行)
+- `src/history_footnote/dm/prompts/system_base.md` (+25 行)
+
+详见：commit `a23f8c6` · [docs/coherence/2026-07-21-final-stall-analysis.md](docs/coherence/2026-07-21-final-stall-analysis.md) · [docs/coherence/2026-07-21-v21013-verified.md](docs/coherence/2026-07-21-v21013-verified.md)
+
+---
+
+## [v2.10.12] - 2026-07-21
+
+### 🆕 Cash Reconciliation 自适应算法修正
+
+#### 之前 bug
+
+旧算法：`baseline + sum(log)` 双计数，导致 cash-reconcile warning 漂移（+3、-1 不一致）。
+
+#### 修复（v2.10.13-prep, commit `61ac6d3`）
+
+新算法：`implicit_initial = state.cash - sum(log)`，delta ≠ 0 → 真漏账警告。
+
+5 turn 测试 session `wanli1587_20260721_111353`：
+- financial_log 共 3 条: +4, +1, +0.015
+- cash=5.015
+- implicit_initial = 5.015 - 5.015 = 0.000 ← 真 initial cash = 0
+- delta = 0 稳定 → 0 WARNING ✅
+
+#### 文件变更
+
+- `src/history_footnote/narrative/post_validator.py`（cash reconcile 算法重写）
+
+详见：commit `61ac6d3`
+
+---
+
+## [v2.10.11] - 2026-07-19
+
+### 🆕 30 回合真 e2e 验证测试套件
+
+新增 `tests/test_v21011_30r_real_e2e.py`：跑真 minimax-anthropic 30 回合，验证 cash 流 + narrative 完整性。
+
+#### 提交
+
+- v2.10.11+ (commit `1b70db7` / `ddd1dfd` / `62bb83c`)：facts_extractor + cash reconciliation + narrative sliding window + DM prompt
+
+---
+
 ## [v2.10.10] - 2026-07-19
 
 ### 🆕 前端真上线 — 生产部署 SvelteKit（替代 v1.7.27 旧前端）
