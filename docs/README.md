@@ -1,11 +1,54 @@
 # 📚 历史注脚 HFE · 文档索引
 
 > **新开发者入口**：从 [`../README.md`](../README.md) 开始。
-> **本目录**包含所有项目文档,按职责分层(v2.10.2 重新整理)。
+> **本目录**包含所有项目文档,按职责分层(v2.10.2 重新整理,v2.10.15 同步更新)。
 >
 > 🆕 **v2.10.9**: [ARCHIVE_INDEX.md](ARCHIVE_INDEX.md) — 5 个归档目录（_archive/architecture archive/eras archive/log used/unused-references）统一索引
 >
-> 🆕 **v2.10.11**: [plans/ROADMAP.md](plans/ROADMAP.md) — 后续版本路线图（v2.10.12 / v2.10.13 / v2.11 / v3.0）
+> 🆕 **v2.10.11**: [plans/ROADMAP.md](plans/ROADMAP.md) — 后续版本路线图（v2.10.13 / v2.10.14 / v2.10.15 已完成, v2.10.16 backlog）
+>
+> 🆕 **v2.10.15**: [coherence/](coherence/) 子目录 — 稳定性 / 史实校验的"审计 + 实测 + 验证"三层文档
+
+## 🆕 2026-07-22 v2.10.15 稳定性三大件 + 史实校验双升级
+
+> **总结**:第三次跑 30 回合实测,**30/30 PASS** ✅。Anachronism Detector 实装 + 端点化 + 持久化。
+> 详见 [CHANGELOG.md](../../CHANGELOG.md) (已升到 v2.10.15)
+>
+> **核心改动**:
+> - **v2.10.13 Adaptive Timeout Ladder**: 30s → 60s → 90s → 120s + backoff,**把 9/30 stall kills 救回**
+> - **v2.10.13 PREEMPTIVE COOLDOWN**: 滑动窗口 10 次失败率 ≥ 50% → 自动 5 分钟冷却
+> - **v2.10.13 ERR-class 分流**: ProviderAllFailedError + 503 EXPECTED-FAIL vs 500 FATAL
+> - **v2.10.13 现金对账自适应**:implicit_initial = cash - sum(log),从 +3/-1 漂移到 0
+> - **v2.10.13 提示黑名单词**:"告知 vs 动作" 区分,防 DM 误触 fin.pay_tax
+> - **v2.10.14 Anachronism Detector**: 三层分类概念级检测 (HARD/SOFT/UNCLEAR)
+> - **v2.10.14 `/api/anachronisms` 端点**:dev/QA 查询史实校验报告
+> - **v2.10.15 Reports 持久化**:写盘 → 重启不丢
+> - **v2.10.15 玩家输入扫描**:`input_anachronism_hits` 字段,识别"现代思维玩法"
+>
+> **新文档（coherence/）**:
+> - [coherence/2026-07-20-30r-coherence-check.md](coherence/2026-07-20-30r-coherence-check.md) — 第一轮 30 回合核对
+> - [coherence/2026-07-20-p0-fix-verified.md](coherence/2026-07-20-p0-fix-verified.md) — P0 修复验证
+> - [coherence/2026-07-21-final-stall-analysis.md](coherence/2026-07-21-final-stall-analysis.md) — Stall 终极分析
+> - [coherence/2026-07-21-v21013-verified.md](coherence/2026-07-21-v21013-verified.md) — v2.10.13 实测验证
+> - [coherence/2026-07-22-anachronism-audit.md](coherence/2026-07-22-anachronism-audit.md) — Anachronism 功能审计
+>
+> **关联 commit**: `a23f8c6` (v2.10.13) · `8b05135` (v2.10.14-prep) · `b0ea5cf` (v2.10.14 endpoint) · `f0c70e9` (v2.10.15)
+>
+> **新 marketing**:
+> - [marketing/zhihu-promotion.md](marketing/zhihu-promotion.md) — Zhihu 推广文 + 6.5 工程笔记"怎么 debug 一个明朝游戏"
+
+## 🆕 2026-07-19 v2.10.10-11 前端切换 + real e2e 测试套件
+
+> 生产部署真切换到 SvelteKit + 30 回合真 LLM e2e 验证套件
+> 详见 [log/2026-07-19-v2.10.11-fixes-and-followups.md](log/2026-07-19-v2.10.11-fixes-and-followups.md)
+>
+> **核心改动**:
+> - v2.10.10 前端：生产部署从 v1.7.27 旧前端 → SvelteKit v2.x
+> - v2.10.11 SPA fallback：修复 `start spa` 模式
+> - 新增 `tests/test_v21011_30r_real_e2e.py`：跑真 minimax-anthropic 30 回合
+>
+> **新文档**:
+> - [log/2026-07-19-v2.10.11-real-30r-e2e.md](log/2026-07-19-v2.10.11-real-30r-e2e.md)
 
 ## 🆕 2026-07-15 v2.10.8 移动端适配 + 文档归档整理
 
@@ -47,6 +90,18 @@
 ```
 docs/
 ├── README.md                       ← 本文件(顶层索引)
+├── ARCHIVE_INDEX.md                ← 跨目录归档索引
+├── 01-decision-log.md             ← 项目关键决策
+│
+├── coherence/                      ← 🆕 v2.10.15+ 稳定性/史实校验审计
+│   ├── 2026-07-20-30r-coherence-check.md    ← 30 回合一致性核对
+│   ├── 2026-07-20-p0-fix-verified.md         ← P0 修复验证
+│   ├── 2026-07-21-final-stall-analysis.md    ← Stall 终极分析
+│   ├── 2026-07-21-v21013-verified.md         ← v2.10.13 验证
+│   └── 2026-07-22-anachronism-audit.md       ← Anachronism 功能审计
+│
+├── marketing/                      ← 🆕 v2.10.15+ Zhihu / 营销
+│   └── zhihu-promotion.md
 │
 ├── architecture/                  ← 引擎设计文档
 │   ├── README.md
@@ -59,7 +114,7 @@ docs/
 │   ├── UI优化委托即梦指南.md
 │   ├── EventId规范.md
 │   ├── TriggerPatterns.md
-│   ├── v2.10.1-W85-涌现式章节设计.md  ← 🆕 现行版
+│   ├── v2.10.1-W85-涌现式章节设计.md  ← 现行版
 │   ├── v2.7.1-后续TODO.md
 │   └── archive/                   ← 历史版本
 │
@@ -77,42 +132,39 @@ docs/
 │   ├── FIELD_REGISTRY.md
 │   └── openapi.yaml
 │
-├── test/                          ← 🆕 测试 / 质量
+├── operations/                    ← 运维操作
+│   └── README.md
+│
+├── deploy/                        ← 部署 / 运维
+│   ├── README.md
+│   ├── DEPLOYMENT_GUIDE.md
+│   └── FRONTEND_MISMATCH_ANALYSIS.md  ← 🆕 v2.10.10
+│
+├── test/                          ← 测试 / 质量
 │   ├── README.md
 │   ├── v2.10.2-comprehensive-test.md       ← 综合测试
 │   ├── v2.10.2-bug-prevention-analysis.md  ← BUG 模式分析
 │   └── v2.10.2-frontend-audit.md          ← 前端审计
 │
-├── plans/                         ← 🆕 v2.10.11+ 后续版本规划
-│   └── ROADMAP.md                  ← v2.10.12 / v2.10.13 / v2.11 / v3.0
+├── plans/                         ← v2.10.11+ 后续版本规划
+│   └── ROADMAP.md                  ← v2.10.12 → v2.10.15 已完成, v2.10.16 backlog
 │
-├── deploy/                        ← 🆕 部署 / 运维
-│   └── DEPLOYMENT_GUIDE.md        ← 5 步 + 10 问题
-│
-├── release/                       ← 🆕 版本说明
+├── release/                       ← 版本说明
 │   ├── README.md
 │   ├── v2.10.1-release-notes.md
 │   └── v2.10.2-release-notes.md
 │
-├── log/                           ← 工作日志(按日期)
-│   ├── README.md
-│   ├── 2026-07-12-v2.10.2-followup-summary.md  ← 🆕 W52 followup 全量总结
-│   ├── 2026-07-12-HFE-W52-优化清单-v1.0.md
-│   ├── 2026-07-12-W85-Phase23-真LLM-smoke.md
-│   ├── 2026-07-11_v2.8.0-段六-真LLM-收尾-work-log.md
-│   ├── 2026-07-10_v2.8.0-段一-work-log.md
-│   ├── 2026-07-09_v2.5-v2.7-work-log.md
-│   ├── 2026-07-07_v1.9.1-4-work-log.md
-│   ├── 2026-07-06_structured-io-analysis.md
-│   └── 2026-07-05_v1.7.20-26-work-log.md
-│
-├── 01-decision-log.md             ← 项目关键决策
-├── WORK_SUMMARY.md                ← v1.6+ 阶段总结
-├── ISSUES.md                      ← 已知问题
-├── CHANGELOG.md                   ← 完整变更日志
-├── INTEGRATION_TODO.md            ← 集成 TODO
-├── stress_test_report_v1.7.28.md  ← 压测报告
-└── 调研成果汇报.md                ← Disco Elysium 调研
+└── log/                           ← 工作日志(按日期)
+    ├── README.md                  ← 日志索引
+    ├── 2026-07-22-v2.10.15-coherence-updates.md  ← 🆕 本次稳定性/史实校验工作
+    ├── 2026-07-21-...                            ← v2.10.13 stall 实测
+    ├── 2026-07-20-...                            ← 30 回合一致性
+    ├── 2026-07-19-v2.10.11-real-30r-e2e.md
+    ├── 2026-07-19-v2.10.11-fixes-and-followups.md
+    ├── 2026-07-15-v2.10.8-mobile-cleanup.md
+    ├── 2026-07-13-HFE-v2.10.3-4-总结.md
+    ├── 2026-07-12-v2.10.2-followup-summary.md
+    └── ...
 ```
 
 ---
@@ -123,12 +175,13 @@ docs/
 
 | 我想了解... | 看这里 |
 |---|---|
-| **项目基础信息** | [`../README.md`](../README.md) |
+| **项目基础信息** | [`../README.md`](file:///Users/mac/Documents/trae_projects/history_footnote/README.md) |
 | **架构与功能设计** | [architecture/产品设计文档.md](architecture/产品设计文档.md) |
 | **HTTP API 字段规范** | [api/FIELD_REGISTRY.md](api/FIELD_REGISTRY.md) |
 | **HTTP API 端点清单** | [api/openapi.yaml](api/openapi.yaml) |
 | **时代背景与剧情知识** | [eras/万历十五年/](eras/万历十五年/) |
 | **如何部署?** | [deploy/DEPLOYMENT_GUIDE.md](deploy/DEPLOYMENT_GUIDE.md) |
+| **稳定性 & 史实校验 metric** | [coherence/](coherence/) |
 
 ### 🐛 排查 BUG
 
@@ -137,13 +190,18 @@ docs/
 | **了解 BUG 根因模式** | [test/v2.10.2-bug-prevention-analysis.md](test/v2.10.2-bug-prevention-analysis.md) |
 | **查看测试覆盖** | [test/v2.10.2-comprehensive-test.md](test/v2.10.2-comprehensive-test.md) |
 | **看前端旧代码** | [test/v2.10.2-frontend-audit.md](test/v2.10.2-frontend-audit.md) |
-| **报告问题** | [`../ISSUES.md`](../ISSUES.md) |
+| **查 v2.10.13+ 稳定性 stall** | [coherence/2026-07-21-final-stall-analysis.md](coherence/2026-07-21-final-stall-analysis.md) |
+| **查 Anachronism 漏/误触** | [coherence/2026-07-22-anachronism-audit.md](coherence/2026-07-22-anachronism-audit.md) |
+| **报告问题** | [`../ISSUES.md`](file:///Users/mac/Documents/trae_projects/history_footnote/ISSUES.md) |
 
 ### 📅 看开发历史
 
 | 时段 | 看这里 |
 |---|---|
-| **v2.10.2 W52 followup (今天)** | [log/2026-07-12-v2.10.2-followup-summary.md](log/2026-07-12-v2.10.2-followup-summary.md) |
+| **v2.10.13-15 (本周)** | [coherence/2026-07-22-anachronism-audit.md](coherence/2026-07-22-anachronism-audit.md) · [log/](log/) |
+| **v2.10.10-11 (上周)** | [log/2026-07-19-v2.10.11-real-30r-e2e.md](log/2026-07-19-v2.10.11-real-30r-e2e.md) |
+| **v2.10.8 (7-15)** | [log/2026-07-15-v2.10.8-mobile-cleanup.md](log/2026-07-15-v2.10.8-mobile-cleanup.md) |
+| **v2.10.2 W52 followup** | [log/2026-07-12-v2.10.2-followup-summary.md](log/2026-07-12-v2.10.2-followup-summary.md) |
 | **v2.8.0 (W85 涌现式章节)** | [log/2026-07-11_v2.8.0-段六-真LLM-收尾-work-log.md](log/2026-07-11_v2.8.0-段六-真LLM-收尾-work-log.md) |
 | **v2.5-v2.7 (命运卡)** | [log/2026-07-09_v2.5-v2.7-work-log.md](log/2026-07-09_v2.5-v2.7-work-log.md) |
 | **完整工作日志** | [log/](log/) |
@@ -157,6 +215,25 @@ docs/
 | **引导者行为** | [architecture/DM 引导者行为模式.md](architecture/DM%20引导者行为模式.md) |
 | **W85 涌现式章节** | [architecture/v2.10.1-W85-涌现式章节设计.md](architecture/v2.10.1-W85-涌现式章节设计.md) |
 
+### 🤖 LLM Provider 稳定性（v2.10.13+）
+
+| 我想了解... | 看这里 |
+|---|---|
+| **Adaptive Timeout Ladder** | [coherence/2026-07-21-final-stall-analysis.md](coherence/2026-07-21-final-stall-analysis.md) |
+| **PREEMPTIVE COOLDOWN** | [coherence/2026-07-21-final-stall-analysis.md](coherence/2026-07-21-final-stall-analysis.md) |
+| **ProviderAllFailedError** | [coherence/2026-07-21-final-stall-analysis.md](coherence/2026-07-21-final-stall-analysis.md) |
+| **Cash Reconciliation 自适应** | [coherence/2026-07-20-p0-fix-verified.md](coherence/2026-07-20-p0-fix-verified.md) |
+| **30 回合实测数据** | [coherence/2026-07-20-30r-coherence-check.md](coherence/2026-07-20-30r-coherence-check.md) |
+
+### 📜 史实校验（v2.10.14+）
+
+| 我想了解... | 看这里 |
+|---|---|
+| **Anachronism Detector 设计** | [coherence/2026-07-22-anachronism-audit.md](coherence/2026-07-22-anachronism-audit.md) |
+| **三层分类（HARD/SOFT/UNCLEAR）** | [coherence/2026-07-22-anachronism-audit.md](coherence/2026-07-22-anachronism-audit.md) |
+| **史实校验端点 + 持久化** | [coherence/2026-07-22-anachronism-audit.md](coherence/2026-07-22-anachronism-audit.md) |
+| **漏网 modern concept（白名单待修）** | [coherence/2026-07-22-anachronism-audit.md](coherence/2026-07-22-anachronism-audit.md) |
+
 ---
 
 ## 📐 文档约定
@@ -167,12 +244,19 @@ docs/
 - **`archive/` 子目录** — 所有 v 编号历史版本,前缀为 `<name>.v<N>.<M>.md`
 - 一份文档原则上只维护最新一版;旧版仅在需要回顾历史决策时才参考
 
+### 🆕 coherence 子目录规则（v2.10.15）
+
+- `coherence/YYYY-MM-DD-<topic>.md` — 稳定性 / 史实校验 / 一致性的"实测 + 审计 + 验证"三层文档
+- 这些是 **跑完 LLM 才有写的事实** — 跟设计文档（architecture/）分离
+- 标记**解决 vs 待修** — 解决后归档到 `coherence/archive/`（如果需要回顾）
+
 ### 维护规则
 
 - 新版本文档 = `git mv` 旧现行版到 `archive/<name>.v<N>.<M>.md`,再 git mv 旧 archive 中最新版为新现行版
 - 改一条决策?→ 更新 `01-decision-log.md`(追加,不覆盖)
 - 写新工作日内容?→ 追加到 `log/YYYY-MM-DD_<topic>.md`
 - 修一批 BUG?→ 在 `log/2026-07-12-v2.10.2-followup-summary.md` 追加 + 更新 `test/` 文档
+- 跑出实测数据 / 完成审计?→ 加新文档到 `coherence/`
 
 ### 跨文档链接约定
 
@@ -182,16 +266,15 @@ docs/
 
 ---
 
-## 🆕 v2.10.2 W52 followup 整理(2026-07-12)
+## 🆕 v2.10.15 coherence 子目录引入
 
 | 改动 | 文件数 | 说明 |
 |---|---|---|
-| 新增 test/ 子目录 | 3 文档 | BUG 根因 / 综合测试 / 前端审计 |
-| 新增 deploy/ 子目录 | 1 文档 | 5 步部署 + 10 问题 |
-| 新增 release/ 子目录 | 2 文档 | v2.10.1 / v2.10.2 release notes |
-| 新增 log/2026-07-12 followup | 1 总结 | W52 followup 全量 |
-| 移动 architecture/ | 3 个设计文档 | 从 docs/ 移到 docs/architecture/ |
-| 移动 design/ → architecture/ | 整个目录改名 | 语义更准 |
+| 新增 `coherence/` 子目录 | 5 文档 | 30 回合核对 + P0 修复验证 + stall 终极分析 + v2.10.13 验证 + Anachronism 审计 |
+| 新增 `marketing/` 子目录 | 1 文档 | Zhihu 推广文（含 6.5 工程笔记"debug 明代游戏"） |
+| 新增 `deploy/FRONTEND_MISMATCH_ANALYSIS.md` | 1 文档 | v2.10.10 前后端对接分析 |
+| 新增 `log/2026-07-19-...` | 2 文档 | v2.10.10-11 上线后 followup |
+| 新增 `log/2026-07-20-22` | 5 文档 | v2.10.12-15 稳定性 + 史实校验工作 |
 
 ---
 
@@ -199,6 +282,7 @@ docs/
 
 | 版本 | 日期 | 改动 |
 |---|---|---|
+| **v2.10.15** | 2026-07-22 | 新增 `coherence/` + `marketing/`,5 篇 audit |
 | **v2.10.2 W52** | 2026-07-12 | 新增 test/deploy/release,重写 README |
 | **v1.7.29** | 早期 | 产品设计文档归档(4→1+3 archive) |
 | **v1.7.29** | 早期 | 支线路径 Wiki 归档(5→1+4 archive) |
@@ -207,4 +291,4 @@ docs/
 
 ---
 
-依据 v2.10.2 W52 followup 重构
+依据 v2.10.15 同步更新（commit `d833199` 之后）

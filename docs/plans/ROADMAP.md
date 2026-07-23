@@ -1,7 +1,7 @@
 # 🗺️ v2.10.11+ 后续版本路线图
 
-> **更新时间**：2026-07-19
-> **基于**：v2.10.11 已上线 `origin/main`（commit `5f1b7d4`）
+> **更新时间**：2026-07-22 (v2.10.15 后)
+> **基于**：v2.10.15 已上线 `origin/main`（commit `f0c70e9` + `d833199`）
 > **作者**：Trae IDE + history_footnote 工程
 > **目的**：把"未规划的事"沉淀成可评审路线图，方便 PR / 决策 / 排期
 >
@@ -9,20 +9,34 @@
 > - 看到某个版本想动手 → 复制成 `docs/plans/vX.Y.Z.md`
 > - 路线有调整 → 更新本文件
 > - 完成后 → 在 CHANGELOG 写一条，把状态（草案 / 进行中 / 已完成）改
+>
+> 🆕 **v2.10.11 → v2.10.15 已完成**：
+> - v2.10.12: cash reconcile baseline 算法换（impl `61ac6d3`）
+> - v2.10.13: Adaptive Timeout Ladder + Stall 防御 + ERR-class 分流（impl `a23f8c6`）
+> - v2.10.14: Anachronism Detector + 端点（impl `8b05135` + `b0ea5cf`）
+> - v2.10.15: Reports 持久化 + 玩家输入扫描（impl `f0c70e9`）
+>
+> 详见 [coherence/](../coherence/) 子目录的 5 篇审计 + 验证文档
 
 ---
 
-## 📊 现状快照（v2.10.11 后）
+## 📊 现状快照（v2.10.15 后）
 
-**已上线**：v2.10.11（含 v2.10.10 前端切换 + v2.10.11 SPA fallback）
+**已上线**：v2.10.15（稳定性 + 史实校验双升级）
 
 | 项 | 状态 | 来源 |
 |---|---|---|
 | 静态资源 character | ✅ 7/7 完成 | TODO v2.7.1 |
-| 静态资源 fate card | ✅ 40/40 完成（超 36 计划） | TODO v2.7.1 |
-| 静态资源 scene | ✅ 3/3 米黄背景 | TODO v2.7.1（可考虑透明升级） |
-| 防回归测试 | ✅ v2.10.10 静态回归测试 | test_v21010_sveltekit_index_html.py |
-| E2E HTTP 测试 | ✅ 9 场景 | test_v21010_e2e_http_smoke.py |
+| 静态资源 fate card | ✅ 40/40 完成 | TODO v2.7.1 |
+| 静态资源 scene | ✅ 3/3 米黄背景 | TODO v2.7.1 |
+| LLM Stall 防御 | ✅ **v2.10.13** Adaptive Ladder + PREEMPTIVE COOLDOWN | docs/coherence/2026-07-21-final-stall-analysis.md |
+| ERR-class 分流 | ✅ **v2.10.13** ProviderAllFailedError + 503/500 | docs/coherence/2026-07-21-final-stall-analysis.md |
+| Cash Reconciliation 自适应 | ✅ **v2.10.13-prep** implicit_initial 算法 | docs/coherence/2026-07-20-p0-fix-verified.md |
+| 30 turns 真 e2e 实测 | ✅ **30/30 PASS** | tests/test_v21011_30r_real_e2e.py |
+| Anachronism Detector | ✅ **v2.10.14** 三层分类 + 端点 | docs/coherence/2026-07-22-anachronism-audit.md |
+| Anachronism 持久化 | ✅ **v2.10.15** Reports 写盘 | docs/coherence/2026-07-22-anachronism-audit.md |
+| 玩家输入史实扫描 | ✅ **v2.10.15** `input_anachronism_hits` | docs/coherence/2026-07-22-anachronism-audit.md |
+| 防回归测试 | ✅ v2.10.10 静态回归 + v2.10.11 30 回合 e2e | test_v21010_sveltekit_index_html.py + test_v21011_30r_real_e2e.py |
 | CI 接 e2e | ❌ CI.yml 只跑 pytest tests/，缺 conda 装 + e2e 集成 | ci.yml |
 | CI 接 scripts/tests | ❌ 101 个 scripts/test_*.py 没被 CI 跑 | 调查发现 |
 | 可观测 / 结构化日志 | ❌ 当前用 stdlib logging | docs/architecture/archive |
@@ -34,61 +48,61 @@
 
 ## 🎯 版本优先级（按 ROI 排序）
 
-### ⭐⭐⭐⭐⭐ v2.10.12 — CI/CD 增强（**建议立即开始**）
+### ⭐⭐⭐⭐⭐ v2.10.16 — Anachronism 完善（P2 backlog 30 行）
+
+**估时**：1-2 天
+**动机**：v2.10.22 audit 显示功能可用但有 3 项 P2 不完美。修这些让 dev/QA 日常更顺手。
+
+**P0**：
+- [ ] **P2-A**：加白名单 phrase（明代合法用法如"按股分账"）
+      改动：`anachronism_detector.py` 加 `ALLOWED_PHRASES: list[str]`
+      验证：5 turn smoke + 不再 flag 明代"股份"用法
+
+- [ ] **P2-B**：SOFT 加 narrative 已澄清检测
+      改动：检测 narrative 含 "万历/月息几分/几钱/现在通用" 等"古代化"信号词
+      验证：SOFT 命中降级到 UNCLEAR 或跳过
+
+- [ ] **P2-C**：补 6 个漏网 modern concept 词
+      改动：6 行 regex 到 HARD/SOFT
+      验证：单测 /api/anachronisms 含 "理财/熊市/IPO/IRR/未来收益/iphone" 都 flag
+
+**P1（待商榷）**：
+- [ ] **P3-D**：CI 集成（GitHub Actions 5 turn smoke）— 0.5 天
+- [ ] **P3-E**：Thread safety（lock around `_PROVIDER_RECENT`）— 0.5 小时
+
+**验收**：
+- 5 turn smoke + `anachronism-assert` —— 不再有漏网 / 误触
+- 全部 P2 closed
+
+---
+
+### ⭐⭐⭐⭐⭐ v2.10.17 — CI/CD 增强（**v2.10.12 推迟过来的 P0**）
 
 **估时**：3-5 天
-**动机**：e2e 已经证明（v2.10.11）这类自动化测试能找到真 bug，**让所有 push 都跑这测试** 才能防 regression。
+**动机**：30 回合真 e2e 已经证明（v2.10.11）这类测试能找到真 bug，**让所有 push 都自动跑** 才能防 regression。
 
 **P0（必做）**：
-1. **CI.yml 接 e2e HTTP 测试**
-   - 安装 conda + langchain（参考 deploy.yml 的 setup-python）
-   - `tests/test_v21010_e2e_http_smoke.py` 9 场景全跑
+1. **CI.yml 接 5 turn e2e**
+   - 安装 conda + langchain
+   - `tests/test_v21011_30r_real_e2e.py --turns 5` 全跑
    - fail-fast：1 个失败 → merge 阻塞
 2. **CI.yml 接 scripts/test_\*.py（offline 部分）**
    - 用 `grep -L "minimax\|deepseek\|api\."` 过滤不需 LLM 的
    - 跑 `python scripts/test_X.py`，exit code 计入
 3. **Coverage 报告**
    - pytest 加 `--cov=src --cov-report=term-missing --cov-fail-under=70`
-   - threshold 放 70 起步，逐步 +5 提
-4. **Release Drafter 自动化**
-   - 用 `.github/release-drafter.yml`
-   - 自动归纳"Next version"
+   - threshold 放 70 起步
+4. **Anachronism HARD 检测**：CI 接 `tests/test_v21014_anachronism_unit.py`（未来加）
 
 **P1（待商榷）**：
 - [ ] `tests/` 子目录分组（按 v2.10.X），方便 review
 - [ ] OpenAPI drift-check（防 API 改了但 docs 漏）
-- [ ] Draft Release 模板（vs. 直接 release 切 tag）
+- [ ] Draft Release 模板
 
 **验收**：
 - PR 触发 CI，全绿才可 merge
 - Coverage ≥ 70%
 - 接下来的 push 任何 break，都被 CI 拦住
-
----
-
-### ⭐⭐⭐⭐ v2.10.13 — 可观测 + 性能
-
-**估时**：5-7 天
-**动机**：上线后用户反馈"加载慢 / 502"时，**无 metric 没法定位**。
-
-**P0**：
-1. **结构化日志**：替换 stdlib `logging` 为 `structlog`
-   - 所有 `logger.info(...)` 改 `log.info(event="xxx", key=value)`
-   - 输出 JSON，便于 ELK / Loki 收
-2. **OpenTelemetry trace**：
-   - 包 LLM invoke（minimax / deepseek 真实耗时）
-   - 包 router dispatch（路由到 handler 的耗时）
-   - 包 session.get / session.set（session pool 性能）
-3. **Prometheus /metrics 端点**：
-   - verify 现有 `routers/admin_settings.py` 是否有 `/metrics`
-   - 加：LLM call count / latency / token usage
-4. **Web Vitals 上报**：
-   - FCP / LCP / TTI / CLS
-   - SvelteKit hooks.server.ts 已部分实现，verify 上报通路
-
-**P1**：
-- [ ] Alerting 规则：5xx > 1% / LLM P95 > 30s / 首页 P95 > 3s
-- [ ] **Admin 面板 RUM**（v2.10.9 W47 已有雏形，看完善度）
 
 ---
 
