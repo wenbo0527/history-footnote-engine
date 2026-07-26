@@ -261,16 +261,16 @@
   </div>
 </div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-  }
-}
-</script>
+<!-- 🆕 用 UMD 版本（无 module/importmap）— preview tool 兼容性更好 -->
+<script src="/static/lib/three.min.js"></script>
 
-<script type="module">
-import * as THREE from 'three';
+<script>
+// 不再 import — three.min.js 是 UMD 全局 THREE
+const THREE = window.THREE;
+if (!THREE) {
+  document.body.innerHTML = '<div style="color:red;padding:20px;">❌ Three.js 加载失败 — 请检查 /static/lib/three.min.js</div>';
+  throw new Error('THREE not loaded');
+}
 
 // ============= 配置 =============
 const CITIES = {
