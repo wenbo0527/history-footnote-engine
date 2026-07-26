@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>万历十五年 · HD-2D 场景原型 (M1)</title>
+<style>
+  /* 🆕 v2.10.x+ 风格化 base */
+  :root {
+    --color-jade: #4a7c59;
+    --color-jade-dark: #2d5236;
+    --color-bronze: #8b6f47;
+    --color-bronze-dark: #5a4530;
+    --color-rice: #f5e6c8;
+    --color-ink: #1a1612;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0a0805;
+    color: var(--color-rice);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* 主舞台 */
+  #stage {
+    position: relative;
+    width: 100vw;
+    height: 70vh;
+    overflow: hidden;
+    background: #1a1612;
+    cursor: grab;
+  }
+  #stage:active { cursor: grabbing; }
+  #scene-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* HUD 上方 */
+  .hud-top {
+    position: absolute;
+    top: 12px; left: 12px;
+    z-index: 10;
+    background: rgba(26, 22, 18, 0.85);
+    border: 1px solid var(--color-bronze);
+    padding: 10px 14px;
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+  }
+  .hud-top h1 {
+    font-size: 14px;
+    color: var(--color-rice);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .hud-top p {
+    font-size: 11px;
+    color: var(--color-bronze);
+    font-weight: 300;
+  }
+
+  /* 城市切换按钮 */
+  .city-tabs {
+    position: absolute;
+    top: 12px; right: 12px;
+    z-index: 10;
+    display: flex;
+    gap: 6px;
+    background: rgba(26, 22, 18, 0.85);
+    padding: 6px;
+    border: 1px solid var(--color-bronze);
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+  }
+  .city-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--color-rice);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .city-tab.active {
+    background: var(--color-bronze);
+    color: var(--color-ink);
+  }
+  .city-tab:hover:not(.active) {
+    background: rgba(139, 111, 71, 0.3);
+  }
+
+  /* 控制面板下方 */
+  .controls {
+    height: 30vh;
+    padding: 20px;
+    background: linear-gradient(to bottom, #1a1612, #0a0805);
+    overflow-y: auto;
+  }
+  .controls h2 {
+    font-size: 14px;
+    color: var(--color-bronze);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .controls-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .ctrl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(74, 124, 89, 0.15);
+    border: 1px solid var(--color-jade);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .ctrl input[type="range"] {
+    width: 100px;
+    accent-color: var(--color-bronze);
+  }
+  .ctrl button {
+    padding: 6px 10px;
+    font-size: 12px;
+    background: var(--color-bronze);
+    color: var(--color-ink);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .ctrl button:hover { background: var(--color-bronze-dark); color: var(--color-rice); }
+  .ctrl label { color: var(--color-rice); }
+
+  /* 调试信息 */
+  .debug {
+    position: absolute;
+    bottom: 12px; left: 12px;
+    z-index: 10;
+    background: rgba(26, 22, 18, 0.85);
+    border: 1px solid var(--color-bronze);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--color-bronze);
+    font-family: monospace;
+    line-height: 1.6;
+  }
+  .debug strong { color: var(--color-rice); }
+
+  /* 史实信息卡片 */
+  .info-card {
+    position: absolute;
+    bottom: 12px; right: 12px;
+    z-index: 10;
+    background: rgba(26, 22, 18, 0.92);
+    border: 1px solid var(--color-bronze);
+    padding: 12px 14px;
+    border-radius: 6px;
+    max-width: 320px;
+    backdrop-filter: blur(8px);
+  }
+  .info-card h3 {
+    font-size: 13px;
+    color: var(--color-rice);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .info-card .meta {
+    font-size: 11px;
+    color: var(--color-bronze);
+    margin-bottom: 6px;
+  }
+  .info-card .desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-rice);
+    font-weight: 300;
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="scene-canvas"></canvas>
+
+  <div class="hud-top">
+    <h1>万历十五年 · HD-2D 场景原型</h1>
+    <p>v0.1 M1: 摄影机微动 + 双层视差</p>
+  </div>
+
+  <div class="city-tabs">
+    <button class="city-tab active" data-city="shengze">盛泽</button>
+    <button class="city-tab" data-city="suzhou">苏州</button>
+    <button class="city-tab" data-city="beijing">京城</button>
+  </div>
+
+  <div class="debug" id="debug">
+    <strong>FPS:</strong> <span id="fps">—</span><br>
+    <strong>镜头:</strong> x=<span id="cam-x">0</span> y=<span id="cam-y">0</span><br>
+    <strong>场景:</strong> <span id="city-name">盛泽</span>
+  </div>
+
+  <div class="info-card" id="info-card">
+    <h3 id="card-title">盛泽镇</h3>
+    <div class="meta" id="card-meta">苏州府吴江县 · 距离京城 5~7 天</div>
+    <div class="desc" id="card-desc">
+      万历年间江南丝织业核心小镇，民间机户过万。你家里两台织机，妻沈氏操持家务，子阿宝在私塾。
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <h2>🎛️ 演示控制</h2>
+
+  <div class="controls-row">
+    <div class="ctrl">
+      <label>移动幅度</label>
+      <input type="range" id="amp-range" min="0" max="20" step="1" value="8">
+      <span id="amp-val">8%</span>
+    </div>
+    <div class="ctrl">
+      <label>视差层级</label>
+      <input type="range" id="parallax-range" min="0" max="100" step="5" value="40">
+      <span id="parallax-val">0.40</span>
+    </div>
+    <div class="ctrl">
+      <label>缩放</label>
+      <input type="range" id="zoom-range" min="50" max="150" step="5" value="100">
+      <span id="zoom-val">100%</span>
+    </div>
+    <div class="ctrl">
+      <label>倾斜</label>
+      <input type="range" id="tilt-range" min="-30" max="30" step="5" value="-10">
+      <span id="tilt-val">-10°</span>
+    </div>
+    <div class="ctrl">
+      <label>阻尼</label>
+      <input type="range" id="damp-range" min="0" max="20" step="1" value="6">
+      <span id="damp-val">0.06</span>
+    </div>
+    <div class="ctrl">
+      <label>动画</label>
+      <input type="checkbox" id="auto-toggle" checked>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="ctrl">
+      <button id="reset-btn">↺ 重置视角</button>
+    </div>
+    <div class="ctrl">
+      <label>🐭 鼠标在场景内移动看摄影机跟随</label>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ============= 配置 =============
+const CITIES = {
+  shengze: {
+    name: '盛泽镇',
+    image: '/scenes/shengze.webp',
+    meta: '苏州府吴江县 · 距离京城 5~7 天',
+    desc: '万历年间江南丝织业核心小镇，民间机户过万。你家里两台织机，妻沈氏操持家务，子阿宝在私塾。',
+  },
+  suzhou: {
+    name: '苏州',
+    image: '/scenes/suzhou.webp',
+    meta: '江南丝织业绝对中心 · 距离盛泽 半日水路',
+    desc: '阊门码头人声鼎沸，民间机户工匠超过三万人。万历年间赋税占全国十分之一。',
+  },
+  beijing: {
+    name: '京城',
+    image: '/scenes/beijing.webp',
+    meta: '帝国首都 · 距离盛泽 5~7 天',
+    desc: '万历十五年，神宗皇帝深居宫中，朝政由内阁与宦官博弈。江南的税银从此处汇聚。',
+  },
+};
+
+let currentCity = 'shengze';
+const amp = { value: 8 };          // 移动幅度 %
+const parallax = { value: 0.4 };    // 视差强度 0-1
+const damp = { value: 0.06 };       // 阻尼
+const autoAnim = { value: true };
+const zoom = { value: 1.0 };
+const tilt = { value: -10 * Math.PI / 180 };
+
+// ============= Three.js 场景 =============
+const canvas = document.getElementById('scene-canvas');
+const stage = document.getElementById('stage');
+
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  alpha: false,
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#1a1612');
+
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+camera.position.set(0, 0, 5);
+
+// 容器 group（让摄影机移动时所有 plane 一起动）
+const worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+// 加载器
+const loader = new THREE.TextureLoader();
+
+// 双层视差 — 远景 + 近景
+let layers = [];
+
+function buildLayers(imageUrl) {
+  // 清空旧的
+  for (const l of layers) {
+    worldGroup.remove(l.mesh);
+    l.mesh.material.dispose();
+  }
+  layers = [];
+
+  // 创建 2 个 plane（远景 + 近景）
+  for (let i = 0; i < 2; i++) {
+    const layerData = CITIES[currentCity];
+    const tex = loader.load(layerData.image);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+
+    const material = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: false,
+    });
+
+    // plane 尺寸: 宽 4 * 16:9 = 4 x 2.25
+    const geometry = new THREE.PlaneGeometry(4, 2.25);
+    const mesh = new THREE.Mesh(geometry, material);
+
+    // z 位置：远景 z=-1, 近景 z=0
+    mesh.position.z = -1 + i * 1;
+    // 近景稍大一点 — 制造层次
+    if (i === 1) {
+      mesh.scale.set(1.15, 1.15, 1);
+      mesh.position.z = 0;
+    }
+
+    worldGroup.add(mesh);
+    layers.push({
+      mesh,
+      baseZ: mesh.position.z,
+      baseScale: mesh.scale.x,
+      isBack: (i === 0),
+    });
+  }
+}
+
+buildLayers(CITIES[currentCity].image);
+
+// ============= Resize =============
+function onResize() {
+  const w = stage.clientWidth;
+  const h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize);
+onResize();
+
+// ============= 鼠标 / 触屏交互 =============
+const target = { x: 0, y: 0 };
+const current = { x: 0, y: 0 };
+const mouse = { x: 0, y: 0, active: false };
+
+stage.addEventListener('mousemove', (e) => {
+  const rect = stage.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  mouse.active = true;
+});
+
+stage.addEventListener('mouseleave', () => {
+  mouse.active = false;
+});
+
+stage.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 0) {
+    const rect = stage.getBoundingClientRect();
+    const t = e.touches[0];
+    mouse.x = ((t.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((t.clientY - rect.top) / rect.height) * 2 + 1;
+    mouse.active = true;
+  }
+});
+
+stage.addEventListener('touchend', () => {
+  mouse.active = false;
+});
+
+// 自动演示动画（鼠标不在时）
+let autoT = 0;
+
+// ============= 主循环 =============
+let lastT = performance.now();
+let fpsAcc = 0;
+let fpsCount = 0;
+let fpsLast = lastT;
+
+function animate(now) {
+  const dt = Math.min((now - lastT) / 1000, 0.1);
+  lastT = now;
+
+  // 计算目标位置
+  let tx, ty;
+  if (mouse.active) {
+    tx = mouse.x;
+    ty = mouse.y;
+  } else if (autoAnim.value) {
+    autoT += dt * 0.4;
+    tx = Math.sin(autoT) * 0.6;
+    ty = Math.cos(autoT * 0.7) * 0.4;
+  } else {
+    tx = 0; ty = 0;
+  }
+
+  // 阻尼
+  current.x += (tx - current.x) * damp.value;
+  current.y += (ty - current.y) * damp.value;
+
+  // 摄影机位置（基于 amp %）
+  const ampScale = amp.value / 100;
+  camera.position.x = current.x * 0.3 * ampScale;
+  camera.position.y = current.y * 0.2 * ampScale;
+  camera.lookAt(0, 0, 0);
+
+  // 视差分层移动
+  for (const l of layers) {
+    const pFactor = l.isBack ? (1 - parallax.value) : 1.0;
+    l.mesh.position.x = current.x * 0.5 * ampScale * pFactor;
+    l.mesh.position.y = current.y * 0.3 * ampScale * pFactor;
+  }
+
+  // 缩放 + 倾斜
+  camera.zoom = zoom.value;
+  camera.fov = 35 + (1 - zoom.value) * 10;
+  camera.rotation.z = tilt.value;
+  camera.updateProjectionMatrix();
+
+  renderer.render(scene, camera);
+
+  // FPS
+  fpsAcc += dt;
+  fpsCount++;
+  if (now - fpsLast > 500) {
+    const fps = Math.round(fpsCount / fpsAcc);
+    document.getElementById('fps').textContent = fps;
+    fpsAcc = 0; fpsCount = 0; fpsLast = now;
+    document.getElementById('cam-x').textContent = current.x.toFixed(2);
+    document.getElementById('cam-y').textContent = current.y.toFixed(2);
+  }
+
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+// ============= UI 绑定 =============
+const ampR = document.getElementById('amp-range');
+const ampV = document.getElementById('amp-val');
+ampR.addEventListener('input', () => {
+  amp.value = +ampR.value;
+  ampV.textContent = amp.value + '%';
+});
+
+const parallaxR = document.getElementById('parallax-range');
+const parallaxV = document.getElementById('parallax-val');
+parallaxR.addEventListener('input', () => {
+  parallax.value = +parallaxR.value / 100;
+  parallaxV.textContent = parallax.value.toFixed(2);
+});
+
+const zoomR = document.getElementById('zoom-range');
+const zoomV = document.getElementById('zoom-val');
+zoomR.addEventListener('input', () => {
+  zoom.value = +zoomR.value / 100;
+  zoomV.textContent = Math.round(zoom.value * 100) + '%';
+});
+
+const tiltR = document.getElementById('tilt-range');
+const tiltV = document.getElementById('tilt-val');
+tiltR.addEventListener('input', () => {
+  tilt.value = +tiltR.value * Math.PI / 180;
+  tiltV.textContent = tiltR.value + '°';
+});
+
+const dampR = document.getElementById('damp-range');
+const dampV = document.getElementById('damp-val');
+dampR.addEventListener('input', () => {
+  damp.value = +dampR.value / 100;
+  dampV.textContent = damp.value.toFixed(2);
+});
+
+const autoToggle = document.getElementById('auto-toggle');
+autoToggle.addEventListener('change', () => {
+  autoAnim.value = autoToggle.checked;
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  ampR.value = 8; amp.value = 8; ampV.textContent = '8%';
+  parallaxR.value = 40; parallax.value = 0.4; parallaxV.textContent = '0.40';
+  zoomR.value = 100; zoom.value = 1.0; zoomV.textContent = '100%';
+  tiltR.value = -10; tilt.value = -10 * Math.PI / 180; tiltV.textContent = '-10°';
+  dampR.value = 6; damp.value = 0.06; dampV.textContent = '0.06';
+});
+
+// 城市切换
+document.querySelectorAll('.city-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const cityId = tab.dataset.city;
+    currentCity = cityId;
+    const city = CITIES[cityId];
+
+    // 重置镜头
+    current.x = 0; current.y = 0;
+
+    // 重建设层
+    buildLayers(city.image);
+
+    // 更新信息卡
+    document.getElementById('card-title').textContent = city.name;
+    document.getElementById('card-meta').textContent = city.meta;
+    document.getElementById('card-desc').textContent = city.desc;
+    document.getElementById('city-name').textContent = city.name;
+  });
+});
+</script>
+
+</body>
+</html>
