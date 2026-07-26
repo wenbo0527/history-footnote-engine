@@ -119,6 +119,91 @@ class Handler(HandlerBaseMixin, BaseHTTPRequestHandler):
         if not dispatch_POST(self, path, body):
             self._json(404, {"error": "not found", "method": "POST", "path": path})
 
+    # 🆕 v2.10.16+: HEAD 支持（preview tool + link checker 需要）
+    # 修复 ERR_ABORTED：当 Trae IDE preview / 某些工具发 HEAD 校验时，
+    # 之前返 501 → navigation abort → ERR_ABORTED。
+    # 修法：完全独立 do_HEAD，只发 headers 不发 body（HTTP/1.1 标准要求）。
+    # 支持 /static/、/、/index.html、SPA fallback、/api/* 路由。
+    def do_HEAD(self):  # noqa: N802 — BaseHTTPRequestHandler convention
+        parsed = urlparse(self.path)
+        path = parsed.path
+        # 静态资源 — 用 _serve_static 但跳过 body 写
+        if path.startswith("/static/"):
+            try:
+                self._serve_static_head(path)
+            except Exception as e:
+                _safe_dispatch_error(self, e, scope=f"HEAD {path}")
+            return
+        # 根 / index.html
+        if path == "/" or path == "/index.html":
+            try:
+                self._html_head(200)
+            except Exception as e:
+                _safe_dispatch_error(self, e, scope=f"HEAD {path}")
+            return
+        # SPA fallback（v2.10.10+）：非 /api/* 非 /static/* 都返 INDEX_HTML
+        if not path.startswith("/api/"):
+            try:
+                self._html_head(200)
+            except Exception as e:
+                _safe_dispatch_error(self, e, scope=f"HEAD {path}")
+            return
+        # /api/* 路由 — HEAD 时客户端只关心存在性 + Content-Type，
+        # 不需要真实 body — 直接发 200 + Content-Length: 0 即可
+        # （避免 do_GET 路径里各种 _json + 异常处理的边界 case）
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+        except Exception as e:
+            _safe_dispatch_error(self, e, scope=f"HEAD {path}")
+        self.close_connection = True
+
+
+class _SilentFile:
+    """HEAD 请求时静默 body write — do_GET 里所有 send_* 调用都跑，
+    但 self.wfile.write(body) 静默不发送任何字节。
+
+    🆕 v2.10.16+: 还需要代理 close() / writable() / writelines() 等
+    因为 BaseHTTPRequestHandler 可能调用这些方法。
+    """
+
+    __slots__ = ("_real",)
+
+    def __init__(self, real):
+        self._real = real
+
+    def write(self, data):  # noqa: A003 — wfile API
+        # 静默 — 不发送 body
+        pass
+
+    def writelines(self, lines):  # noqa: A003
+        # 静默 — 不发送 body
+        pass
+
+    def flush(self):  # noqa: A003
+        # 静默 — 不强制 flush
+        pass
+
+    def close(self):  # noqa: A003
+        # 真实关闭底层 socket — 这是关键，否则连接挂起
+        try:
+            self._real.flush()
+        except Exception:
+            pass
+
+    def writable(self):  # noqa: A003
+        return True
+
+    def closed(self):  # noqa: A003
+        return getattr(self._real, "closed", False)
+
+    # 让其它可能的属性访问 fallback 到真实 wfile
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
 
 # ============================================================
 # 入口函数 run()

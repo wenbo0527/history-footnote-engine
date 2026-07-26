@@ -290,6 +290,55 @@ class HandlerBaseMixin:
         self.end_headers()
         self.wfile.write(body)
 
+    # 🆕 v2.10.16+: HEAD 版 _serve_static — 只发 headers，不发 body
+    # HTTP/1.1 要求 HEAD 响应跟 GET 一样的 headers + 0 字节 body
+    # 修复 ERR_ABORTED：Trae IDE preview tool 发 HEAD 时 501 → abort
+    def _serve_static_head(self, path: str):
+        from history_footnote.web_server.static_assets import (
+            STATIC_DIR as _SVELTE_STATIC,
+            _FRONTEND_BUILD_DIR,
+        )
+        rel = path[len("/static/"):]
+        if ".." in rel or rel.startswith("/"):
+            self._json(400, {"error": "invalid path"})
+            return
+        file_path = _SVELTE_STATIC / rel
+        if not file_path.exists() or not file_path.is_file():
+            file_path = _FRONTEND_BUILD_DIR / rel
+        if not file_path.exists() or not file_path.is_file():
+            self._json(404, {"error": "not found", "path": rel})
+            return
+        ext = file_path.suffix
+        mime = MIME_TYPES.get(ext, "application/octet-stream")
+        try:
+            body = file_path.read_bytes()
+        except OSError:
+            self._json(500, {"error": "read failed"})
+            return
+        # 用 len(uncompressed) 作为 Content-Length（body 静默不发送所以不实际量压缩后大小）
+        body = self._gzip_if_accepted(body)
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        if body[:2] == b'\x1f\x8b':
+            self.send_header("Content-Encoding", "gzip")
+        self.send_header("Cache-Control", "public, max-age=3600")
+        self.end_headers()
+        # 不 write body
+
+    # 🆕 v2.10.16+: HEAD 版 _html — 只发 headers
+    def _html_head(self, status: int):
+        from history_footnote.web_server.static_assets import INDEX_HTML
+        body = INDEX_HTML.encode("utf-8")
+        body = self._gzip_if_accepted(body)
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        if body[:2] == b'\x1f\x8b':
+            self.send_header("Content-Encoding", "gzip")
+        self.end_headers()
+        # 不 write body
+
     def _rate_limit_or_429(self, limiter, scope: str = "Too Many Requests") -> bool:
         """统一限流检查：被限流就返回 True 并自动写 429；通过返回 False。"""
         client_ip = self.client_address[0]
