@@ -276,19 +276,19 @@ if (!THREE) {
 const CITIES = {
   shengze: {
     name: '盛泽镇',
-    image: '/scenes/shengze.webp',
+    image: '/scenes/shengze.png',  // 🆕 v2.10.16+: 改用 png（webp 在某些 WebGL 上下文失败）
     meta: '苏州府吴江县 · 距离京城 5~7 天',
     desc: '万历年间江南丝织业核心小镇，民间机户过万。你家里两台织机，妻沈氏操持家务，子阿宝在私塾。',
   },
   suzhou: {
     name: '苏州',
-    image: '/scenes/suzhou.webp',
+    image: '/scenes/suzhou.png',
     meta: '江南丝织业绝对中心 · 距离盛泽 半日水路',
     desc: '阊门码头人声鼎沸，民间机户工匠超过三万人。万历年间赋税占全国十分之一。',
   },
   beijing: {
     name: '京城',
-    image: '/scenes/beijing.webp',
+    image: '/scenes/beijing.png',
     meta: '帝国首都 · 距离盛泽 5~7 天',
     desc: '万历十五年，神宗皇帝深居宫中，朝政由内阁与宦官博弈。江南的税银从此处汇聚。',
   },
@@ -306,30 +306,61 @@ const tilt = { value: -10 * Math.PI / 180 };
 const canvas = document.getElementById('scene-canvas');
 const stage = document.getElementById('stage');
 
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: true,
-  alpha: false,
-});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// 🆕 等待 stage 有 layout 后再 init renderer（避免 canvas size 0 → 黑屏）
+function waitForLayout() {
+  return new Promise(resolve => {
+    function check() {
+      if (stage.clientWidth > 0 && stage.clientHeight > 0) {
+        resolve();
+      } else {
+        requestAnimationFrame(check);
+      }
+    }
+    check();
+  });
+}
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('#1a1612');
-
-const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-camera.position.set(0, 0, 5);
-
-// 容器 group（让摄影机移动时所有 plane 一起动）
-const worldGroup = new THREE.Group();
-scene.add(worldGroup);
-
-// 加载器
+let renderer, scene, camera, worldGroup;
 const loader = new THREE.TextureLoader();
 
 // 双层视差 — 远景 + 近景
 let layers = [];
 
+async function initThree() {
+  await waitForLayout();
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: false,
+      failIfMajorPerformanceCaveat: false,  // 不管 GPU 性能
+    });
+  } catch (e) {
+    document.getElementById('stage').innerHTML =
+      '<div style="color:red;padding:20px;">❌ WebGL 初始化失败: ' + e.message + '<br>请用 Chrome / Firefox / Edge 最新版</div>';
+    return;
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  scene = new THREE.Scene();
+  // 🆕 深色背景 — 即使 texture 没加载也能看到
+  scene.background = new THREE.Color('#1a1612');
+
+  camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+  camera.position.set(0, 0, 5);
+
+  // 容器 group（让摄影机移动时所有 plane 一起动）
+  worldGroup = new THREE.Group();
+  scene.add(worldGroup);
+
+  buildLayers(CITIES[currentCity].image);
+  onResize();
+  // 启动主循环
+  requestAnimationFrame(animate);
+}
+
 function buildLayers(imageUrl) {
+  if (!worldGroup) return;
   // 清空旧的
   for (const l of layers) {
     worldGroup.remove(l.mesh);
@@ -340,7 +371,75 @@ function buildLayers(imageUrl) {
   // 创建 2 个 plane（远景 + 近景）
   for (let i = 0; i < 2; i++) {
     const layerData = CITIES[currentCity];
-    const tex = loader.load(layerData.image);
+    // 🆕 v2.10.16+: 先尝试加载 image，失败时用程序化纹理兜底
+    const tex = loader.load(layerData.image, (loadedTex) => {
+      loadedTex.needsUpdate = true;
+      console.log(`[hd2d] layer ${i} (${layerData.image}) loaded: ${loadedTex.image.width}x${loadedTex.image.height}`);
+    }, undefined, (err) => {
+      console.warn(`[hd2d] layer ${i} (${layerData.image}) failed — using procedural fallback:`, err.message || err);
+      // 🆕 程序化兜底纹理（防止预览工具 sandbox 不允许 image loading）
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      const cityName = layerData.name;
+      const hue = (i === 0) ? 35 : 25;  // 远景稍冷，近景稍暖
+      // 渐变背景
+      const grd = ctx.createLinearGradient(0, 0, 1024, 512);
+      grd.addColorStop(0, `hsl(${hue}, 30%, 65%)`);
+      grd.addColorStop(1, `hsl(${hue}, 40%, 35%)`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, 1024, 512);
+      // 山峦轮廓（远景）
+      if (i === 0) {
+        ctx.fillStyle = `hsl(${hue}, 35%, 50%)`;
+        ctx.beginPath();
+        ctx.moveTo(0, 380);
+        ctx.lineTo(150, 280); ctx.lineTo(300, 320);
+        ctx.lineTo(500, 240); ctx.lineTo(700, 290);
+        ctx.lineTo(900, 270); ctx.lineTo(1024, 350);
+        ctx.lineTo(1024, 512); ctx.lineTo(0, 512);
+        ctx.fill();
+      }
+      // 建筑（近景）
+      if (i === 1) {
+        ctx.fillStyle = `hsl(${hue}, 30%, 30%)`;
+        // 房屋
+        for (let j = 0; j < 8; j++) {
+          const x = j * 128 + 20;
+          const h = 80 + Math.sin(j * 1.5) * 40;
+          ctx.fillRect(x, 512 - h - 80, 100, h);
+          // 屋檐
+          ctx.fillRect(x - 5, 512 - h - 90, 110, 12);
+        }
+        // 树干
+        ctx.fillStyle = `hsl(${hue}, 25%, 20%)`;
+        for (let j = 0; j < 5; j++) {
+          ctx.fillRect(j * 220 + 80, 380, 12, 120);
+        }
+      }
+      // 标题水印
+      ctx.font = 'bold 60px serif';
+      ctx.fillStyle = `hsl(${hue}, 50%, 90%)`;
+      ctx.textAlign = 'center';
+      ctx.fillText(cityName, 512, 256);
+      ctx.font = '24px serif';
+      ctx.fillText('(程序化兜底纹理)', 512, 296);
+      // 用 canvas 创建纹理
+      const fallbackTex = new THREE.CanvasTexture(canvas);
+      fallbackTex.colorSpace = THREE.SRGBColorSpace;
+      fallbackTex.needsUpdate = true;
+      // 替换 mesh 的 material
+      const newMat = new THREE.MeshBasicMaterial({
+        map: fallbackTex,
+        side: THREE.DoubleSide,
+        color: 0xffffff,
+      });
+      if (layers[i]) {
+        layers[i].mesh.material.dispose();
+        layers[i].mesh.material = newMat;
+      }
+    });
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.minFilter = THREE.LinearFilter;
     tex.magFilter = THREE.LinearFilter;
@@ -348,10 +447,12 @@ function buildLayers(imageUrl) {
     const material = new THREE.MeshBasicMaterial({
       map: tex,
       transparent: false,
+      side: THREE.DoubleSide,  // 🆕 双面渲染，防止 plane 朝向错
+      color: 0xffffff,  // 白色 multiplier，不影响贴图色
     });
 
-    // plane 尺寸: 宽 4 * 16:9 = 4 x 2.25
-    const geometry = new THREE.PlaneGeometry(4, 2.25);
+    // 🆕 plane 加大 — 远景 8x4.5，确保覆盖视野
+    const geometry = new THREE.PlaneGeometry(8, 4.5);
     const mesh = new THREE.Mesh(geometry, material);
 
     // z 位置：远景 z=-1, 近景 z=0
@@ -372,10 +473,9 @@ function buildLayers(imageUrl) {
   }
 }
 
-buildLayers(CITIES[currentCity].image);
-
 // ============= Resize =============
 function onResize() {
+  if (!renderer) return;  // 🆕 v2.10.16+: 还没初始化好时跳过
   const w = stage.clientWidth;
   const h = stage.clientHeight;
   renderer.setSize(w, h, false);
@@ -383,7 +483,8 @@ function onResize() {
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', onResize);
-onResize();
+// 🆕 v2.10.16+: 移除同步 onResize() 调用 — 由 initThree() 异步调用
+// onResize();
 
 // ============= 鼠标 / 触屏交互 =============
 const target = { x: 0, y: 0 };
@@ -425,6 +526,10 @@ let fpsCount = 0;
 let fpsLast = lastT;
 
 function animate(now) {
+  if (!renderer) {  // 🆕 v2.10.16+: 没初始化好就跳过
+    requestAnimationFrame(animate);
+    return;
+  }
   const dt = Math.min((now - lastT) / 1000, 0.1);
   lastT = now;
 
@@ -479,7 +584,15 @@ function animate(now) {
 
   requestAnimationFrame(animate);
 }
-requestAnimationFrame(animate);
+
+// 🆕 v2.10.16+: 用 initThree 异步初始化（之前同步初始化 → canvas size 0 → 黑屏）
+// 🆕 WebGL 早期检测 — 避免 renderer 创建失败时没提示
+if (!window.WebGLRenderingContext) {
+  document.getElementById('stage').innerHTML =
+    '<div style="color:red;padding:20px;">❌ 此浏览器不支持 WebGL</div>';
+} else {
+  initThree();
+}
 
 // ============= UI 绑定 =============
 const ampR = document.getElementById('amp-range');

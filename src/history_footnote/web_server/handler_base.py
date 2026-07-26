@@ -92,6 +92,9 @@ MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".png": "image/png",
     ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",  # 🆕 v2.10.16+: 修 Three.js TextureLoader 黑屏
     ".svg": "image/svg+xml",
     ".ico": "image/x-icon",
 }
