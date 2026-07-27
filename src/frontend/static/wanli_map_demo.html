@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>万历十五年 · 江南地图原型 (C Demo)</title>
+<style>
+  /* 🆕 风格化 base — 跟游戏一致 */
+  :root {
+    --color-jade: #4a7c59;
+    --color-jade-dark: #2d5236;
+    --color-bronze: #8b6f47;
+    --color-bronze-dark: #5a4530;
+    --color-bronze-light: #c9a878;
+    --color-rice: #f5e6c8;
+    --color-ink: #1a1612;
+    --color-water: #4a6b8a;
+    --color-water-dark: #2c3e50;
+    --color-paper: #e8d8b8;
+    --color-visit: #c44536;
+    --color-current: #e8a83a;
+    --color-heard: #6c8eaf;
+    --color-village: #8b6f47;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", serif;
+    background: linear-gradient(to bottom, #0a0805, #1a1612);
+    color: var(--color-rice);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* === 顶部 HUD === */
+  .hud {
+    padding: 16px 20px;
+    background: rgba(26, 22, 18, 0.92);
+    border-bottom: 1px solid var(--color-bronze);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .hud-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-rice);
+    letter-spacing: 2px;
+  }
+  .hud-sub {
+    font-size: 12px;
+    color: var(--color-bronze-light);
+    margin-top: 2px;
+  }
+  .hud-meta {
+    font-size: 12px;
+    color: var(--color-bronze);
+    text-align: right;
+  }
+  .hud-meta strong { color: var(--color-rice); }
+
+  /* === Tab 切换 === */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .tab {
+    padding: 6px 14px;
+    background: rgba(74, 124, 89, 0.2);
+    border: 1px solid var(--color-jade);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--color-rice);
+  }
+  .tab.active {
+    background: var(--color-bronze);
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .tab:hover:not(.active) {
+    background: rgba(139, 111, 71, 0.4);
+  }
+
+  /* === 主地图区 === */
+  #map-container {
+    position: relative;
+    width: 100%;
+    height: 70vh;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #2c3e50, #4a6b8a);
+    cursor: grab;
+  }
+  #map-container:active { cursor: grabbing; }
+
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* === Tooltip === */
+  .tooltip {
+    position: absolute;
+    background: rgba(26, 22, 18, 0.95);
+    border: 1px solid var(--color-bronze);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    max-width: 280px;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+  }
+  .tooltip.show { display: block; }
+  .tooltip h3 {
+    color: var(--color-rice);
+    font-size: 14px;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+  .tooltip .meta {
+    color: var(--color-bronze-light);
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .tooltip .desc {
+    color: var(--color-rice);
+    font-size: 11px;
+    font-weight: 300;
+    line-height: 1.5;
+  }
+  .tooltip .stat {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--color-bronze-dark);
+    color: var(--color-bronze-light);
+    font-size: 11px;
+  }
+
+  /* === 底部信息 === */
+  .info-bar {
+    padding: 12px 20px;
+    background: rgba(26, 22, 18, 0.85);
+    border-top: 1px solid var(--color-bronze);
+    font-size: 12px;
+    color: var(--color-bronze-light);
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--color-ink);
+  }
+  .legend-dot.current { background: var(--color-current); }
+  .legend-dot.visited { background: var(--color-visit); }
+  .legend-dot.heard { background: var(--color-heard); }
+  .legend-dot.village { background: var(--color-village); }
+
+  /* === SVG 元素样式 === */
+  .water-curve {
+    fill: none;
+    stroke: var(--color-water);
+    stroke-width: 6;
+    stroke-linecap: round;
+    opacity: 0.85;
+  }
+  .water-curve-inner {
+    fill: none;
+    stroke: #6c8eaf;
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.7;
+    stroke-dasharray: 4 3;
+  }
+  .city-circle {
+    fill: var(--color-paper);
+    stroke: var(--color-bronze-dark);
+    stroke-width: 2;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .city-circle:hover {
+    fill: var(--color-bronze-light);
+    stroke: var(--color-visit);
+    stroke-width: 3;
+  }
+  .city-circle.current {
+    fill: var(--color-current);
+    stroke: var(--color-visit);
+    stroke-width: 3;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .city-circle.visited {
+    fill: var(--color-visit);
+  }
+  .city-label {
+    font-size: 14px;
+    fill: var(--color-ink);
+    text-anchor: middle;
+    pointer-events: none;
+    font-weight: 600;
+  }
+  .city-label.current {
+    fill: var(--color-visit);
+    font-size: 16px;
+  }
+  .travel-line {
+    stroke: var(--color-bronze-dark);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+    fill: none;
+    opacity: 0.6;
+  }
+  .travel-label {
+    font-size: 10px;
+    fill: var(--color-bronze-dark);
+    text-anchor: middle;
+    font-weight: 400;
+  }
+  .village-marker {
+    fill: var(--color-village);
+    stroke: var(--color-bronze-dark);
+    stroke-width: 1;
+    cursor: pointer;
+  }
+  .village-marker.current {
+    fill: var(--color-current);
+    stroke: var(--color-visit);
+  }
+  .village-label {
+    font-size: 11px;
+    fill: var(--color-paper);
+    text-anchor: start;
+    pointer-events: none;
+  }
+  .water-label {
+    font-size: 11px;
+    fill: var(--color-rice);
+    font-style: italic;
+    opacity: 0.7;
+    text-anchor: middle;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  /* === 控制 === */
+  .controls {
+    display: flex;
+    gap: 6px;
+  }
+  .ctrl-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    background: rgba(74, 124, 89, 0.3);
+    border: 1px solid var(--color-jade);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--color-rice);
+    transition: all 0.2s;
+  }
+  .ctrl-btn:hover { background: var(--color-bronze); color: var(--color-ink); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div>
+    <div class="hud-title">万历十五年 · 江南地图</div>
+    <div class="hud-sub">明万历十五年（1587） · 苏州府吴江县 · 盛泽镇及周边</div>
+    <div class="tabs">
+      <button class="tab active" data-view="macro">宏观 · 江南四城</button>
+      <button class="tab" data-view="shengze">中观 · 盛泽镇</button>
+    </div>
+  </div>
+  <div>
+    <div class="hud-meta">
+      <strong>玩家:</strong> 吴江盛泽 · 织工 · 男<br>
+      <strong>当前:</strong> <span id="current-name">盛泽</span><br>
+      <strong>回合:</strong> <span id="round">12</span>
+    </div>
+    <div class="controls" style="margin-top: 8px;">
+      <button class="ctrl-btn" id="zoom-in">+</button>
+      <button class="ctrl-btn" id="zoom-out">-</button>
+      <button class="ctrl-btn" id="reset-view">↺ 复位</button>
+    </div>
+  </div>
+</div>
+
+<div id="map-container">
+  <svg id="map-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
+    <!-- 由 JS 动态填充 -->
+  </svg>
+  <div class="tooltip" id="tooltip"></div>
+</div>
+
+<div class="info-bar">
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot current"></span>当前所在</div>
+    <div class="legend-item"><span class="legend-dot visited"></span>已访问</div>
+    <div class="legend-item"><span class="legend-dot heard"></span>听过未去</div>
+    <div class="legend-item"><span class="legend-dot village"></span>镇内地点</div>
+    <div class="legend-item">〰️ 京杭大运河（万历年间已贯通）</div>
+    <div class="legend-item">点击城市/地点查看详情</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 真实史实数据（来自 eras/wanli1587/era.json + 城市 Wiki）
+// ============================================================
+const CITIES = {
+  // 宏观 4 城 — 按真实地理坐标投影（lat/lon）→ SVG 坐标（800x500）
+  shengze: {
+    name: '盛泽镇',
+    desc: '苏州府吴江县东南 · 万历年间江南丝织业核心小镇，民间机户过万',
+    days: 0,
+    meta: '苏州府吴江县',
+    // SVG 坐标 (按相对 lat/lon 投影)
+    svg: { x: 700, y: 380 },
+    status: 'current',
+    key_locations: ['牙行', '机户', '绸行', '关帝庙'],
+    fun_fact: '全镇绸市牙行十余家，每坊机户不下百余',
+  },
+  suzhou: {
+    name: '苏州府',
+    desc: '阊门码头人声鼎沸，民间机户工匠超过三万人，万历年间赋税占全国十分之一',
+    days: 1.0,
+    meta: '江南丝织业绝对中心',
+    svg: { x: 600, y: 340 },
+    status: 'visited',
+    key_locations: ['织造局', '山塘街', '桃花坞', '阊门码头'],
+    fun_fact: '应天巡抚驻地，万历末年葛成抗税罢工发生于此',
+  },
+  hangzhou: {
+    name: '杭州府',
+    desc: '南宋旧都，丝绸生产的源头城，大作坊为特色',
+    days: 2.5,
+    meta: '南宋旧都 · 京杭运河南端',
+    svg: { x: 480, y: 480 },
+    status: 'heard',
+    key_locations: ['清河坊', '西湖', '涌金门'],
+    fun_fact: '张毅庵从 1 张织机发展到 20 余张，万历丝商典范',
+  },
+  songjiang: {
+    name: '松江府',
+    desc: '全国棉纺织业中心，衣被天下，万历年间赋税 122 万两占全国 7%',
+    days: 2.0,
+    meta: '棉纺织业第一府',
+    svg: { x: 820, y: 420 },
+    status: 'heard',
+    key_locations: ['乌泥泾', '黄道婆祠', '棉田'],
+    fun_fact: '"衣被天下" — 黄道婆从海南带回纺织技术，万历发扬光大',
+  },
+  nanjing: {
+    name: '南京应天府',
+    desc: '留都，天下财赋出于江南，而金陵为其会',
+    days: 6.0,
+    meta: '南都 · 留都',
+    svg: { x: 350, y: 200 },
+    status: 'heard',
+    key_locations: ['织造局', '夫子庙', '秦淮河', '明孝陵'],
+    fun_fact: '万历中期科举黄金时代，人口 40-50 万',
+  },
+};
+
+// 盛泽镇内 10 地点（来自 era.json world.locations.list）
+const SHENGZE_PLACES = [
+  { id: 'home', name: '自家', desc: '三间瓦房，妻沈氏操持家务', svg: { x: 700, y: 380 }, status: 'current', icon: '🏠' },
+  { id: 'tooth_market', name: '牙行', desc: '绸市经纪人，专门撮合机户与买家', svg: { x: 680, y: 360 }, status: 'heard', icon: '💰' },
+  { id: 'weaving_house', name: '织坊', desc: '两台织机，妻沈氏操机，子阿宝帮忙', svg: { x: 720, y: 365 }, status: 'current', icon: '🧵' },
+  { id: 'zhou_home', name: '周大娘家', desc: '邻家寡妇，织娘，关系亲近', svg: { x: 690, y: 400 }, status: 'heard', icon: '🏘️' },
+  { id: 'tea_house', name: '茶馆', desc: '盛泽镇上的消息集散地', svg: { x: 730, y: 395 }, status: 'heard', icon: '🍵' },
+  { id: 'guan_di_temple', name: '关帝庙', desc: '镇上香火最盛的庙宇', svg: { x: 705, y: 415 }, status: 'heard', icon: '⛩️' },
+  { id: 'silk_market', name: '绸市', desc: '每日清晨开市，盛泽绸远近闻名', svg: { x: 665, y: 390 }, status: 'heard', icon: '🏪' },
+  { id: 'river_dock', name: '运河码头', desc: '盛泽镇对外水运的唯一通道', svg: { x: 720, y: 420 }, status: 'heard', icon: '⚓' },
+  { id: 'tea_market', name: '茶市', desc: '茶叶、布匹、日用杂货交易', svg: { x: 745, y: 380 }, status: 'heard', icon: '🍃' },
+  { id: 'rice_market', name: '米行', desc: '盛泽镇粮商聚集', svg: { x: 670, y: 410 }, status: 'heard', icon: '🌾' },
+];
+
+// ============================================================
+// SVG 渲染
+// ============================================================
+const svg = document.getElementById('map-svg');
+const tooltip = document.getElementById('tooltip');
+
+let currentView = 'macro'; // 'macro' | 'shengze'
+let zoom = 1;
+let pan = { x: 0, y: 0 };
+
+function render() {
+  svg.innerHTML = '';
+  if (currentView === 'macro') renderMacro();
+  else renderShengze();
+}
+
+// ===== 宏观 4 城视图 =====
+function renderMacro() {
+  // 背景层（渐变水墨感）
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <radialGradient id="waterGrad" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#4a6b8a"/>
+      <stop offset="100%" stop-color="#2c3e50"/>
+    </radialGradient>
+    <linearGradient id="landGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d4c4a8"/>
+      <stop offset="100%" stop-color="#a89478"/>
+    </linearGradient>
+    <pattern id="ricePaper" patternUnits="userSpaceOnUse" width="200" height="200">
+      <rect width="200" height="200" fill="url(#landGrad)"/>
+      <circle cx="50" cy="50" r="1" fill="#8b6f47" opacity="0.3"/>
+      <circle cx="150" cy="100" r="1" fill="#8b6f47" opacity="0.3"/>
+      <circle cx="100" cy="170" r="1" fill="#8b6f47" opacity="0.3"/>
+    </pattern>
+  `;
+  svg.appendChild(defs);
+
+  // 陆地背景（江南地区占大部分）
+  const land = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  land.setAttribute('d', 'M 50 50 Q 200 80, 400 60 T 800 100 Q 1000 200, 1150 400 Q 1100 600, 900 700 T 400 750 Q 200 700, 100 500 Z');
+  land.setAttribute('fill', 'url(#ricePaper)');
+  land.setAttribute('stroke', '#8b6f47');
+  land.setAttribute('stroke-width', '1');
+  land.setAttribute('opacity', '0.85');
+  svg.appendChild(land);
+
+  // 京杭大运河 — 万历年间已贯通（杭州 → 苏州 → 扬州 → 北京）
+  const canal = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  canal.setAttribute('class', 'water-curve');
+  canal.setAttribute('d', 'M 480 480 Q 600 420, 700 380 Q 600 350, 480 480 M 700 380 Q 500 280, 350 200');
+  canal.setAttribute('stroke', '#4a6b8a');
+  svg.appendChild(canal);
+  // 运河虚线装饰
+  const canalInner = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  canalInner.setAttribute('class', 'water-curve-inner');
+  canalInner.setAttribute('d', 'M 480 480 Q 600 420, 700 380 Q 600 350, 480 480');
+  svg.appendChild(canalInner);
+
+  // 太湖水系
+  const lake = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  lake.setAttribute('class', 'water-curve');
+  lake.setAttribute('d', 'M 600 450 Q 700 500, 800 470 Q 850 440, 820 410 Q 750 380, 680 410 Q 620 420, 600 450');
+  svg.appendChild(lake);
+
+  // 运河 + 太湖标签
+  const waterLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  waterLabel.setAttribute('class', 'water-label');
+  waterLabel.setAttribute('x', 380);
+  waterLabel.setAttribute('y', 350);
+  waterLabel.textContent = '京杭大运河';
+  svg.appendChild(waterLabel);
+
+  const lakeLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  lakeLabel.setAttribute('class', 'water-label');
+  lakeLabel.setAttribute('x', 720);
+  lakeLabel.setAttribute('y', 470);
+  lakeLabel.textContent = '太湖';
+  svg.appendChild(lakeLabel);
+
+  // 城市之间连线（按 travel_days 缩放）
+  const connections = [
+    { from: 'shengze', to: 'suzhou', days: 1.0 },
+    { from: 'shengze', to: 'hangzhou', days: 2.5 },
+    { from: 'shengze', to: 'songjiang', days: 2.0 },
+    { from: 'shengze', to: 'nanjing', days: 6.0 },
+  ];
+  connections.forEach(c => {
+    const a = CITIES[c.from].svg;
+    const b = CITIES[c.to].svg;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('class', 'travel-line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y);
+    svg.appendChild(line);
+    // 距离标签
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('class', 'travel-label');
+    label.setAttribute('x', (a.x + b.x) / 2);
+    label.setAttribute('y', (a.y + b.y) / 2 - 5);
+    label.textContent = `${c.days}天`;
+    svg.appendChild(label);
+  });
+
+  // 城市节点
+  Object.entries(CITIES).forEach(([id, city]) => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('data-id', id);
+    g.style.cursor = 'pointer';
+
+    // 城市圆圈
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('class', `city-circle ${city.status}`);
+    circle.setAttribute('cx', city.svg.x);
+    circle.setAttribute('cy', city.svg.y);
+    circle.setAttribute('r', city.status === 'current' ? 22 : 18);
+    g.appendChild(circle);
+
+    // 城市标签
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('class', `city-label ${city.status === 'current' ? 'current' : ''}`);
+    label.setAttribute('x', city.svg.x);
+    label.setAttribute('y', city.svg.y + 5);
+    label.textContent = city.name;
+    g.appendChild(label);
+
+    // 副标签（meta）
+    const sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    sub.setAttribute('class', 'water-label');
+    sub.setAttribute('x', city.svg.x);
+    sub.setAttribute('y', city.svg.y + 45);
+    sub.textContent = city.meta;
+    g.appendChild(sub);
+
+    // 事件
+    g.addEventListener('mouseenter', () => showTooltip(city, city.svg.x, city.svg.y));
+    g.addEventListener('mouseleave', hideTooltip);
+    g.addEventListener('click', () => {
+      // 点击切换到中观（如果是盛泽）
+      if (id === 'shengze') switchView('shengze');
+    });
+
+    svg.appendChild(g);
+  });
+
+  // 角落说明
+  const hint = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  hint.setAttribute('class', 'water-label');
+  hint.setAttribute('x', 30);
+  hint.setAttribute('y', 30);
+  hint.textContent = '明万历十五年（1587） · 江南';
+  hint.setAttribute('font-size', '14');
+  hint.setAttribute('fill', 'var(--color-rice)');
+  svg.appendChild(hint);
+}
+
+// ===== 中观 盛泽镇视图 =====
+function renderShengze() {
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <pattern id="villageBg" patternUnits="userSpaceOnUse" width="40" height="40">
+      <rect width="40" height="40" fill="#e8d8b8"/>
+      <line x1="0" y1="20" x2="40" y2="20" stroke="#a89478" stroke-width="0.5"/>
+      <line x1="20" y1="0" x2="20" y2="40" stroke="#a89478" stroke-width="0.5"/>
+    </pattern>
+  `;
+  svg.appendChild(defs);
+
+  // 镇内水道（运河支流）
+  const river1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  river1.setAttribute('class', 'water-curve');
+  river1.setAttribute('d', 'M 600 350 Q 700 400, 800 450');
+  svg.appendChild(river1);
+
+  const river2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  river2.setAttribute('class', 'water-curve');
+  river2.setAttribute('d', 'M 650 320 Q 720 380, 750 440');
+  svg.appendChild(river2);
+
+  // 街道网格（手绘感）
+  for (let i = 0; i < 6; i++) {
+    const street = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    street.setAttribute('stroke', '#8b6f47');
+    street.setAttribute('stroke-width', '0.5');
+    street.setAttribute('opacity', '0.4');
+    street.setAttribute('x1', 500);
+    street.setAttribute('y1', 350 + i * 25);
+    street.setAttribute('x2', 900);
+    street.setAttribute('y2', 350 + i * 25);
+    svg.appendChild(street);
+  }
+
+  // 镇名标识
+  const townName = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  townName.setAttribute('class', 'water-label');
+  townName.setAttribute('x', 700);
+  townName.setAttribute('y', 330);
+  townName.setAttribute('font-size', '20');
+  townName.setAttribute('fill', '#5a4530');
+  townName.textContent = '盛泽镇';
+  svg.appendChild(townName);
+
+  // 运河支流标签
+  const waterLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  waterLabel.setAttribute('class', 'water-label');
+  waterLabel.setAttribute('x', 770);
+  waterLabel.setAttribute('y', 430);
+  waterLabel.textContent = '运河支流';
+  svg.appendChild(waterLabel);
+
+  // 10 个地点
+  SHENGZE_PLACES.forEach(place => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.style.cursor = 'pointer';
+
+    // 节点
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('class', `village-marker ${place.status === 'current' ? 'current' : ''}`);
+    c.setAttribute('cx', place.svg.x);
+    c.setAttribute('cy', place.svg.y);
+    c.setAttribute('r', place.status === 'current' ? 14 : 10);
+    g.appendChild(c);
+
+    // 标签
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('class', 'village-label');
+    label.setAttribute('x', place.svg.x + 16);
+    label.setAttribute('y', place.svg.y + 5);
+    label.textContent = place.icon + ' ' + place.name;
+    g.appendChild(label);
+
+    g.addEventListener('mouseenter', () => showTooltip(place, place.svg.x, place.svg.y));
+    g.addEventListener('mouseleave', hideTooltip);
+
+    svg.appendChild(g);
+  });
+}
+
+// ============================================================
+// Tooltip
+// ============================================================
+function showTooltip(data, x, y) {
+  const containerRect = document.getElementById('map-container').getBoundingClientRect();
+  tooltip.innerHTML = `
+    <h3>${data.name || ''}</h3>
+    ${data.meta ? `<div class="meta">${data.meta}</div>` : ''}
+    <div class="desc">${data.desc || ''}</div>
+    ${data.days !== undefined ? `<div class="stat">距离盛泽: ${data.days} 天${data.days > 0 ? '水路' : ''}</div>` : ''}
+    ${data.key_locations ? `<div class="stat">史实地标: ${data.key_locations.join(' · ')}</div>` : ''}
+    ${data.fun_fact ? `<div class="stat">📜 ${data.fun_fact}</div>` : ''}
+  `;
+  tooltip.classList.add('show');
+  // 位置（在节点右侧）
+  const px = (x / 1200) * containerRect.width + 30;
+  const py = (y / 800) * containerRect.height - 10;
+  tooltip.style.left = Math.min(px, containerRect.width - 300) + 'px';
+  tooltip.style.top = Math.max(20, py - tooltip.offsetHeight) + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('show');
+}
+
+// ============================================================
+// Tab 切换
+// ============================================================
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === view);
+  });
+  render();
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchView(tab.dataset.view));
+});
+
+// ============================================================
+// Zoom / Pan
+// ============================================================
+const viewBox = { x: 0, y: 0, w: 1200, h: 800 };
+function applyZoom() {
+  svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+}
+document.getElementById('zoom-in').addEventListener('click', () => {
+  viewBox.w = Math.max(400, viewBox.w * 0.85);
+  viewBox.h = Math.max(270, viewBox.h * 0.85);
+  viewBox.x += viewBox.w * 0.075;
+  viewBox.y += viewBox.h * 0.075;
+  applyZoom();
+});
+document.getElementById('zoom-out').addEventListener('click', () => {
+  viewBox.w = Math.min(2400, viewBox.w * 1.15);
+  viewBox.h = Math.min(1600, viewBox.h * 1.15);
+  viewBox.x -= viewBox.w * 0.075;
+  viewBox.y -= viewBox.h * 0.075;
+  applyZoom();
+});
+document.getElementById('reset-view').addEventListener('click', () => {
+  viewBox.x = 0; viewBox.y = 0; viewBox.w = 1200; viewBox.h = 800;
+  applyZoom();
+});
+
+// Drag pan
+let isDragging = false;
+let dragStart = null;
+document.getElementById('map-container').addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY, vbX: viewBox.x, vbY: viewBox.y };
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = (e.clientX - dragStart.x) / 10;
+  const dy = (e.clientY - dragStart.y) / 10;
+  viewBox.x = dragStart.vbX - dx * (viewBox.w / 1200);
+  viewBox.y = dragStart.vbY - dy * (viewBox.h / 800);
+  applyZoom();
+});
+window.addEventListener('mouseup', () => isDragging = false);
+
+// Initial render
+render();
+</script>
+
+</body>
+</html>
