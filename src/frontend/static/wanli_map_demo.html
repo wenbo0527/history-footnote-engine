@@ -114,6 +114,15 @@
     cursor: grab;
   }
   #map-container:active { cursor: grabbing; }
+  /* 🆕 Phase 4.5: 画卷展开 — CSS keyframe 动画 */
+  @keyframes scrollReveal {
+    0% { clip-path: inset(0 100% 0 0); opacity: 0.3; }
+    25% { opacity: 1; }
+    100% { clip-path: inset(0 0 0 0); opacity: 1; }
+  }
+  svg.scroll-reveal {
+    animation: scrollReveal 1.4s cubic-bezier(0.25, 0.1, 0.25, 1.0) both;
+  }
   svg {
     width: 100%;
     height: 100%;
@@ -980,6 +989,49 @@ function renderMacro() {
   seasonTint.setAttribute('opacity', '0.08');
   svg.appendChild(seasonTint);
 
+  // 🆕 Phase 4.4: 卷云飘动 — 5 朵云散布天空
+  const clouds = [
+    { x: 180, y: 120, scale: 1.0, speed: 0.15, opacity: 0.55 },
+    { x: 380, y: 80, scale: 0.7, speed: 0.20, opacity: 0.45 },
+    { x: 620, y: 150, scale: 0.85, speed: 0.18, opacity: 0.50 },
+    { x: 880, y: 110, scale: 1.1, speed: 0.12, opacity: 0.60 },
+    { x: 1080, y: 180, scale: 0.75, speed: 0.22, opacity: 0.40 },
+  ];
+  clouds.forEach((c, idx) => {
+    const cloudG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    cloudG.setAttribute('class', 'floating-cloud');
+    cloudG.setAttribute('id', `cloud-${idx}`);
+    cloudG.setAttribute('filter', 'url(#cloudFilter)');
+    cloudG.setAttribute('transform', `translate(${c.x}, ${c.y}) scale(${c.scale})`);
+    let cloudPath = '';
+    cloudPath += `M 0 0 Q -10 -8, 10 -6 Q 30 -10, 50 -4 Q 70 -8, 90 -2 `;
+    cloudPath += `M 15 -8 Q 20 -16, 30 -12 Q 35 -16, 42 -10 `;
+    cloudPath += `M 55 -8 Q 60 -16, 70 -12 Q 75 -18, 85 -10 `;
+    cloudPath += `M 0 0 Q 5 6, 15 4 `;
+    cloudPath += `M 30 0 Q 40 6, 50 4 `;
+    cloudPath += `M 60 0 Q 70 6, 85 2 `;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', cloudPath);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'rgba(74, 124, 89, 0.5)');
+    path.setAttribute('stroke-width', '1.2');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('opacity', c.opacity);
+    cloudG.appendChild(path);
+    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path2.setAttribute('d', `M 5 -3 Q 20 -7, 40 -5 Q 60 -7, 80 -2`);
+    path2.setAttribute('fill', 'none');
+    path2.setAttribute('stroke', 'rgba(44, 36, 24, 0.25)');
+    path2.setAttribute('stroke-width', '0.6');
+    path2.setAttribute('stroke-linecap', 'round');
+    cloudG.appendChild(path2);
+    cloudG.dataset.baseX = c.x;
+    cloudG.dataset.baseY = c.y;
+    cloudG.dataset.speed = c.speed;
+    cloudG.dataset.scale = c.scale;
+    svg.appendChild(cloudG);
+  });
+
   // 🆕 Phase 3.5: 卷尾跋（仿古代山水画落款 — 右下）
   const colophon = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   colophon.setAttribute('transform', 'translate(700, 750)');
@@ -1374,6 +1426,14 @@ window.addEventListener('mouseup', () => isDragging = false);
 function render() {
   if (currentView === 'macro') renderMacro();
   else renderShengze();
+  // 🆕 Phase 4.5: 画卷展开 — 触发 CSS 动画
+  const svgEl = document.getElementById('map-svg');
+  if (svgEl) {
+    svgEl.classList.remove('scroll-reveal');
+    // Force reflow to restart animation
+    void svgEl.offsetWidth;
+    svgEl.classList.add('scroll-reveal');
+  }
 }
 
 // ============================================================
@@ -1434,6 +1494,21 @@ function animate() {
       offset = 0;
     }
     trailPath.setAttribute('stroke-dashoffset', offset);
+  }
+
+  // 5. 卷云飘动 — 5 朵云各自周期飘动
+  for (let i = 0; i < 5; i++) {
+    const cloud = document.getElementById(`cloud-${i}`);
+    if (!cloud) continue;
+    const baseX = parseFloat(cloud.dataset.baseX);
+    const baseY = parseFloat(cloud.dataset.baseY);
+    const speed = parseFloat(cloud.dataset.speed);
+    const scale = parseFloat(cloud.dataset.scale);
+    const driftX = Math.sin(t * speed) * 8;
+    const driftY = Math.cos(t * speed * 0.7) * 4;
+    const phaseOffset = i * 1.5;
+    cloud.setAttribute('transform',
+      `translate(${baseX + driftX}, ${baseY + driftY}) scale(${scale}) rotate(${Math.sin(t * 0.1 + phaseOffset) * 0.5})`);
   }
 
   requestAnimationFrame(animate);
