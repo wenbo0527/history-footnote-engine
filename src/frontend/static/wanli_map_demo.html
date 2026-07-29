@@ -584,6 +584,24 @@ function renderMacro() {
       <feGaussianBlur stdDeviation="0.4"/>
     </filter>
 
+    <!-- 🆕 Phase 4.1: 水墨沸腾 (line boil — 山脉/河流/卷尾跋 微微抖动) -->
+    <filter id="lineBoil" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence id="boilTurbulence" type="fractalNoise" baseFrequency="0.02 0.04" numOctaves="2" seed="11" result="noise"/>
+      <feDisplacementMap id="boilDisplace" in="SourceGraphic" in2="noise" scale="3"/>
+    </filter>
+
+    <!-- 🆕 Phase 4.1: 卷云 (轻微漂移) -->
+    <filter id="cloudFilter" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence id="cloudTurbulence" type="fractalNoise" baseFrequency="0.015" numOctaves="3" seed="5" result="noise"/>
+      <feDisplacementMap id="cloudDisplace" in="SourceGraphic" in2="noise" scale="6"/>
+    </filter>
+
+    <!-- 🆕 Phase 4.1: 河流波动 (鱼鳞波纹 drift 视觉) -->
+    <filter id="waterFlow" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence id="waterTurbulence" type="fractalNoise" baseFrequency="0.04 0.015" numOctaves="2" seed="9" result="noise"/>
+      <feDisplacementMap id="waterDisplace" in="SourceGraphic" in2="noise" scale="2"/>
+    </filter>
+
     <!-- 🆕 Phase 3.4: 烟雨 / 雾 — 远景渐变 -->
     <linearGradient id="mistGradient" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#e8d8b0" stop-opacity="0"/>
@@ -646,6 +664,8 @@ function renderMacro() {
     const mountainGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     mountainGroup.setAttribute('class', 'mountain-symbol');
     mountainGroup.setAttribute('transform', `translate(${m.svg.x}, ${m.svg.y})`);
+    // 🆕 Phase 4.1: 应用 lineBoil filter 到整个山脉 — 让山"水墨沸腾"
+    mountainGroup.setAttribute('filter', 'url(#lineBoil)');
 
     // 🆕 Phase 3.1: 远山墨影 (lighter wash, before main)
     const washShadow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -711,10 +731,13 @@ function renderMacro() {
   const canal = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canal.setAttribute('class', 'river-path');
   canal.setAttribute('d', 'M 480 480 Q 600 420, 700 380 Q 600 350, 480 480');
+  // 🆕 Phase 4.1: 河水流动 filter
+  canal.setAttribute('filter', 'url(#waterFlow)');
   svg.appendChild(canal);
   const canalInner = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canalInner.setAttribute('class', 'river-path-inner');
   canalInner.setAttribute('d', 'M 480 480 Q 600 420, 700 380 Q 600 350, 480 480');
+  canalInner.setAttribute('filter', 'url(#waterFlow)');
   svg.appendChild(canalInner);
 
   // 运河从盛泽延伸到南京
@@ -723,6 +746,7 @@ function renderMacro() {
   canalExt.setAttribute('d', 'M 700 380 Q 500 280, 350 200');
   canalExt.setAttribute('stroke-width', '4');
   canalExt.setAttribute('opacity', '0.7');
+  canalExt.setAttribute('filter', 'url(#waterFlow)');
   svg.appendChild(canalExt);
 
   // 运河标签
@@ -787,10 +811,15 @@ function renderMacro() {
   trailPath.setAttribute('stroke', '#c44536');
   trailPath.setAttribute('stroke-width', '3');
   trailPath.setAttribute('stroke-linecap', 'round');
-  trailPath.setAttribute('stroke-dasharray', '8 4');
+  // 🆕 Phase 4.3: 朱砂笔触自绘 — pathLength + stroke-dashoffset 动画
+  trailPath.setAttribute('id', 'playerTrailPath');
+  // 先用 pathLength 让路径长度归一化到 100，stroke-dasharray=100
+  trailPath.setAttribute('pathLength', '100');
+  trailPath.setAttribute('stroke-dasharray', '100');
+  // 初始 stroke-dashoffset=100（隐藏），将动画到 0（显示）
+  trailPath.setAttribute('stroke-dashoffset', '100');
   trailPath.setAttribute('opacity', '0.7');
-  // 加手绘不规则性（多次叠加不同透明度）
-  trailPath.setAttribute('filter', 'url(#inkWash)');
+  trailPath.setAttribute('filter', 'url(#lineBoil)');  // 🆕 Phase 4.1: 让笔触微抖
   playerTrail.appendChild(trailPath);
 
   // 起点印章（苏州 — 出发地）
@@ -954,6 +983,7 @@ function renderMacro() {
   // 🆕 Phase 3.5: 卷尾跋（仿古代山水画落款 — 右下）
   const colophon = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   colophon.setAttribute('transform', 'translate(700, 750)');
+  colophon.setAttribute('filter', 'url(#lineBoil)');  // 🆕 Phase 4.1: 卷尾跋微抖
   colophon.innerHTML = `
     <text x="0" y="0" font-family="STKaiti, serif" font-size="10" fill="#5a4a36" font-style="italic">盛澤織工 · 製於運河畔</text>
     <text x="0" y="14" font-family="STKaiti, serif" font-size="9" fill="#8a6f47" font-style="italic">萬曆十五年丁亥秋九月</text>
@@ -1345,6 +1375,71 @@ function render() {
   if (currentView === 'macro') renderMacro();
   else renderShengze();
 }
+
+// ============================================================
+// 🆕 Phase 4.1 + 4.3: 动画循环
+// - lineBoil: feTurbulence/feDisplacementMap baseFrequency + scale 周期性变化
+// - 河水流动: waterTurbulence/waterDisplace 周期变化
+// - 朱砂笔触自绘: stroke-dashoffset 0..100..0.. 周期
+// ============================================================
+let animT = 0;
+function animate() {
+  animT += 0.016;  // 60fps
+  const t = animT;
+
+  // 1. lineBoil — 水墨沸腾
+  const boilTurb = document.getElementById('boilTurbulence');
+  const boilDisp = document.getElementById('boilDisplace');
+  if (boilTurb) {
+    boilTurb.setAttribute('baseFrequency', `${0.018 + Math.sin(t * 0.3) * 0.005} ${0.04 + Math.cos(t * 0.5) * 0.008}`);
+  }
+  if (boilDisp) {
+    boilDisp.setAttribute('scale', `${2.5 + Math.sin(t * 0.7) * 1.2}`);
+  }
+
+  // 2. 卷云 (cloudFilter) — 远景烟雨
+  const cloudTurb = document.getElementById('cloudTurbulence');
+  const cloudDisp = document.getElementById('cloudDisplace');
+  if (cloudTurb) {
+    cloudTurb.setAttribute('baseFrequency', `${0.012 + Math.cos(t * 0.2) * 0.004}`);
+  }
+  if (cloudDisp) {
+    cloudDisp.setAttribute('scale', `${5 + Math.sin(t * 0.4) * 2}`);
+  }
+
+  // 3. 河水流动 — 京杭运河
+  const waterTurb = document.getElementById('waterTurbulence');
+  const waterDisp = document.getElementById('waterDisplace');
+  if (waterTurb) {
+    waterTurb.setAttribute('baseFrequency', `${0.04 + Math.sin(t * 0.6) * 0.01} ${0.012}`);
+  }
+  if (waterDisp) {
+    waterDisp.setAttribute('scale', `${1.5 + Math.cos(t * 0.5) * 0.8}`);
+  }
+
+  // 4. 朱砂笔触自绘 — stroke-dashoffset 周期
+  const trailPath = document.getElementById('playerTrailPath');
+  if (trailPath) {
+    // 5 秒一次循环：0..100..0
+    // phase 0-1: 从 100 画到 0 (显示路径) 0-2.5s
+    // phase 1-2: 保持 0 (完整显示) 2.5-4s
+    // phase 2-3: 保持完整 4-5s 然后下次循环
+    const cycle = (t % 5) / 5;  // 0..1
+    let offset;
+    if (cycle < 0.5) {
+      // 0..0.5: 100 → 0 (画)
+      offset = 100 - (cycle * 2) * 100;
+    } else {
+      // 0.5..1: 0 (保持)
+      offset = 0;
+    }
+    trailPath.setAttribute('stroke-dashoffset', offset);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
 
 render();</script>
 </body>
