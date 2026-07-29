@@ -444,7 +444,10 @@
 
 <div id="map-container">
   <svg id="map-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
-    <!-- 由 JS 动态填充 -->
+    <!-- 静态 fallback (如果 JS 失败，至少显示一个 loading 状态) -->
+    <rect x="0" y="0" width="1200" height="800" fill="#e8d8b0"/>
+    <text x="600" y="400" text-anchor="middle" font-family="STKaiti, KaiTi, serif" font-size="32" fill="#5a4a36">載入中...</text>
+    <text x="600" y="450" text-anchor="middle" font-family="STKaiti, KaiTi, serif" font-size="16" fill="#8a6f47">江南輿圖繪製中</text>
   </svg>
   <div class="tooltip" id="tooltip"></div>
 </div>
