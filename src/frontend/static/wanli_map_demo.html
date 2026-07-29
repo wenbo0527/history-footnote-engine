@@ -576,6 +576,32 @@ function renderMacro() {
       <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="3"/>
       <feDisplacementMap in="SourceGraphic" scale="3"/>
     </filter>
+
+    <!-- 🆕 Phase 3.1: 水墨晕染 (ink wash for mountains) -->
+    <filter id="inkWash" x="-50%" y="-50%" width="200%" height="200%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.025" numOctaves="3" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="6"/>
+      <feGaussianBlur stdDeviation="0.4"/>
+    </filter>
+
+    <!-- 🆕 Phase 3.4: 烟雨 / 雾 — 远景渐变 -->
+    <linearGradient id="mistGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8d8b0" stop-opacity="0"/>
+      <stop offset="60%" stop-color="#e8d8b0" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#e8d8b0" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <!-- 🆕 Phase 3.4: 季节指示 -->
+    <radialGradient id="seasonTint" cx="50%" cy="0%">
+      <stop offset="0%" stop-color="currentColor" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- 🆕 Phase 3.5: 卷尾跋 印章 pattern -->
+    <pattern id="sealGrid" patternUnits="userSpaceOnUse" width="60" height="60">
+      <rect width="60" height="60" fill="none"/>
+      <rect x="10" y="10" width="40" height="40" fill="#c44536" opacity="0.9"/>
+    </pattern>
   `;
   svg.appendChild(defs);
 
@@ -620,6 +646,21 @@ function renderMacro() {
     const mountainGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     mountainGroup.setAttribute('class', 'mountain-symbol');
     mountainGroup.setAttribute('transform', `translate(${m.svg.x}, ${m.svg.y})`);
+
+    // 🆕 Phase 3.1: 远山墨影 (lighter wash, before main)
+    const washShadow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    let shadowD = '';
+    for (let i = 0; i < m.length; i++) {
+      const x = i * 50 - (m.length * 25);
+      const h = 20 + Math.sin(i * 1.5) * 8;
+      if (i === 0) shadowD += `M ${x - 6} 8 L ${x - 16} ${h + 8} L ${x + 4} ${h + 8} Z`;
+      else shadowD += ` M ${x - 6} 8 L ${x - 16} ${h + 8} L ${x + 4} ${h + 8} Z`;
+    }
+    washShadow.setAttribute('d', shadowD);
+    washShadow.setAttribute('fill', 'rgba(44, 36, 24, 0.18)');
+    washShadow.setAttribute('stroke', 'none');
+    washShadow.setAttribute('filter', 'url(#inkWash)');
+    mountainGroup.appendChild(washShadow);
 
     // 主山脉 — 多个小山峰
     let pathD = '';
@@ -730,6 +771,58 @@ function renderMacro() {
     svg.appendChild(label);
   });
 
+  // 🆕 Phase 3.2: 玩家路径 — 朱砂笔触（动线）
+  // 模拟玩家访问历史：苏州 → 盛泽（已访问路径用粗朱砂虚线 + 起点朱砂印章）
+  const playerTrail = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  playerTrail.setAttribute('class', 'player-trail');
+  const trailA = CITIES['suzhou'].svg;
+  const trailB = CITIES['shengze'].svg;
+  // 曲线 — 朱砂笔触
+  const trailPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  // 用贝塞尔曲线，更像手绘笔触
+  const midX = (trailA.x + trailB.x) / 2;
+  const midY = (trailA.y + trailB.y) / 2 - 30;  // 微微上拱
+  trailPath.setAttribute('d', `M ${trailA.x} ${trailA.y} Q ${midX} ${midY}, ${trailB.x} ${trailB.y}`);
+  trailPath.setAttribute('fill', 'none');
+  trailPath.setAttribute('stroke', '#c44536');
+  trailPath.setAttribute('stroke-width', '3');
+  trailPath.setAttribute('stroke-linecap', 'round');
+  trailPath.setAttribute('stroke-dasharray', '8 4');
+  trailPath.setAttribute('opacity', '0.7');
+  // 加手绘不规则性（多次叠加不同透明度）
+  trailPath.setAttribute('filter', 'url(#inkWash)');
+  playerTrail.appendChild(trailPath);
+
+  // 起点印章（苏州 — 出发地）
+  const trailSeal = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  trailSeal.setAttribute('transform', `translate(${trailA.x - 32}, ${trailA.y - 32})`);
+  trailSeal.innerHTML = `
+    <rect class="seal-stamp" x="0" y="0" width="34" height="34" rx="2" transform="rotate(-3 17 17)"/>
+    <text class="seal-stamp-text" x="17" y="14">始</text>
+    <text class="seal-stamp-text" x="17" y="26">於</text>
+  `;
+  playerTrail.appendChild(trailSeal);
+
+  // 终点箭头（盛泽 — 当前所在）
+  const trailArrow = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  trailArrow.setAttribute('transform', `translate(${trailB.x}, ${trailB.y})`);
+  trailArrow.innerHTML = `
+    <path d="M -14 -2 L 0 0 L -14 2 Z" fill="#c44536" stroke="#8a2e23" stroke-width="0.5"/>
+  `;
+  playerTrail.appendChild(trailArrow);
+
+  // 路径标注
+  const trailLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  trailLabel.setAttribute('class', 'road-label');
+  trailLabel.setAttribute('x', midX);
+  trailLabel.setAttribute('y', midY - 6);
+  trailLabel.setAttribute('fill', '#8a2e23');
+  trailLabel.setAttribute('font-size', '11');
+  trailLabel.textContent = '玩家路徑';
+  playerTrail.appendChild(trailLabel);
+
+  svg.appendChild(playerTrail);
+
   // 8. 城市符号（方形城墙 + 等级字）
   Object.entries(CITIES).forEach(([id, city]) => {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -828,12 +921,70 @@ function renderMacro() {
   `;
   svg.appendChild(compass);
 
+  // 🆕 Phase 3.4: 烟雨 / 雾（远景淡米黄覆盖）
+  const mist = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  mist.setAttribute('x', '0');
+  mist.setAttribute('y', '0');
+  mist.setAttribute('width', '1200');
+  mist.setAttribute('height', '500');
+  mist.setAttribute('fill', 'url(#mistGradient)');
+  mist.setAttribute('opacity', '0.7');
+  svg.appendChild(mist);
+
+  // 🆕 Phase 3.4: 季节指示（右上角）
+  const season = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  season.setAttribute('transform', 'translate(1060, 100)');
+  season.innerHTML = `
+    <rect x="-30" y="-20" width="110" height="36" fill="#e8d8b0" stroke="#2c2418" stroke-width="1" opacity="0.92"/>
+    <text x="25" y="2" text-anchor="middle" font-family="STKaiti, serif" font-size="11" fill="#2c2418" font-weight="700">時序 · 仲秋</text>
+    <text x="25" y="14" text-anchor="middle" font-family="STKaiti, serif" font-size="9" fill="#8a6f47">萬曆十五年九月</text>
+  `;
+  svg.appendChild(season);
+
+  // 🆕 Phase 3.4: 季节染色（淡金色顶光 — 秋意）
+  const seasonTint = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  seasonTint.setAttribute('x', '0');
+  seasonTint.setAttribute('y', '0');
+  seasonTint.setAttribute('width', '1200');
+  seasonTint.setAttribute('height', '300');
+  seasonTint.setAttribute('fill', '#b8923d');
+  seasonTint.setAttribute('opacity', '0.08');
+  svg.appendChild(seasonTint);
+
+  // 🆕 Phase 3.5: 卷尾跋（仿古代山水画落款 — 右下）
+  const colophon = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  colophon.setAttribute('transform', 'translate(700, 750)');
+  colophon.innerHTML = `
+    <text x="0" y="0" font-family="STKaiti, serif" font-size="10" fill="#5a4a36" font-style="italic">盛澤織工 · 製於運河畔</text>
+    <text x="0" y="14" font-family="STKaiti, serif" font-size="9" fill="#8a6f47" font-style="italic">萬曆十五年丁亥秋九月</text>
+    <text x="0" y="28" font-family="STKaiti, serif" font-size="9" fill="#8a6f47" font-style="italic">核於吳江府學  ·  廿五年後追繪</text>
+  `;
+  svg.appendChild(colophon);
+
+  // 🆕 Phase 3.5: 印鉴集（4 角落刻章）
+  const cornerSeals = [
+    { x: 1100, y: 50, chars: '實錄' },
+    { x: 1130, y: 90, chars: '考據' },
+    { x: 50, y: 730, chars: '史源' },
+    { x: 90, y: 760, chars: '可信' },
+  ];
+  cornerSeals.forEach(s => {
+    const sealG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    sealG.setAttribute('transform', `translate(${s.x}, ${s.y}) rotate(${Math.random() * 6 - 3})`);
+    sealG.innerHTML = `
+      <rect x="0" y="0" width="32" height="32" fill="#c44536" stroke="#8a2e23" stroke-width="1" rx="2"/>
+      <text x="16" y="14" text-anchor="middle" font-family="STKaiti, serif" font-size="10" fill="#e8d8b0" font-weight="700">${s.chars[0]}</text>
+      <text x="16" y="26" text-anchor="middle" font-family="STKaiti, serif" font-size="10" fill="#e8d8b0" font-weight="700">${s.chars[1]}</text>
+    `;
+    svg.appendChild(sealG);
+  });
+
   // 10. 图例题跋（右下）
   const legend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   legend.setAttribute('transform', 'translate(900, 700)');
   legend.innerHTML = `
-    <rect x="0" y="0" width="240" height="80" fill="#e8d8b0" stroke="#2c2418" stroke-width="1.5" opacity="0.95"/>
-    <text x="120" y="20" text-anchor="middle" font-family="STKaiti, serif" font-size="13" fill="#2c2418" font-weight="700">圖例</text>
+    <rect x="0" y="0" width="180" height="80" fill="#e8d8b0" stroke="#2c2418" stroke-width="1.5" opacity="0.95"/>
+    <text x="90" y="20" text-anchor="middle" font-family="STKaiti, serif" font-size="13" fill="#2c2418" font-weight="700">圖例</text>
     <text x="10" y="38" font-family="STKaiti, serif" font-size="11" fill="#2c2418">▣ 府  □ 州縣</text>
     <text x="10" y="56" font-family="STKaiti, serif" font-size="11" fill="#2c2418">〰️ 運河  ╍╍ 陸路</text>
     <text x="10" y="72" font-family="STKaiti, serif" font-size="11" fill="#2c2418">〜 水域  Λ 山</text>
@@ -929,6 +1080,82 @@ function renderShengze() {
   wall.setAttribute('opacity', '0.5');
   svg.appendChild(wall);
 
+  // 🆕 Phase 3.3: 江南水乡（白墙灰瓦）
+  // 散布若干民居 + 拱桥 + 阁楼（程序化简笔）
+  const houses = [
+    { x: 540, y: 360, w: 28, h: 18 },   // 自家北
+    { x: 580, y: 405, w: 32, h: 22 },   // 牙行西
+    { x: 620, y: 350, w: 24, h: 16 },   // 织坊北
+    { x: 750, y: 360, w: 30, h: 20 },   // 茶馆
+    { x: 780, y: 410, w: 28, h: 18 },   // 米行东
+    { x: 830, y: 360, w: 26, h: 16 },   // 茶市东
+    { x: 870, y: 400, w: 30, h: 20 },   // 绸市东
+    { x: 540, y: 470, w: 28, h: 18 },   // 桥北
+    { x: 760, y: 470, w: 32, h: 22 },   // 关帝庙南
+    { x: 820, y: 470, w: 26, h: 16 },   // 码头东
+  ];
+
+  houses.forEach(h => {
+    const houseG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    // 白墙
+    const wall = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    wall.setAttribute('x', h.x);
+    wall.setAttribute('y', h.y);
+    wall.setAttribute('width', h.w);
+    wall.setAttribute('height', h.h);
+    wall.setAttribute('fill', '#f5ead2');
+    wall.setAttribute('stroke', '#5a4530');
+    wall.setAttribute('stroke-width', '0.6');
+    houseG.appendChild(wall);
+
+    // 灰瓦屋顶（梯形）
+    const roof = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    roof.setAttribute('d', `M ${h.x - 3} ${h.y} L ${h.x + h.w / 2} ${h.y - 6} L ${h.x + h.w + 3} ${h.y} Z`);
+    roof.setAttribute('fill', '#3a3024');
+    roof.setAttribute('stroke', '#1a1612');
+    roof.setAttribute('stroke-width', '0.5');
+    houseG.appendChild(roof);
+
+    // 屋脊短线
+    const ridge = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ridge.setAttribute('x1', h.x + h.w / 2);
+    ridge.setAttribute('x2', h.x + h.w / 2);
+    ridge.setAttribute('y1', h.y - 8);
+    ridge.setAttribute('y2', h.y - 6);
+    ridge.setAttribute('stroke', '#1a1612');
+    ridge.setAttribute('stroke-width', '1');
+    houseG.appendChild(ridge);
+
+    svg.appendChild(houseG);
+  });
+
+  // 🆕 Phase 3.3: 拱桥 — 江南水乡标志
+  const bridges = [
+    { x: 600, y: 435, w: 60 },
+    { x: 720, y: 460, w: 50 },
+    { x: 850, y: 470, w: 55 },
+  ];
+  bridges.forEach(b => {
+    const bridgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    // 拱
+    const arch = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    arch.setAttribute('d', `M ${b.x} ${b.y} Q ${b.x + b.w / 2} ${b.y - 12}, ${b.x + b.w} ${b.y}`);
+    arch.setAttribute('fill', 'none');
+    arch.setAttribute('stroke', '#2c2418');
+    arch.setAttribute('stroke-width', '2');
+    bridgeG.appendChild(arch);
+    // 桥面
+    const deck = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    deck.setAttribute('x1', b.x);
+    deck.setAttribute('x2', b.x + b.w);
+    deck.setAttribute('y1', b.y);
+    deck.setAttribute('y2', b.y);
+    deck.setAttribute('stroke', '#8a6f47');
+    deck.setAttribute('stroke-width', '2');
+    bridgeG.appendChild(deck);
+    svg.appendChild(bridgeG);
+  });
+
   // 镇门（南面）
   const gate = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   gate.innerHTML = `
@@ -991,6 +1218,41 @@ function renderShengze() {
 
     svg.appendChild(g);
   });
+
+  // 🆕 Phase 3.5: 中观 卷尾跋
+  const shengzeColophon = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  shengzeColophon.setAttribute('transform', 'translate(700, 700)');
+  shengzeColophon.innerHTML = `
+    <text x="0" y="0" font-family="STKaiti, serif" font-size="10" fill="#5a4a36" font-style="italic">盛澤織工 · 自家</text>
+    <text x="0" y="14" font-family="STKaiti, serif" font-size="9" fill="#8a6f47" font-style="italic">繪於丁亥仲秋 · 月明夜</text>
+  `;
+  svg.appendChild(shengzeColophon);
+
+  // 🆕 Phase 3.5: 中观 印鉴集（2 个）
+  const shengzeSeals = [
+    { x: 1100, y: 50, chars: '盛澤' },
+    { x: 1130, y: 100, chars: '地圖' },
+  ];
+  shengzeSeals.forEach(s => {
+    const sealG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    sealG.setAttribute('transform', `translate(${s.x}, ${s.y}) rotate(${Math.random() * 6 - 3})`);
+    sealG.innerHTML = `
+      <rect x="0" y="0" width="36" height="36" fill="#c44536" stroke="#8a2e23" stroke-width="1" rx="2"/>
+      <text x="18" y="16" text-anchor="middle" font-family="STKaiti, serif" font-size="11" fill="#e8d8b0" font-weight="700">${s.chars[0]}</text>
+      <text x="18" y="29" text-anchor="middle" font-family="STKaiti, serif" font-size="11" fill="#e8d8b0" font-weight="700">${s.chars[1]}</text>
+    `;
+    svg.appendChild(sealG);
+  });
+
+  // 🆕 Phase 3.4: 中观 季节染色（仲秋 — 淡金顶光）
+  const shengzeTint = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  shengzeTint.setAttribute('x', '0');
+  shengzeTint.setAttribute('y', '0');
+  shengzeTint.setAttribute('width', '1200');
+  shengzeTint.setAttribute('height', '350');
+  shengzeTint.setAttribute('fill', '#b8923d');
+  shengzeTint.setAttribute('opacity', '0.06');
+  svg.appendChild(shengzeTint);
 }
 
 // ============================================================
