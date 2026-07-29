@@ -727,12 +727,151 @@ function renderMacro() {
   `;
   svg.appendChild(hangzhouBorder);
 
+  // 🆕 Phase 5.1: 5 个细节增强图层 — 基于育碧 POI 方法 + 江南水乡史实
+
+  // A. 京杭大运河船只（7 艘 — 渔船/商船/漕船）
+  const canalShips = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  canalShips.setAttribute('class', 'canal-ships');
+  const ships = [
+    { x: 510, y: 470, type: '漕船', size: 8 },
+    { x: 580, y: 420, type: '商船', size: 7 },
+    { x: 650, y: 400, type: '漁船', size: 5 },
+    { x: 460, y: 470, type: '漕船', size: 8 },
+    { x: 420, y: 460, type: '漁船', size: 5 },
+    { x: 550, y: 380, type: '客船', size: 6 },
+    { x: 480, y: 350, type: '商船', size: 7 },
+  ];
+  ships.forEach((s, i) => {
+    const ship = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    ship.setAttribute('transform', `translate(${s.x}, ${s.y})`);
+    ship.setAttribute('id', `ship-${i}`);
+    // 船体（半圆）
+    ship.innerHTML = `
+      <path d="M -${s.size} 0 Q 0 ${s.size * 0.7}, ${s.size} 0 Z" fill="#5a4a36" stroke="#2c2418" stroke-width="0.5"/>
+      <!-- 桅杆 -->
+      <line x1="0" y1="0" x2="0" y2="-${s.size * 1.5}" stroke="#2c2418" stroke-width="0.6"/>
+      <!-- 帆 -->
+      <path d="M 0 -${s.size * 1.5} L ${s.size * 0.7} -${s.size * 0.3} L 0 -${s.size * 0.3} Z" fill="#e8d8b0" stroke="#5a4a36" stroke-width="0.4" opacity="0.8"/>
+    `;
+    canalShips.appendChild(ship);
+  });
+  svg.appendChild(canalShips);
+
+  // B. 苏州-盛泽沿途驿站/村镇（POI 密度 — 育碧方法论）
+  const villages = [
+    { x: 530, y: 360, name: '吳江驛' },
+    { x: 560, y: 380, name: '平望鎮' },
+    { x: 620, y: 360, name: '梅堰' },
+    { x: 580, y: 400, name: '盛澤橋' },
+    { x: 660, y: 400, name: '震澤' },
+  ];
+  villages.forEach((v, i) => {
+    const vg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    vg.setAttribute('transform', `translate(${v.x}, ${v.y})`);
+    vg.innerHTML = `
+      <circle cx="0" cy="0" r="3" fill="#e8d8b0" stroke="#5a4a36" stroke-width="0.8"/>
+      <circle cx="0" cy="0" r="1.5" fill="#5a4a36"/>
+      <text x="6" y="3" font-family="STKaiti, KaiTi, serif" font-size="8" fill="#5a4a36">${v.name}</text>
+    `;
+    svg.appendChild(vg);
+  });
+
+  // C. 太湖渔船/水鸟（自然元素）
+  const lakeDetails = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  // 太湖渔船
+  const fishBoats = [
+    { x: 660, y: 440 }, { x: 700, y: 460 }, { x: 720, y: 425 },
+    { x: 640, y: 460 }, { x: 740, y: 450 }
+  ];
+  fishBoats.forEach(fb => {
+    lakeDetails.innerHTML += `
+      <g transform="translate(${fb.x}, ${fb.y})">
+        <ellipse cx="0" cy="0" rx="4" ry="2" fill="#5a4a36"/>
+        <line x1="0" y1="-2" x2="0" y2="-7" stroke="#2c2418" stroke-width="0.5"/>
+        <path d="M 0 -7 L 3 -2 L 0 -2 Z" fill="#e8d8b0" stroke="#5a4a36" stroke-width="0.3" opacity="0.7"/>
+      </g>
+    `;
+  });
+  // 太湖水鸟（V 字群）
+  for (let i = 0; i < 6; i++) {
+    const bx = 600 + i * 30;
+    const by = 420 + Math.sin(i * 0.8) * 5;
+    lakeDetails.innerHTML += `<path d="M ${bx} ${by} l 3 -2 l 3 2" fill="none" stroke="#2c2418" stroke-width="0.6"/>`;
+  }
+  svg.appendChild(lakeDetails);
+
+  // D. 松江棉田（农耕文明 — 黄道婆后万历时期大面积种植）
+  const cottonFields = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  cottonFields.setAttribute('opacity', '0.6');
+  // 棉田（密集短线 + 田字格）
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 6; col++) {
+      const fx = 800 + col * 18;
+      const fy = 460 + row * 14;
+      cottonFields.innerHTML += `
+        <line x1="${fx}" y1="${fy}" x2="${fx + 14}" y2="${fy}" stroke="#9b8956" stroke-width="0.5" opacity="0.7"/>
+        <line x1="${fx + 7}" y1="${fy - 2}" x2="${fx + 7}" y2="${fy + 2}" stroke="#9b8956" stroke-width="0.3"/>
+      `;
+    }
+  }
+  cottonFields.innerHTML += `<text x="860" y="540" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#9b8956" font-style="italic">棉田</text>`;
+  svg.appendChild(cottonFields);
+
+  // E. 黄浦江 + 吴淞江（上海前身 — 万历年间已成型）
+  const huangpu = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  huangpu.setAttribute('opacity', '0.6');
+  huangpu.innerHTML = `
+    <!-- 黄浦江 (明代雏形) -->
+    <path d="M 850 460 Q 920 490, 990 520 Q 1050 540, 1100 580" fill="none" stroke="#2c5e6f" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 3" opacity="0.8"/>
+    <!-- 吴淞江 (明初) -->
+    <path d="M 800 440 Q 870 470, 940 500 Q 1000 520, 1060 560" fill="none" stroke="#2c5e6f" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 2" opacity="0.7"/>
+    <text x="970" y="540" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#2c5e6f" font-style="italic">黃浦江</text>
+    <text x="900" y="500" font-family="STKaiti, KaiTi, serif" font-size="8" fill="#2c5e6f" font-style="italic">吳淞江</text>
+    <!-- 上海雏形（标注） -->
+    <circle cx="1050" cy="580" r="2.5" fill="#5a4a36"/>
+    <text x="1056" y="585" font-family="STKaiti, KaiTi, serif" font-size="8" fill="#5a4a36">上海鎮</text>
+  `;
+  svg.appendChild(huangpu);
+
+  // F. 长江中下游码头 / 渡口（POI 密度）
+  const riverDocks = [
+    { x: 380, y: 240, name: '鎮江渡' },
+    { x: 480, y: 290, name: '江陰渡' },
+    { x: 580, y: 330, name: '通州渡' },
+  ];
+  riverDocks.forEach(d => {
+    const dg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    dg.setAttribute('transform', `translate(${d.x}, ${d.y})`);
+    dg.innerHTML = `
+      <rect x="-4" y="-1" width="8" height="3" fill="#5a4a36"/>
+      <line x1="0" y1="2" x2="0" y2="6" stroke="#5a4a36" stroke-width="0.6"/>
+      <text x="6" y="2" font-family="STKaiti, KaiTi, serif" font-size="8" fill="#5a4a36">${d.name}</text>
+    `;
+    svg.appendChild(dg);
+  });
+
+  // G. 京杭运河沿岸城镇（POI 密度 — 镇江/扬州/杭州等）
+  const canalTowns = [
+    { x: 320, y: 220, name: '揚州' },
+    { x: 380, y: 240, name: '鎮江' },
+    { x: 440, y: 460, name: '湖州' },
+  ];
+  canalTowns.forEach(t => {
+    const tg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    tg.setAttribute('transform', `translate(${t.x}, ${t.y})`);
+    tg.innerHTML = `
+      <rect x="-5" y="-5" width="10" height="10" fill="#e8d8b0" stroke="#5a4a36" stroke-width="0.6"/>
+      <text x="0" y="3" text-anchor="middle" font-family="STKaiti, KaiTi, serif" font-size="7" fill="#5a4a36" font-weight="700">${t.name}</text>
+    `;
+    svg.appendChild(tg);
+  });
+
   // 宣纸底
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   bg.setAttribute('width', '1200');
   bg.setAttribute('height', '800');
   bg.setAttribute('fill', 'url(#paperTexture)');
-  bg.setAttribute('opacity', '0.65');
+  bg.setAttribute('opacity', '0.55');
   svg.appendChild(bg);
 
   // 2. 计里画方网格（明代地图常用）
