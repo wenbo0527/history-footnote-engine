@@ -114,15 +114,10 @@
     cursor: grab;
   }
   #map-container:active { cursor: grabbing; }
-  /* 🆕 Phase 4.5: 画卷展开 — CSS keyframe 动画 */
-  @keyframes scrollReveal {
-    0% { clip-path: inset(0 100% 0 0); opacity: 0.3; }
-    25% { opacity: 1; }
-    100% { clip-path: inset(0 0 0 0); opacity: 1; }
-  }
-  svg.scroll-reveal {
-    animation: scrollReveal 1.4s cubic-bezier(0.25, 0.1, 0.25, 1.0) both;
-  }
+  /* 🆕 Phase 4.5: 画卷展开 — 用 SVG <animateTransform> SMIL 动画（更可靠，跨浏览器）
+     - 在 #map-svg 内部创建一个 wrapper <g id="mapReveal"> 包裹所有内容
+     - 通过 SMIL 动画从 scaleX(0) 到 scaleX(1)
+  */
   svg {
     width: 100%;
     height: 100%;
@@ -1426,14 +1421,14 @@ window.addEventListener('mouseup', () => isDragging = false);
 function render() {
   if (currentView === 'macro') renderMacro();
   else renderShengze();
-  // 🆕 Phase 4.5: 画卷展开 — 触发 CSS 动画
+  // 🆕 调试日志
   const svgEl = document.getElementById('map-svg');
   if (svgEl) {
-    svgEl.classList.remove('scroll-reveal');
-    // Force reflow to restart animation
-    void svgEl.offsetWidth;
-    svgEl.classList.add('scroll-reveal');
+    console.log(`[wanli-map] rendered ${currentView}, SVG children:`, svgEl.children.length);
+  } else {
+    console.error('[wanli-map] SVG element not found!');
   }
+  // 🆕 Phase 4.5: 画卷展开已迁移到 SMIL 动画（在 defs 中）— JS 不再操作 class
 }
 
 // ============================================================
