@@ -170,6 +170,154 @@
     color: var(--cinnabar);
   }
 
+  /* 🆕 Phase 6.1: 城市弹窗 — 居中浮层 */
+  .city-modal-mask {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26, 22, 18, 0.6);
+    z-index: 200;
+    display: none;
+    backdrop-filter: blur(4px);
+  }
+  .city-modal-mask.show { display: block; }
+  .city-modal {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 720px;
+    max-height: 86vh;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 4px;
+    z-index: 201;
+    display: none;
+    font-family: "STKaiti", "KaiTi", serif;
+    color: var(--ink);
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  }
+  .city-modal.show { display: flex; flex-direction: column; }
+
+  .city-modal-header {
+    padding: 16px 24px;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--cinnabar);
+  }
+  .city-modal-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+  }
+  .city-modal-close {
+    background: var(--cinnabar);
+    color: var(--paper);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .city-modal-close:hover { background: var(--cinnabar-dark); }
+
+  .city-modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .city-modal-section {
+    margin-bottom: 20px;
+  }
+  .city-modal-section h4 {
+    font-size: 14px;
+    color: var(--cinnabar);
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+    border-bottom: 1px solid var(--bronze, #8a6f47);
+    padding-bottom: 4px;
+  }
+  .city-modal-section p {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .city-modal-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 24px;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .city-modal-meta-grid div { color: var(--ink-light); }
+  .city-modal-meta-grid strong { color: var(--ink); font-weight: 600; }
+
+  .location-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+  .location-card {
+    padding: 8px 10px;
+    background: rgba(184, 146, 61, 0.1);
+    border: 1px solid var(--bronze, #8a6f47);
+    border-radius: 2px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .location-card:hover {
+    background: rgba(196, 69, 54, 0.15);
+    border-color: var(--cinnabar);
+  }
+  .location-card.current {
+    background: var(--cinnabar);
+    color: var(--paper);
+    border-color: var(--cinnabar-dark);
+  }
+  .location-card-icon { font-size: 16px; margin-right: 6px; }
+  .location-card-name { font-weight: 600; }
+
+  .npc-list, .event-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .npc-list li, .event-list li {
+    padding: 6px 0;
+    font-size: 12px;
+    border-bottom: 1px dotted var(--bronze, #8a6f47);
+  }
+  .npc-list li:last-child, .event-list li:last-child { border-bottom: none; }
+  .npc-name { font-weight: 600; color: var(--cinnabar); margin-right: 8px; }
+
+  .city-modal-footer {
+    padding: 12px 24px;
+    background: var(--paper-dark);
+    border-top: 1px solid var(--ink);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .city-modal-btn {
+    padding: 8px 20px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 2px;
+  }
+  .city-modal-btn.primary { background: var(--cinnabar); }
+  .city-modal-btn:hover { opacity: 0.85; }
+
   /* === Legend === */
   .info-bar {
     padding: 12px 20px;
@@ -425,8 +573,12 @@
     </div>
     <div class="hud-sub">明萬曆十五年（丁亥·1587） · 蘇州府吳江縣 · 盛澤鎮及周邊</div>
     <div class="tabs">
-      <button class="tab active" data-view="macro">宏觀 · 江南四府</button>
-      <button class="tab" data-view="shengze">中觀 · 盛澤鎮</button>
+      <button class="tab active" data-view="macro">宏觀 · 江南</button>
+      <button class="tab" data-view="shengze">盛澤</button>
+      <button class="tab" data-view="suzhou">蘇州</button>
+      <button class="tab" data-view="hangzhou">杭州</button>
+      <button class="tab" data-view="songjiang">松江</button>
+      <button class="tab" data-view="nanjing">南京</button>
     </div>
   </div>
   <div>
@@ -450,6 +602,20 @@
     <text x="600" y="450" text-anchor="middle" font-family="STKaiti, KaiTi, serif" font-size="16" fill="#8a6f47">江南輿圖繪製中</text>
   </svg>
   <div class="tooltip" id="tooltip"></div>
+</div>
+
+<!-- 🆕 Phase 6.1: 城市弹窗（5 城共用） -->
+<div class="city-modal-mask" id="city-modal-mask"></div>
+<div class="city-modal" id="city-modal">
+  <div class="city-modal-header">
+    <div class="city-modal-title" id="city-modal-title">城市名</div>
+    <button class="city-modal-close" id="city-modal-close">×</button>
+  </div>
+  <div class="city-modal-body" id="city-modal-body"></div>
+  <div class="city-modal-footer">
+    <button class="city-modal-btn" id="city-modal-close-btn">關 閉</button>
+    <button class="city-modal-btn primary" id="city-modal-travel-btn">前 往 此 城</button>
+  </div>
 </div>
 
 <div class="info-bar">
@@ -524,6 +690,137 @@ const CITIES = {
     status: 'heard',
     key_locations: ['織造局', '夫子廟', '秦淮河', '明孝陵'],
     fun_fact: '萬曆中期科舉黃金時代，人口 40-50 萬',
+  },
+};
+
+// 🆕 Phase 6.1.2: 5 城详细数据 — 弹窗内容
+const CITY_DETAILS = {
+  shengze: {
+    name: '盛澤鎮',
+    tier: 'xian',
+    sub_view: 'shengze',
+    distance: '盛澤本地',
+    tier_label: '縣屬城鎮',
+    population: '約 5 千戶',
+    industries: '絲織業（綢市 + 牙行 + 機戶）',
+    description: '蘇州府吳江縣東南要衝，明代中後期江南絲織業核心小鎮。盛澤綢聞名全國，「日出萬綢，衣被天下」之說由來已久。全鎮綢市牙行十餘家，每坊機戶不下百餘。',
+    key_locations: [
+      { id: 'home', name: '自家', icon: '🏠', desc: '三間瓦房，妻沈氏操持家務', status: 'current' },
+      { id: 'weaving_house', name: '織坊', icon: '🧵', desc: '兩台織機，妻沈氏操機，子阿寶幫忙', status: 'current' },
+      { id: 'tooth_market', name: '牙行', icon: '💰', desc: '綢市經紀人，撮合機戶與買家', status: 'heard' },
+      { id: 'zhou_home', name: '周大娘家', icon: '🏘️', desc: '鄰家寡婦，織娘，關係親近', status: 'heard' },
+      { id: 'tea_house', name: '茶館', icon: '🍵', desc: '鎮上消息集散地', status: 'heard' },
+      { id: 'guan_di_temple', name: '關帝廟', icon: '⛩️', desc: '鎮上香火最盛的廟宇', status: 'heard' },
+      { id: 'silk_market', name: '綢市', icon: '🏪', desc: '每日清晨開市，盛澤綢遠近聞名', status: 'heard' },
+      { id: 'river_dock', name: '運河碼頭', icon: '⚓', desc: '盛澤鎮對外水運的唯一通道', status: 'heard' },
+      { id: 'tea_market', name: '茶市', icon: '🍃', desc: '茶葉、布匹、日用雜貨交易', status: 'heard' },
+      { id: 'rice_market', name: '米行', icon: '🌾', desc: '盛澤鎮糧商聚集', status: 'heard' },
+    ],
+    npcs: [
+      { name: '沈氏', role: '妻', status: 'home', desc: '賢內助，操持家務與織機' },
+      { name: '阿寶', role: '子', status: 'home', desc: '十二歲，幫忙織坊' },
+      { name: '周大娘', role: '鄰居', status: 'heard', desc: '寡婦，織娘，關係親近' },
+      { name: '牙行老闆', role: '商人', status: 'heard', desc: '綢市掮客，消息靈通' },
+    ],
+    events: [
+      { year: '1587', name: '綢價波動', desc: '本年綢價較往年低，機戶叫苦' },
+      { year: '1586', name: '水災', desc: '太湖溢水，盛澤低窪處受災' },
+    ],
+  },
+  suzhou: {
+    name: '蘇州府',
+    tier: 'fu',
+    sub_view: 'suzhou',
+    distance: '距盛澤 1.0 天 (40 里水路)',
+    tier_label: '府城',
+    population: '約 50 萬',
+    industries: '絲織、棉織、印染、商業、文化',
+    description: '江南絲織業絕對中心，明萬曆年間民間機戶工匠超過三萬人。閶門碼頭人聲鼎沸，萬曆末年葛成抗稅罷工發生於此。應天巡撫駐地，賦稅占全國十分之一。',
+    key_locations: [
+      { id: 'weaving_bureau', name: '織造局', icon: '🏛️', desc: '皇室織造專用，管理絲織工匠' },
+      { id: 'shantang_street', name: '山塘街', icon: '🏘️', desc: '虎丘山塘，水陸商街' },
+      { id: 'taohuawu', name: '桃花塢', icon: '🎨', desc: '木刻年畫重鎮，萬曆年間已繁盛' },
+      { id: 'changmen_dock', name: '閶門碼頭', icon: '⚓', desc: '蘇州對外水運樞紐' },
+      { id: 'guanqian', name: '觀前街', icon: '🛍️', desc: '玄妙觀前商業街' },
+    ],
+    npcs: [
+      { name: '葛成', role: '民變領袖', status: 'heard', desc: '萬曆二十九年抗稅罷工首領' },
+      { name: '應天巡撫', role: '行政官', status: 'heard', desc: '駐蘇州府，管轄江南' },
+    ],
+    events: [
+      { year: '1601', name: '葛成抗稅', desc: '蘇州機工反稅監孫隆暴動' },
+      { year: '1576', name: '織造局擴建', desc: '內織染局擴大，招募工匠' },
+    ],
+  },
+  hangzhou: {
+    name: '杭州府',
+    tier: 'fu',
+    sub_view: 'hangzhou',
+    distance: '距盛澤 2.5 天 (運河)',
+    tier_label: '府城',
+    population: '約 35 萬',
+    industries: '絲織、瓷器、茶葉、絲綢大戶',
+    description: '南宋舊都，京杭運河南端。明代絲綢生產的源頭城，以大作坊為特色。張毅庵從 1 張織機發展到 20 餘張，萬曆絲商典範。湧金門、清河坊為商業中心。',
+    key_locations: [
+      { id: 'qinghe_fang', name: '清河坊', icon: '🛍️', desc: '南宋御街，商業繁華' },
+      { id: 'west_lake', name: '西湖', icon: '🏞️', desc: '杭州名勝，萬曆士大夫題詠勝地' },
+      { id: 'yongjin_gate', name: '涌金門', icon: '⚓', desc: '西湖外運河碼頭' },
+      { id: 'longjing_village', name: '龍井村', icon: '🍃', desc: '龍井茶產地' },
+      { id: 'wulin_gate', name: '武林門', icon: '🚪', desc: '北城門，陸路要道' },
+    ],
+    npcs: [
+      { name: '張毅庵', role: '絲商典範', status: 'heard', desc: '從 1 織機到 20 餘張的絲商傳奇' },
+    ],
+    events: [
+      { year: '萬曆中期', name: '張毅庵崛起', desc: '絲商 1 機到 20 機的萬曆絲商典範' },
+    ],
+  },
+  songjiang: {
+    name: '松江府',
+    tier: 'fu',
+    sub_view: 'songjiang',
+    distance: '距盛澤 2.0 天',
+    tier_label: '府城',
+    population: '約 20 萬',
+    industries: '棉紡織（衣被天下）',
+    description: '全國棉紡織業中心，萬曆年間「衣被天下」之說由來。黃道婆從海南帶回紡織技術，烏泥涇棉布聞名全國。萬曆年間賦稅 122 萬兩占全國 7%。',
+    key_locations: [
+      { id: 'wunijing', name: '烏泥涇', icon: '🌾', desc: '黃道婆故里，棉紡技術發源地' },
+      { id: 'huangdaopo_temple', name: '黃道婆祠', icon: '⛩️', desc: '紀念黃道婆的祠廟' },
+      { id: 'cotton_field', name: '棉田', icon: '🌱', desc: '松江府棉田，萬曆時期大面積種植' },
+      { id: 'songjiang_weaving', name: '松江布行', icon: '🏪', desc: '棉布集散地' },
+      { id: 'songjiang_market', name: '府城集市', icon: '🛍️', desc: '松江府城主要商業區' },
+    ],
+    npcs: [
+      { name: '黃道婆', role: '棉紡祖師', status: 'heard', desc: '宋末元初從崖州帶回紡織技術' },
+    ],
+    events: [
+      { year: '黃道婆', name: '紡織技術引進', desc: '從海南崖州帶回攪車、彈弓、紡車、織機' },
+      { year: '萬曆中期', name: '松江布聞名', desc: '烏泥涇被聞名天下' },
+    ],
+  },
+  nanjing: {
+    name: '南京應天府',
+    tier: 'fu',
+    sub_view: 'nanjing',
+    distance: '距盛澤 6.0 天 (運河)',
+    tier_label: '南都·留都',
+    population: '約 40-50 萬',
+    industries: '官營織造、文化政治、漕運',
+    description: '大明留都，天下財賦出於江南，而金陵為其會。萬曆中期科舉黃金時代，秦淮河畔繁華。織造局為江南最大官營織坊，明孝陵為皇室祖陵。',
+    key_locations: [
+      { id: 'weaving_bureau_nj', name: '織造局', icon: '🏛️', desc: '江南最大官營織造' },
+      { id: 'fuzimiao', name: '夫子廟', icon: '⛩️', desc: '秦淮河畔文化中心' },
+      { id: 'qinhuai_river', name: '秦淮河', icon: '🌊', desc: '南京母親河，繁華水岸' },
+      { id: 'xiaoling', name: '明孝陵', icon: '🏯', desc: '明太祖朱元璋陵墓' },
+      { id: 'zhonghua_gate', name: '中華門', icon: '🚪', desc: '南城門，世界最大甕城' },
+    ],
+    npcs: [
+      { name: '南京守備', role: '宦官', status: 'heard', desc: '南京守備太監，管織造局' },
+    ],
+    events: [
+      { year: '萬曆中期', name: '留都繁華', desc: '人口 40-50 萬，秦淮河畔燈火' },
+    ],
   },
 };
 
@@ -1173,7 +1470,8 @@ function renderMacro() {
     g.addEventListener('mouseenter', () => showTooltip(city, city.svg.x, city.svg.y));
     g.addEventListener('mouseleave', hideTooltip);
     g.addEventListener('click', () => {
-      if (id === 'shengze') switchView('shengze');
+      // 🆕 Phase 6.1: 5 城全部支持点击 → 弹窗 + 进入
+      showCityPanel(city);
     });
 
     svg.appendChild(g);
@@ -1598,6 +1896,272 @@ function hideTooltip() {
 }
 
 // ============================================================
+// 🆕 Phase 6.1.1: 城市弹窗
+// ============================================================
+let currentCityData = null;
+
+function showCityPanel(city) {
+  const id = Object.keys(CITIES).find(k => CITIES[k] === city);
+  const detail = CITY_DETAILS[id] || {
+    name: city.name,
+    description: city.desc,
+    distance: city.days !== undefined ? `距盛澤 ${city.days} 天` : '',
+    tier_label: city.level === 'fu' ? '府城' : '縣城',
+    key_locations: [],
+    npcs: [],
+    events: [],
+  };
+
+  currentCityData = { id, city, detail };
+
+  // 标题
+  document.getElementById('city-modal-title').textContent = detail.name;
+
+  // body
+  const body = document.getElementById('city-modal-body');
+  body.innerHTML = `
+    <div class="city-modal-meta-grid">
+      <div><strong>等級</strong>: ${detail.tier_label || '-'}</div>
+      <div><strong>人口</strong>: ${detail.population || '-'}</div>
+      <div><strong>產業</strong>: ${detail.industries || '-'}</div>
+      <div><strong>距離</strong>: ${detail.distance || '-'}</div>
+    </div>
+
+    <div class="city-modal-section">
+      <h4>📜 史實描述</h4>
+      <p>${detail.description || ''}</p>
+    </div>
+
+    ${detail.key_locations && detail.key_locations.length > 0 ? `
+    <div class="city-modal-section">
+      <h4>🏛️ 城內地點（${detail.key_locations.length}）</h4>
+      <div class="location-grid">
+        ${detail.key_locations.map(loc => `
+          <div class="location-card ${loc.status || ''}" data-loc-id="${loc.id}">
+            <span class="location-card-icon">${loc.icon || '📍'}</span>
+            <span class="location-card-name">${loc.name}</span>
+            <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">${loc.desc}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+    ${detail.npcs && detail.npcs.length > 0 ? `
+    <div class="city-modal-section">
+      <h4>👤 已知人物（${detail.npcs.length}）</h4>
+      <ul class="npc-list">
+        ${detail.npcs.map(npc => `
+          <li>
+            <span class="npc-name">${npc.name}</span>
+            <span style="color: var(--ink-light); margin-right: 8px;">[${npc.role}]</span>
+            <span style="font-size: 11px;">${npc.desc}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+
+    ${detail.events && detail.events.length > 0 ? `
+    <div class="city-modal-section">
+      <h4>📅 史實大事</h4>
+      <ul class="event-list">
+        ${detail.events.map(ev => `
+          <li>
+            <span class="npc-name">${ev.year}</span>
+            <span style="font-weight: 600;">${ev.name}</span>
+            <span style="font-size: 11px; color: var(--ink-light);">— ${ev.desc}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ` : ''}
+  `;
+
+  // 显示
+  document.getElementById('city-modal-mask').classList.add('show');
+  document.getElementById('city-modal').classList.add('show');
+
+  // 绑定 location card 点击 → 切到中观
+  body.querySelectorAll('.location-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const locId = card.dataset.locId;
+      console.log('[wanli-map] location clicked:', locId);
+      // 切到对应城市的中观
+      if (currentCityData && currentCityData.detail.sub_view) {
+        switchView(currentCityData.detail.sub_view);
+        closeCityPanel();
+      }
+    });
+  });
+}
+
+function closeCityPanel() {
+  document.getElementById('city-modal-mask').classList.remove('show');
+  document.getElementById('city-modal').classList.remove('show');
+  currentCityData = null;
+}
+
+// Bind close handlers
+document.getElementById('city-modal-close').addEventListener('click', closeCityPanel);
+document.getElementById('city-modal-close-btn').addEventListener('click', closeCityPanel);
+document.getElementById('city-modal-mask').addEventListener('click', closeCityPanel);
+document.getElementById('city-modal-travel-btn').addEventListener('click', () => {
+  if (currentCityData) {
+    // 模拟 travel action
+    alert(`🚶 玩家動身前往 ${currentCityData.detail.name}！\n（遊戲中將消耗 ${currentCityData.city.days || 0} 天）`);
+    closeCityPanel();
+  }
+});
+// ESC 关闭
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeCityPanel();
+});
+
+// 🆕 Phase 6.1.3: 通用 sub-view 渲染（4 个新城市）
+function renderSubView(cityId) {
+  const svg = document.getElementById('map-svg');
+  svg.innerHTML = '';
+  const detail = CITY_DETAILS[cityId];
+  if (!detail || !detail.key_locations) return;
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <pattern id="paperTexture${cityId}" patternUnits="userSpaceOnUse" width="40" height="40">
+      <rect width="40" height="40" fill="#e8d8b0"/>
+      <circle cx="5" cy="8" r="0.5" fill="#8a6f47" opacity="0.15"/>
+      <circle cx="22" cy="14" r="0.5" fill="#8a6f47" opacity="0.15"/>
+    </pattern>
+  `;
+  svg.appendChild(defs);
+
+  // 宣纸底
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '1200');
+  bg.setAttribute('height', '800');
+  bg.setAttribute('fill', `url(#paperTexture${cityId})`);
+  svg.appendChild(bg);
+
+  // 卷首题跋
+  const cartouche = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  cartouche.innerHTML = `
+    <rect class="title-cartouche" x="20" y="20" width="320" height="60"/>
+    <text class="title-cartouche-text" x="180" y="48">${detail.name}圖</text>
+    <text class="map-label label-small" x="180" y="68" fill="#5a4a36">${detail.tier_label} · ${detail.population || ''}</text>
+  `;
+  svg.appendChild(cartouche);
+
+  // 镇名大标
+  const townName = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  townName.setAttribute('class', 'map-label label-large');
+  townName.setAttribute('x', 600);
+  townName.setAttribute('y', 300);
+  townName.setAttribute('font-size', '36');
+  townName.setAttribute('fill', '#5a4530');
+  townName.textContent = detail.name;
+  svg.appendChild(townName);
+
+  // 镇墙（虚线方框）
+  const wall = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  wall.setAttribute('x', 420);
+  wall.setAttribute('y', 350);
+  wall.setAttribute('width', 560);
+  wall.setAttribute('height', 280);
+  wall.setAttribute('fill', 'none');
+  wall.setAttribute('stroke', '#2c2418');
+  wall.setAttribute('stroke-width', '3');
+  wall.setAttribute('stroke-dasharray', '8 4');
+  wall.setAttribute('opacity', '0.5');
+  svg.appendChild(wall);
+
+  // 河流穿过
+  const river = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  river.setAttribute('class', 'river-path');
+  river.setAttribute('d', 'M 420 400 Q 700 500, 980 600');
+  river.setAttribute('opacity', '0.7');
+  svg.appendChild(river);
+
+  // 民居（10 座）
+  for (let i = 0; i < 10; i++) {
+    const hx = 450 + (i % 5) * 110;
+    const hy = 380 + Math.floor(i / 5) * 100;
+    const houseG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    houseG.innerHTML = `
+      <rect x="${hx}" y="${hy}" width="32" height="22" fill="#f5ead2" stroke="#5a4530" stroke-width="0.6"/>
+      <path d="M ${hx - 3} ${hy} L ${hx + 16} ${hy - 6} L ${hx + 35} ${hy} Z" fill="#3a3024" stroke="#1a1612" stroke-width="0.5"/>
+    `;
+    svg.appendChild(houseG);
+  }
+
+  // 地点节点（5 个）
+  const locCount = detail.key_locations.length;
+  detail.key_locations.forEach((loc, i) => {
+    const angle = (i / locCount) * Math.PI * 2 - Math.PI / 2;
+    const cx = 700 + Math.cos(angle) * 200;
+    const cy = 500 + Math.sin(angle) * 100;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.style.cursor = 'pointer';
+
+    // 朱砂印章（当前）
+    if (loc.status === 'current') {
+      const seal = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      seal.setAttribute('class', 'current-mark');
+      seal.setAttribute('x', cx - 10);
+      seal.setAttribute('y', cy - 10);
+      seal.setAttribute('width', 20);
+      seal.setAttribute('height', 20);
+      seal.setAttribute('transform', `rotate(-3 ${cx} ${cy})`);
+      g.appendChild(seal);
+      const sealText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      sealText.setAttribute('class', 'current-mark-text');
+      sealText.setAttribute('x', cx);
+      sealText.setAttribute('y', cy + 5);
+      sealText.textContent = '此';
+      g.appendChild(sealText);
+    } else {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', cx);
+      dot.setAttribute('cy', cy);
+      dot.setAttribute('r', 6);
+      dot.setAttribute('fill', '#e8d8b0');
+      dot.setAttribute('stroke', '#2c2418');
+      dot.setAttribute('stroke-width', '1');
+      g.appendChild(dot);
+      const dotInner = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dotInner.setAttribute('cx', cx);
+      dotInner.setAttribute('cy', cy);
+      dotInner.setAttribute('r', 3);
+      dotInner.setAttribute('fill', '#2c2418');
+      g.appendChild(dotInner);
+    }
+
+    // 标签
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('class', 'map-label label-small');
+    label.setAttribute('x', cx + 12);
+    label.setAttribute('y', cy + 5);
+    label.setAttribute('fill', loc.status === 'current' ? '#c44536' : '#2c2418');
+    label.textContent = loc.icon + ' ' + loc.name;
+    g.appendChild(label);
+
+    // hover
+    g.addEventListener('mouseenter', () => showTooltip(loc, cx, cy));
+    g.addEventListener('mouseleave', hideTooltip);
+
+    svg.appendChild(g);
+  });
+
+  // 卷尾跋
+  const colophon = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  colophon.setAttribute('transform', 'translate(700, 700)');
+  colophon.innerHTML = `
+    <text x="0" y="0" font-family="STKaiti, serif" font-size="10" fill="#5a4a36" font-style="italic">${detail.name}圖 · 萬曆十五年</text>
+    <text x="0" y="14" font-family="STKaiti, serif" font-size="9" fill="#8a6f47" font-style="italic">${detail.industries || ''}</text>
+  `;
+  svg.appendChild(colophon);
+}
+
+// ============================================================
 // Tab 切换
 // ============================================================
 let currentView = 'macro';
@@ -1660,7 +2224,12 @@ window.addEventListener('mouseup', () => isDragging = false);
 // ============================================================
 function render() {
   if (currentView === 'macro') renderMacro();
-  else renderShengze();
+  else if (currentView === 'shengze') renderShengze();
+  else if (currentView === 'suzhou') renderSubView('suzhou');
+  else if (currentView === 'hangzhou') renderSubView('hangzhou');
+  else if (currentView === 'songjiang') renderSubView('songjiang');
+  else if (currentView === 'nanjing') renderSubView('nanjing');
+  else renderMacro();
   // 🆕 调试日志
   const svgEl = document.getElementById('map-svg');
   if (svgEl) {
