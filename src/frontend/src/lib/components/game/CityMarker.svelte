@@ -20,6 +20,9 @@
     meta: string;
   }
 
+  // 导出供其他组件使用
+  export type { CityData };
+
   interface Props {
     city: CityData;
     status: 'current' | 'visited' | 'heard' | 'locked';

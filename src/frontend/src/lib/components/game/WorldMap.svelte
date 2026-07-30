@@ -23,22 +23,34 @@
    */
 
   import type { GameState } from '$lib/api/types';
-  import CityMarker from './CityMarker.svelte';
+  import CityMarker, { type CityData } from './CityMarker.svelte';
   import CityDetailPanel from './CityDetailPanel.svelte';
   import CanalPath from './CanalPath.svelte';
+  import TravelLine from './TravelLine.svelte';
+
+  interface TravelSegment {
+    from: string;
+    to: string;
+    days: number;
+    round?: number;
+  }
 
   interface Props {
     state: GameState;
     visitedCities?: string[];
     heardCities?: string[];
+    travelPath?: TravelSegment[];
     onCityClick?: (cityId: string) => void;
+    onTravel?: (cityId: string) => void;
   }
 
   let {
     state,
     visitedCities = [],
     heardCities = [],
-    onCityClick = (id) => console.log('[WorldMap] city click:', id)
+    travelPath = [],
+    onCityClick = (id) => console.log('[WorldMap] city click:', id),
+    onTravel = (id) => console.log('[WorldMap] travel to:', id)
   }: Props = $props();
 
   // 5 城配置（v4 底图对齐）
@@ -119,6 +131,11 @@
     <!-- 京杭大运河（青色 + 水流动效）-->
     <CanalPath path={CANAL_PATH} />
 
+    <!-- 玩家路径（朱砂笔触）— Phase 8.4 -->
+    {#each travelPath as segment, i (i)}
+      <TravelLine {segment} cities={CITIES} />
+    {/each}
+
     <!-- 5 城节点 -->
     {#each CITIES as city (city.id)}
       <CityMarker
@@ -161,6 +178,10 @@
       cityId={selectedCityId}
       city={CITIES.find(c => c.id === selectedCityId)}
       onClose={closeDetail}
+      onTravel={(id) => {
+        onTravel(id);
+        closeDetail();
+      }}
     />
   {/if}
 </div>

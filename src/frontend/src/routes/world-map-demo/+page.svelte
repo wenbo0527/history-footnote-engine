@@ -31,30 +31,56 @@
     cash: 100,
     rice: 50,
     looms: 2,
+    narrative_history: [
+      { round: 1, content: '我出生在盛澤鎮。', type: 'opening' },
+      { round: 2, content: '父親帶我前往蘇州府拜見姑母。', type: 'story' },
+      { round: 3, content: '回到盛澤，繼續織綢。', type: 'story' },
+      { round: 4, content: '我前往杭州府進絲。', type: 'story' },
+      { round: 5, content: '回到盛澤。', type: 'story' },
+    ],
   } as any);
 
-  let visitedCities = $state<string[]>([]);
-  let heardCities = $state<string[]>(['suzhou', 'hangzhou', 'songjiang', 'nanjing']);
-  let selectedCity = $state<string | null>(null);
+  let visitedCities = $state<string[]>(['suzhou', 'hangzhou']);
+  let heardCities = $state<string[]>(['songjiang', 'nanjing']);
+
+  // Phase 8.4: 玩家路径（朱砂笔触）
+  let travelPath = $state<Array<{ from: string; to: string; days: number; round?: number }>>([
+    { from: 'shengze', to: 'suzhou', days: 1, round: 2 },
+    { from: 'suzhou', to: 'shengze', days: 1, round: 3 },
+    { from: 'shengze', to: 'hangzhou', days: 2, round: 4 },
+    { from: 'hangzhou', to: 'shengze', days: 2, round: 5 },
+  ]);
 
   function handleCityClick(cityId: string) {
-    selectedCity = cityId;
-    if (cityId !== state.city) {
-      // 模拟探索
-      if (!visitedCities.includes(cityId)) {
-        visitedCities = [...visitedCities, cityId];
-      }
-    }
+    console.log('[demo] city click:', cityId);
   }
 
   function handleTravel(cityId: string) {
     if (cityId === state.city) return;
+
     // 模拟 travel
-    state = { ...state, city: cityId };
-    if (!visitedCities.includes(cityId)) {
+    const days = cityId === 'shengze' ? 0
+      : cityId === 'suzhou' ? 1
+      : cityId === 'hangzhou' ? 2
+      : cityId === 'songjiang' ? 2
+      : 6;
+
+    const newState = { ...state, city: cityId };
+    state = newState;
+
+    // 记录路径
+    travelPath = [...travelPath, {
+      from: state.city === cityId ? state.city : state.city, // 当前
+      to: cityId,
+      days,
+      round: state.round_current + 1,
+    }];
+
+    if (!visitedCities.includes(cityId) && cityId !== 'shengze') {
       visitedCities = [...visitedCities, cityId];
     }
-    selectedCity = null;
+
+    console.log('[demo] traveled to:', cityId, `(${days} days)`);
   }
 </script>
 
@@ -78,7 +104,9 @@
       {state}
       {visitedCities}
       {heardCities}
+      {travelPath}
       onCityClick={handleCityClick}
+      onTravel={handleTravel}
     />
   </div>
 
