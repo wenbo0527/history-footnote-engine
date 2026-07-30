@@ -114,6 +114,22 @@
     cursor: grab;
   }
   #map-container:active { cursor: grabbing; }
+  /* 🆕 Phase 7.1: AI 生成水墨底图 */
+  .map-base {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0.55;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  #map-svg {
+    position: relative;
+    z-index: 1;
+  }
   /* 🆕 Phase 4.5: 画卷展开 — 用 SVG <animateTransform> SMIL 动画（更可靠，跨浏览器）
      - 在 #map-svg 内部创建一个 wrapper <g id="mapReveal"> 包裹所有内容
      - 通过 SMIL 动画从 scaleX(0) 到 scaleX(1)
@@ -595,6 +611,8 @@
 </div>
 
 <div id="map-container">
+  <!-- 🆕 Phase 7.1: AI 生成水墨底图 (MiniMax mmx image) -->
+  <img class="map-base" id="map-base" src="/static/mmx-output/jian-ye-A.jpg" alt="江南輿圖" />
   <svg id="map-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
     <!-- 静态 fallback (如果 JS 失败，至少显示一个 loading 状态) -->
     <rect x="0" y="0" width="1200" height="800" fill="#e8d8b0"/>
@@ -1168,7 +1186,7 @@ function renderMacro() {
   bg.setAttribute('width', '1200');
   bg.setAttribute('height', '800');
   bg.setAttribute('fill', 'url(#paperTexture)');
-  bg.setAttribute('opacity', '0.55');
+  bg.setAttribute('opacity', '0.25');
   svg.appendChild(bg);
 
   // 2. 计里画方网格（明代地图常用）
