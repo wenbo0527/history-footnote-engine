@@ -50,8 +50,17 @@
     heardCities = [],
     travelPath = [],
     onCityClick = (id) => console.log('[WorldMap] city click:', id),
-    onTravel = (id) => console.log('[WorldMap] travel to:', id)
+    onTravel = async (id) => { console.log('[WorldMap] travel to:', id); }
   }: Props = $props();
+
+  async function handleTravelClick(cityId: string) {
+    traveling = true;
+    try {
+      await Promise.resolve(onTravel(cityId));
+    } finally {
+      // 不立即关闭，Container 决定何时关
+    }
+  }
 
   // 5 城配置（v4 底图对齐）
   const CITIES = [
@@ -99,6 +108,7 @@
 
   let selectedCityId = $state<string | null>(null);
   let showDetail = $state(false);
+  let traveling = $state(false);
 
   function handleCityClick(cityId: string) {
     selectedCityId = cityId;
@@ -110,15 +120,61 @@
     showDetail = false;
     selectedCityId = null;
   }
+
+  // 🆕 Phase 8.5.2: 主图点击 → 智能识别最近城市
+  let baseImg = $state<HTMLImageElement | null>(null);
+
+  function getNearestCity(viewportX: number, viewportY: number) {
+    if (!baseImg) return null;
+
+    // 1. 计算点击坐标对应的 SVG viewBox 坐标
+    const rect = baseImg.getBoundingClientRect();
+    const scaleX = 1200 / rect.width;
+    const scaleY = 800 / rect.height;
+    const svgX = (viewportX - rect.left) * scaleX;
+    const svgY = (viewportY - rect.top) * scaleY;
+
+    // 2. 找最近城市（within 50 SVG units = 4% of width）
+    const SEARCH_RADIUS = 50;
+    let nearest = null;
+    let minDist = Infinity;
+    for (const c of CITIES) {
+      const dx = c.x - svgX;
+      const dy = c.y - svgY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDist && dist < SEARCH_RADIUS) {
+        minDist = dist;
+        nearest = c;
+      }
+    }
+    return nearest;
+  }
+
+  function handleBaseClick(e: MouseEvent) {
+    const nearest = getNearestCity(e.clientX, e.clientY);
+    if (nearest) {
+      handleCityClick(nearest.id);
+    }
+  }
+
+  function handleBaseMove(e: MouseEvent) {
+    const nearest = getNearestCity(e.clientX, e.clientY);
+    if (baseImg) {
+      baseImg.style.cursor = nearest ? 'pointer' : 'default';
+    }
+  }
 </script>
 
 <div class="world-map-container">
   <!-- AI 水墨底图（v4） -->
   <img
+    bind:this={baseImg}
     class="map-base"
     src="/static/mmx-output/jian-ye-A-v4.jpg"
     alt="江南輿圖"
     draggable="false"
+    on:click={handleBaseClick}
+    on:mousemove={handleBaseMove}
   />
 
   <!-- SVG 叠加层 -->
@@ -177,10 +233,10 @@
     <CityDetailPanel
       cityId={selectedCityId}
       city={CITIES.find(c => c.id === selectedCityId)}
+      {traveling}
       onClose={closeDetail}
       onTravel={(id) => {
-        onTravel(id);
-        closeDetail();
+        handleTravelClick(id);
       }}
     />
   {/if}

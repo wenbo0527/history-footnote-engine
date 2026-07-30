@@ -47,6 +47,16 @@
   on:mouseenter={() => (showTooltip = true)}
   on:mouseleave={() => (showTooltip = false)}
 >
+  <!-- 🆕 Phase 8.5: 透明 hit-zone (覆盖 v4 底图上城簇大小, 35px) -->
+  <circle
+    class="hit-zone"
+    cx="0"
+    cy="0"
+    r="35"
+    fill="transparent"
+    pointer-events="all"
+  />
+
   <!-- 当前：朱砂印章 -->
   {#if status === 'current'}
     <g class="seal" transform="rotate(-3)">
@@ -106,6 +116,12 @@
   .city-marker {
     cursor: pointer;
     transition: transform 0.2s;
+  }
+
+  /* 🆕 Phase 8.5: hit-zone 视觉反馈 (debug 可选) */
+  .hit-zone {
+    fill: transparent;
+    /* 调试时打开：fill: rgba(196, 69, 54, 0.1); */
   }
 
   .city-marker:hover {

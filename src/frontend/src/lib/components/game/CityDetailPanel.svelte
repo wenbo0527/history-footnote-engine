@@ -47,11 +47,12 @@
   interface Props {
     cityId: string;
     city: CityData | undefined;
+    traveling?: boolean;
     onClose?: () => void;
     onTravel?: (cityId: string) => void;
   }
 
-  let { cityId, city, onClose, onTravel }: Props = $props();
+  let { cityId, city, traveling = false, onClose, onTravel }: Props = $props();
 
   // 5 城详细数据（从 wanli_map_demo.html CITY_DETAILS 提取）
   const CITY_DATA: Record<string, {
@@ -266,9 +267,15 @@
       <button
         class="city-modal-btn primary"
         on:click={handleTravel}
-        disabled={!city || city.days === 0}
+        disabled={!city || city.days === 0 || traveling}
       >
-        {city?.days === 0 ? '當前所在地' : `前 往 此 城（${city?.days ?? '?'} 天）`}
+        {#if traveling}
+          啟程中…
+        {:else if city?.days === 0}
+          當前所在地
+        {:else}
+          前 往 此 城（{city?.days ?? '?'} 天）
+        {/if}
       </button>
     </div>
   </div>
