@@ -30,7 +30,7 @@
   import type { CityData, TravelSegment } from './cityData';
 
   interface Props {
-    state: GameState;
+    gameState: GameState;
     visitedCities?: string[];
     heardCities?: string[];
     travelPath?: TravelSegment[];
@@ -39,12 +39,12 @@
   }
 
   let {
-    state,
+    gameState,
     visitedCities = [],
     heardCities = [],
     travelPath = [],
-    onCityClick = (id) => console.log('[WorldMap] city click:', id),
-    onTravel = async (id) => { console.log('[WorldMap] travel to:', id); }
+    onCityClick = (id: string) => console.log('[WorldMap] city click:', id),
+    onTravel = async (id: string) => { console.log('[WorldMap] travel to:', id); }
   }: Props = $props();
 
   async function handleTravelClick(cityId: string) {
@@ -94,7 +94,7 @@
   const CANAL_PATH = 'M 150 95 Q 190 130, 235 160 Q 350 280, 500 440 Q 610 410, 720 380';
 
   function getCityStatus(cityId: string): 'current' | 'visited' | 'heard' | 'locked' {
-    if (cityId === state.city) return 'current';
+    if (cityId === gameState.city) return 'current';
     if (visitedCities.includes(cityId)) return 'visited';
     if (heardCities.includes(cityId)) return 'heard';
     return 'locked';

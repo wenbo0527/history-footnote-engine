@@ -13,7 +13,7 @@
   import type { GameState } from '$lib/api/types';
 
   // Mock GameState（演示用）
-  let state = $state<GameState>({
+  let state: GameState = $state({
     session_id: 'demo',
     account_username: '盛澤織工',
     character: {
@@ -40,11 +40,11 @@
     ],
   } as any);
 
-  let visitedCities = $state<string[]>(['suzhou', 'hangzhou']);
-  let heardCities = $state<string[]>(['songjiang', 'nanjing']);
+  let visitedCities: string[] = $state(['suzhou', 'hangzhou']);
+  let heardCities: string[] = $state(['songjiang', 'nanjing']);
 
   // Phase 8.4: 玩家路径（朱砂笔触）
-  let travelPath = $state<Array<{ from: string; to: string; days: number; round?: number }>>([
+  let travelPath: Array<{ from: string; to: string; days: number; round?: number }> = $state([
     { from: 'shengze', to: 'suzhou', days: 1, round: 2 },
     { from: 'suzhou', to: 'shengze', days: 1, round: 3 },
     { from: 'shengze', to: 'hangzhou', days: 2, round: 4 },
@@ -101,7 +101,7 @@
 
   <div class="map-wrapper">
     <WorldMap
-      {state}
+      gameState={state}
       {visitedCities}
       {heardCities}
       {travelPath}

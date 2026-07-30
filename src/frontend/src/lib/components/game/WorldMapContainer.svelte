@@ -115,7 +115,7 @@
 
 {#if $game}
   <WorldMap
-    state={$game}
+    gameState={$game}
     {visitedCities}
     {heardCities}
     travelPath={travelPath}
