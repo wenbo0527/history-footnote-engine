@@ -611,8 +611,8 @@
 </div>
 
 <div id="map-container">
-  <!-- 🆕 Phase 7.1: AI 生成水墨底图 (v3 — 5 城 + 京杭运河 + 江南水乡) -->
-  <img class="map-base" id="map-base" src="/static/mmx-output/jian-ye-A-v3.jpg" alt="江南輿圖" />
+  <!-- 🆕 Phase 7.1.3: AI 生成水墨底图 (v4 — 运河走向 + 中央大城) -->
+  <img class="map-base" id="map-base" src="/static/mmx-output/jian-ye-A-v4.jpg" alt="江南輿圖" />
   <svg id="map-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
     <!-- 静态 fallback (如果 JS 失败，至少显示一个 loading 状态) -->
     <rect x="0" y="0" width="1200" height="800" fill="#e8d8b0"/>
@@ -660,8 +660,8 @@ const CITIES = {
     desc: '蘇州府吳江縣東南 · 萬曆年間江南絲織業核心小鎮，民間機戶過萬',
     days: 0,
     meta: '蘇州府吳江縣',
-    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 中央偏右 (大城)
-    svg: { x: 500, y: 280 },
+    // 🆕 Phase 7.1.3: 对齐 AI 底图 v4 — 中央大城 (盛泽是核心)
+    svg: { x: 500, y: 440 },
     status: 'current',
     key_locations: ['牙行', '機戶', '綢行', '關帝廟'],
     fun_fact: '全鎮綢市牙行十餘家，每坊機戶不下百餘',
@@ -672,8 +672,8 @@ const CITIES = {
     desc: '閶門碼頭人聲鼎沸，民間機戶工匠超過三萬人，萬曆年間賦稅占全國十分之一',
     days: 1.0,
     meta: '江南絲織業絕對中心',
-    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 中上 (盛泽西北)
-    svg: { x: 270, y: 200 },
+    // 🆕 Phase 7.1.3: 对齐 AI 底图 v4 — 左中城
+    svg: { x: 235, y: 160 },
     status: 'visited',
     key_locations: ['織造局', '山塘街', '桃花塢', '閶門碼頭'],
     fun_fact: '應天巡撫駐地，萬曆末年葛成抗稅罷工發生於此',
@@ -684,8 +684,8 @@ const CITIES = {
     desc: '南宋舊都，絲綢生產的源頭城大作坊為特色',
     days: 2.5,
     meta: '南宋舊都 · 京杭運河南端',
-    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 左下大城
-    svg: { x: 200, y: 340 },
+    // 🆕 Phase 7.1.3: 对齐 AI 底图 v4 — 左下 (底图无城簇, 保持位置)
+    svg: { x: 200, y: 320 },
     status: 'heard',
     key_locations: ['清河坊', '西湖', '涌金門'],
     fun_fact: '張毅庵從 1 張織機發展到 20 餘張，萬曆絲商典範',
@@ -696,8 +696,8 @@ const CITIES = {
     desc: '全國棉紡織業中心，衣被天下，萬曆年間賦稅 122 萬兩占全國 7%',
     days: 2.0,
     meta: '棉紡織業第一府',
-    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 盛泽东南
-    svg: { x: 720, y: 220 },
+    // 🆕 Phase 7.1.3: 对齐 AI 底图 v4 — 右中 (底图无城簇)
+    svg: { x: 720, y: 380 },
     status: 'heard',
     key_locations: ['烏泥涇', '黃道婆祠', '棉田'],
     fun_fact: '"衣被天下" — 黃道婆從海南帶回紡織技術，萬曆發揚光大',
@@ -708,8 +708,8 @@ const CITIES = {
     desc: '留都，天下財賦出於江南，而金陵為其會',
     days: 6.0,
     meta: '南都 · 留都',
-    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 左上大城
-    svg: { x: 130, y: 110 },
+    // 🆕 Phase 7.1.3: 对齐 AI 底图 v4 — 左上小城簇
+    svg: { x: 150, y: 95 },
     status: 'heard',
     key_locations: ['織造局', '夫子廟', '秦淮河', '明孝陵'],
     fun_fact: '萬曆中期科舉黃金時代，人口 40-50 萬',
@@ -1287,24 +1287,24 @@ function renderMacro() {
   `;
   svg.appendChild(lake);
 
-  // 6. 京杭大运河（青色曲线 + 虚线波纹）— Phase 7.1.2 对齐 v3 底图
+  // 6. 京杭大运河（青色曲线 + 虚线波纹）— Phase 7.1.3 对齐 v4 底图
   const canal = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canal.setAttribute('class', 'river-path');
-  // v3: 南京(130,110) → 苏州(270,200) → 盛泽(500,280) → 松江(720,220)
-  canal.setAttribute('d', 'M 270 200 Q 380 230, 500 280 Q 610 250, 720 220');
+  // v4 运河: 从南京(150,95) → 苏州(235,160) → 盛泽(500,440) → 松江(720,380)
+  canal.setAttribute('d', 'M 235 160 Q 350 280, 500 440 Q 610 410, 720 380');
   // 🆕 Phase 4.1: 河水流动 filter
   canal.setAttribute('filter', 'url(#waterFlow)');
   svg.appendChild(canal);
   const canalInner = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canalInner.setAttribute('class', 'river-path-inner');
-  canalInner.setAttribute('d', 'M 270 200 Q 380 230, 500 280 Q 610 250, 720 220');
+  canalInner.setAttribute('d', 'M 235 160 Q 350 280, 500 440 Q 610 410, 720 380');
   canalInner.setAttribute('filter', 'url(#waterFlow)');
   svg.appendChild(canalInner);
 
   // 运河从南京延伸到苏州（西北段）
   const canalExt = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canalExt.setAttribute('class', 'river-path');
-  canalExt.setAttribute('d', 'M 130 110 Q 200 150, 270 200');
+  canalExt.setAttribute('d', 'M 150 95 Q 190 130, 235 160');
   canalExt.setAttribute('stroke-width', '4');
   canalExt.setAttribute('opacity', '0.7');
   canalExt.setAttribute('filter', 'url(#waterFlow)');
