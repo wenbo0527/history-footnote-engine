@@ -54,7 +54,6 @@
         notes.push({ key: String(name), name: String(name), value });
       }
     }
-    }
     return notes;
   });
 

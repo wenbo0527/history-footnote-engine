@@ -15,14 +15,7 @@
    *   路径用 Q (quadratic Bezier) 平滑
    */
 
-  import type { CityData } from './CityMarker.svelte';
-
-  interface TravelSegment {
-    from: string;
-    to: string;
-    days: number;
-    round?: number;
-  }
+  import type { CityData, TravelSegment } from './cityData';
 
   interface Props {
     segment: TravelSegment;

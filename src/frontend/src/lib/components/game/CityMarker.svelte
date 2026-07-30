@@ -9,19 +9,7 @@
    * - locked: 灰色半透明
    */
 
-  interface CityData {
-    id: string;
-    name: string;
-    tier: 'fu' | 'xian';
-    x: number;
-    y: number;
-    days: number;
-    desc: string;
-    meta: string;
-  }
-
-  // 导出供其他组件使用
-  export type { CityData };
+  import type { CityData } from './cityData';
 
   interface Props {
     city: CityData;

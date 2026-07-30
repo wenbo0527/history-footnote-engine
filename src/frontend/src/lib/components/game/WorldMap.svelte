@@ -23,17 +23,11 @@
    */
 
   import type { GameState } from '$lib/api/types';
-  import CityMarker, { type CityData } from './CityMarker.svelte';
+  import CityMarker from './CityMarker.svelte';
   import CityDetailPanel from './CityDetailPanel.svelte';
   import CanalPath from './CanalPath.svelte';
   import TravelLine from './TravelLine.svelte';
-
-  interface TravelSegment {
-    from: string;
-    to: string;
-    days: number;
-    round?: number;
-  }
+  import type { CityData, TravelSegment } from './cityData';
 
   interface Props {
     state: GameState;
