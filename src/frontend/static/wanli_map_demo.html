@@ -122,7 +122,7 @@
     height: 100%;
     object-fit: cover;
     z-index: 0;
-    opacity: 0.55;
+    opacity: 0.78;  /* 🆕 v3: 增强 (从 0.55) — v3 底图更精致 */
     mix-blend-mode: multiply;
     pointer-events: none;
   }
@@ -611,8 +611,8 @@
 </div>
 
 <div id="map-container">
-  <!-- 🆕 Phase 7.1: AI 生成水墨底图 (MiniMax mmx image) -->
-  <img class="map-base" id="map-base" src="/static/mmx-output/jian-ye-A.jpg" alt="江南輿圖" />
+  <!-- 🆕 Phase 7.1: AI 生成水墨底图 (v3 — 5 城 + 京杭运河 + 江南水乡) -->
+  <img class="map-base" id="map-base" src="/static/mmx-output/jian-ye-A-v3.jpg" alt="江南輿圖" />
   <svg id="map-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
     <!-- 静态 fallback (如果 JS 失败，至少显示一个 loading 状态) -->
     <rect x="0" y="0" width="1200" height="800" fill="#e8d8b0"/>
@@ -660,7 +660,8 @@ const CITIES = {
     desc: '蘇州府吳江縣東南 · 萬曆年間江南絲織業核心小鎮，民間機戶過萬',
     days: 0,
     meta: '蘇州府吳江縣',
-    svg: { x: 700, y: 380 },
+    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 中央偏右 (大城)
+    svg: { x: 500, y: 280 },
     status: 'current',
     key_locations: ['牙行', '機戶', '綢行', '關帝廟'],
     fun_fact: '全鎮綢市牙行十餘家，每坊機戶不下百餘',
@@ -671,7 +672,8 @@ const CITIES = {
     desc: '閶門碼頭人聲鼎沸，民間機戶工匠超過三萬人，萬曆年間賦稅占全國十分之一',
     days: 1.0,
     meta: '江南絲織業絕對中心',
-    svg: { x: 600, y: 340 },
+    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 中上 (盛泽西北)
+    svg: { x: 270, y: 200 },
     status: 'visited',
     key_locations: ['織造局', '山塘街', '桃花塢', '閶門碼頭'],
     fun_fact: '應天巡撫駐地，萬曆末年葛成抗稅罷工發生於此',
@@ -682,7 +684,8 @@ const CITIES = {
     desc: '南宋舊都，絲綢生產的源頭城大作坊為特色',
     days: 2.5,
     meta: '南宋舊都 · 京杭運河南端',
-    svg: { x: 480, y: 480 },
+    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 左下大城
+    svg: { x: 200, y: 340 },
     status: 'heard',
     key_locations: ['清河坊', '西湖', '涌金門'],
     fun_fact: '張毅庵從 1 張織機發展到 20 餘張，萬曆絲商典範',
@@ -693,7 +696,8 @@ const CITIES = {
     desc: '全國棉紡織業中心，衣被天下，萬曆年間賦稅 122 萬兩占全國 7%',
     days: 2.0,
     meta: '棉紡織業第一府',
-    svg: { x: 820, y: 420 },
+    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 盛泽东南
+    svg: { x: 720, y: 220 },
     status: 'heard',
     key_locations: ['烏泥涇', '黃道婆祠', '棉田'],
     fun_fact: '"衣被天下" — 黃道婆從海南帶回紡織技術，萬曆發揚光大',
@@ -704,7 +708,8 @@ const CITIES = {
     desc: '留都，天下財賦出於江南，而金陵為其會',
     days: 6.0,
     meta: '南都 · 留都',
-    svg: { x: 350, y: 200 },
+    // 🆕 Phase 7.1.2: 对齐 AI 底图 v3 — 左上大城
+    svg: { x: 130, y: 110 },
     status: 'heard',
     key_locations: ['織造局', '夫子廟', '秦淮河', '明孝陵'],
     fun_fact: '萬曆中期科舉黃金時代，人口 40-50 萬',
@@ -945,102 +950,98 @@ function renderMacro() {
   `;
   svg.appendChild(defs);
 
-  // 🆕 Phase 5.0: 中国地图背景底子
-  // 1. 海域（东海）— 浅蓝渐变
-  const sea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  sea.setAttribute('d', 'M 0 600 L 0 800 L 1200 800 L 1200 600 Q 1100 580, 1000 600 Q 900 620, 800 580 Q 700 600, 600 560 Q 500 580, 400 540 Q 300 560, 200 580 Q 100 600, 0 600 Z');
-  sea.setAttribute('fill', 'rgba(74, 124, 137, 0.18)');
-  sea.setAttribute('stroke', 'rgba(44, 94, 111, 0.5)');
-  sea.setAttribute('stroke-width', '1');
-  sea.setAttribute('stroke-dasharray', '4 3');
-  svg.appendChild(sea);
+  // 🆕 Phase 7.1.2: 当 AI 底图已就绪时，关闭冗余程序化背景层
+  // (AI 底图 v3 已含 山/太湖/运河/5 城, 不再需要程序化绘制)
+  const USE_AI_BASE = !!document.getElementById('map-base');
 
-  // 2. 海岸线 + 舟山群岛（万历年间已存在）
-  const coast = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  coast.setAttribute('opacity', '0.6');
-  // 杭州湾海岸线
-  coast.innerHTML = `
-    <path d="M 820 540 Q 900 530, 980 550 Q 1020 560, 1050 580" fill="none" stroke="#2c5e6f" stroke-width="1.5" stroke-dasharray="3 2"/>
-    <text x="950" y="575" font-family="STKaiti, KaiTi, serif" font-size="10" fill="#2c5e6f" font-style="italic">杭州灣</text>
-    <!-- 舟山群岛 -->
-    <ellipse cx="1050" cy="640" rx="8" ry="5" fill="none" stroke="#2c5e6f" stroke-width="1"/>
-    <ellipse cx="1080" cy="660" rx="6" ry="4" fill="none" stroke="#2c5e6f" stroke-width="1"/>
-    <ellipse cx="1060" cy="680" rx="7" ry="4" fill="none" stroke="#2c5e6f" stroke-width="1"/>
-    <ellipse cx="1090" cy="700" rx="5" ry="3" fill="none" stroke="#2c5e6f" stroke-width="1"/>
-    <text x="1080" y="715" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#2c5e6f" font-style="italic">舟山</text>
-  `;
-  svg.appendChild(coast);
+  // 🆕 Phase 5.0: 中国地图背景底子（程序化 fallback — 仅当 AI 底图加载失败时使用）
+  if (!USE_AI_BASE) {
+    // 1. 海域（东海）— 浅蓝渐变
+    const sea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    sea.setAttribute('d', 'M 0 600 L 0 800 L 1200 800 L 1200 600 Q 1100 580, 1000 600 Q 900 620, 800 580 Q 700 600, 600 560 Q 500 580, 400 540 Q 300 560, 200 580 Q 100 600, 0 600 Z');
+    sea.setAttribute('fill', 'rgba(74, 124, 137, 0.18)');
+    sea.setAttribute('stroke', 'rgba(44, 94, 111, 0.5)');
+    sea.setAttribute('stroke-width', '1');
+    sea.setAttribute('stroke-dasharray', '4 3');
+    svg.appendChild(sea);
 
-  // 3. 长江轮廓（万历年间已贯通）
-  // 长江流经南京 → 镇江 → 江阴 → 上海入海
-  const yangtze = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  yangtze.setAttribute('opacity', '0.55');
-  yangtze.innerHTML = `
-    <path d="M 280 180 Q 320 220, 380 260 Q 460 300, 540 320 Q 620 340, 700 360" fill="none" stroke="#2c5e6f" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 3"/>
-    <text x="320" y="240" font-family="STKaiti, KaiTi, serif" font-size="11" fill="#2c5e6f" font-style="italic" font-weight="600">長江</text>
-  `;
-  svg.appendChild(yangtze);
+    // 2. 海岸线 + 舟山群岛
+    const coast = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    coast.setAttribute('opacity', '0.6');
+    coast.innerHTML = `
+      <path d="M 820 540 Q 900 530, 980 550 Q 1020 560, 1050 580" fill="none" stroke="#2c5e6f" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <text x="950" y="575" font-family="STKaiti, KaiTi, serif" font-size="10" fill="#2c5e6f" font-style="italic">杭州灣</text>
+      <ellipse cx="1050" cy="640" rx="8" ry="5" fill="none" stroke="#2c5e6f" stroke-width="1"/>
+      <ellipse cx="1080" cy="660" rx="6" ry="4" fill="none" stroke="#2c5e6f" stroke-width="1"/>
+      <ellipse cx="1060" cy="680" rx="7" ry="4" fill="none" stroke="#2c5e6f" stroke-width="1"/>
+      <ellipse cx="1090" cy="700" rx="5" ry="3" fill="none" stroke="#2c5e6f" stroke-width="1"/>
+      <text x="1080" y="715" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#2c5e6f" font-style="italic">舟山</text>
+    `;
+    svg.appendChild(coast);
 
-  // 4. 江南水乡湿地（太湖周边 + 杭嘉湖）
-  const wetland = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  wetland.setAttribute('opacity', '0.7');
-  wetland.innerHTML = `
-    <!-- 杭嘉湖湿地 -->
-    <ellipse cx="500" cy="500" rx="120" ry="40" fill="rgba(108, 158, 171, 0.18)" stroke="none"/>
-    <ellipse cx="450" cy="540" rx="80" ry="25" fill="rgba(108, 158, 171, 0.12)" stroke="none"/>
-    <!-- 河道密布 -->
-    <path d="M 380 460 Q 500 480, 600 470 Q 700 480, 780 500" fill="none" stroke="#6c9eab" stroke-width="0.6" opacity="0.6"/>
-    <path d="M 400 480 Q 500 500, 600 490 Q 700 500, 760 520" fill="none" stroke="#6c9eab" stroke-width="0.6" opacity="0.6"/>
-    <path d="M 420 510 Q 520 530, 620 520 Q 720 530, 780 550" fill="none" stroke="#6c9eab" stroke-width="0.6" opacity="0.6"/>
-    <text x="420" y="445" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#5a8a9b" font-style="italic">杭嘉湖</text>
-  `;
-  svg.appendChild(wetland);
+    // 3. 长江轮廓
+    const yangtze = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    yangtze.setAttribute('opacity', '0.55');
+    yangtze.innerHTML = `
+      <path d="M 280 180 Q 320 220, 380 260 Q 460 300, 540 320 Q 620 340, 700 360" fill="none" stroke="#2c5e6f" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 3"/>
+      <text x="320" y="240" font-family="STKaiti, KaiTi, serif" font-size="11" fill="#2c5e6f" font-style="italic" font-weight="600">長江</text>
+    `;
+    svg.appendChild(yangtze);
 
-  // 5. 山系走向（连接天目山、庐山、黄山 — 形成连续山系）
-  const mountainRange = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  mountainRange.setAttribute('opacity', '0.3');
-  // 天目山系（连线）
-  mountainRange.innerHTML = `
-    <!-- 天目山主脉 (浙西) -->
-    <path d="M 320 410 Q 360 420, 400 440 Q 430 460, 450 480" fill="none" stroke="#5a4a36" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
-    <!-- 庐山-黄山连线（皖南） -->
-    <path d="M 220 320 Q 240 340, 260 360 Q 270 380, 280 400" fill="none" stroke="#5a4a36" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
-    <!-- 衡山-黄山连线（皖中） -->
-    <path d="M 280 250 Q 280 280, 280 320 Q 280 360, 280 400" fill="none" stroke="#5a4a36" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
-    <text x="395" y="500" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#5a4a36" font-style="italic">天目山脈</text>
-  `;
-  svg.appendChild(mountainRange);
+    // 4. 江南水乡湿地
+    const wetland = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    wetland.setAttribute('opacity', '0.7');
+    wetland.innerHTML = `
+      <ellipse cx="500" cy="500" rx="120" ry="40" fill="rgba(108, 158, 171, 0.18)" stroke="none"/>
+      <ellipse cx="450" cy="540" rx="80" ry="25" fill="rgba(108, 158, 171, 0.12)" stroke="none"/>
+      <path d="M 380 460 Q 500 480, 600 470 Q 700 480, 780 500" fill="none" stroke="#6c9eab" stroke-width="0.6" opacity="0.6"/>
+      <path d="M 400 480 Q 500 500, 600 490 Q 700 500, 760 520" fill="none" stroke="#6c9eab" stroke-width="0.6" opacity="0.6"/>
+      <path d="M 420 510 Q 520 530, 620 520 Q 720 530, 780 550" fill="none" stroke="#6c9eab" stroke-width="0.6" opacity="0.6"/>
+      <text x="420" y="445" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#5a8a9b" font-style="italic">杭嘉湖</text>
+    `;
+    svg.appendChild(wetland);
 
-  // 6. 苏州府域边界（点状虚线 — 明清制图标准）
-  const suzhouBorder = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  suzhouBorder.setAttribute('opacity', '0.4');
-  // 苏州府大致范围（以苏州为中心，包括吴江、常熟、昆山等）
-  suzhouBorder.innerHTML = `
-    <path d="M 480 240 Q 540 220, 620 240 Q 700 260, 760 320 Q 800 380, 780 440 Q 740 480, 660 480 Q 580 470, 520 440 Q 470 400, 460 340 Q 460 280, 480 240 Z"
-          fill="rgba(184, 146, 61, 0.08)" stroke="#b8923d" stroke-width="1.5" stroke-dasharray="3 4"/>
-    <text x="600" y="220" font-family="STKaiti, KaiTi, serif" font-size="10" fill="#b8923d" font-style="italic">蘇州府域</text>
-  `;
-  svg.appendChild(suzhouBorder);
+    // 5. 山系走向
+    const mountainRange = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    mountainRange.setAttribute('opacity', '0.3');
+    mountainRange.innerHTML = `
+      <path d="M 320 410 Q 360 420, 400 440 Q 430 460, 450 480" fill="none" stroke="#5a4a36" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
+      <path d="M 220 320 Q 240 340, 260 360 Q 270 380, 280 400" fill="none" stroke="#5a4a36" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
+      <path d="M 280 250 Q 280 280, 280 320 Q 280 360, 280 400" fill="none" stroke="#5a4a36" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
+      <text x="395" y="500" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#5a4a36" font-style="italic">天目山脈</text>
+    `;
+    svg.appendChild(mountainRange);
 
-  // 7. 松江府域
-  const songjiangBorder = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  songjiangBorder.setAttribute('opacity', '0.4');
-  songjiangBorder.innerHTML = `
-    <path d="M 760 380 Q 800 360, 860 380 Q 920 400, 940 460 Q 940 500, 900 520 Q 840 530, 800 510 Q 770 480, 760 440 Q 750 410, 760 380 Z"
-          fill="rgba(184, 146, 61, 0.08)" stroke="#b8923d" stroke-width="1.5" stroke-dasharray="3 4"/>
-    <text x="860" y="370" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#b8923d" font-style="italic">松江府</text>
-  `;
-  svg.appendChild(songjiangBorder);
+    // 6. 苏州府域
+    const suzhouBorder = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    suzhouBorder.setAttribute('opacity', '0.4');
+    suzhouBorder.innerHTML = `
+      <path d="M 480 240 Q 540 220, 620 240 Q 700 260, 760 320 Q 800 380, 780 440 Q 740 480, 660 480 Q 580 470, 520 440 Q 470 400, 460 340 Q 460 280, 480 240 Z"
+            fill="rgba(184, 146, 61, 0.08)" stroke="#b8923d" stroke-width="1.5" stroke-dasharray="3 4"/>
+      <text x="600" y="220" font-family="STKaiti, KaiTi, serif" font-size="10" fill="#b8923d" font-style="italic">蘇州府域</text>
+    `;
+    svg.appendChild(suzhouBorder);
 
-  // 8. 杭州府域
-  const hangzhouBorder = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  hangzhouBorder.setAttribute('opacity', '0.4');
-  hangzhouBorder.innerHTML = `
-    <path d="M 360 420 Q 420 410, 480 430 Q 520 460, 540 500 Q 540 540, 500 560 Q 440 570, 400 550 Q 360 520, 350 480 Q 350 440, 360 420 Z"
-          fill="rgba(184, 146, 61, 0.08)" stroke="#b8923d" stroke-width="1.5" stroke-dasharray="3 4"/>
-    <text x="420" y="410" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#b8923d" font-style="italic">杭州府</text>
-  `;
-  svg.appendChild(hangzhouBorder);
+    // 7. 松江府域
+    const songjiangBorder = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    songjiangBorder.setAttribute('opacity', '0.4');
+    songjiangBorder.innerHTML = `
+      <path d="M 760 380 Q 800 360, 860 380 Q 920 400, 940 460 Q 940 500, 900 520 Q 840 530, 800 510 Q 770 480, 760 440 Q 750 410, 760 380 Z"
+            fill="rgba(184, 146, 61, 0.08)" stroke="#b8923d" stroke-width="1.5" stroke-dasharray="3 4"/>
+      <text x="860" y="370" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#b8923d" font-style="italic">松江府</text>
+    `;
+    svg.appendChild(songjiangBorder);
+
+    // 8. 杭州府域
+    const hangzhouBorder = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    hangzhouBorder.setAttribute('opacity', '0.4');
+    hangzhouBorder.innerHTML = `
+      <path d="M 360 420 Q 420 410, 480 430 Q 520 460, 540 500 Q 540 540, 500 560 Q 440 570, 400 550 Q 360 520, 350 480 Q 350 440, 360 420 Z"
+            fill="rgba(184, 146, 61, 0.08)" stroke="#b8923d" stroke-width="1.5" stroke-dasharray="3 4"/>
+      <text x="420" y="410" font-family="STKaiti, KaiTi, serif" font-size="9" fill="#b8923d" font-style="italic">杭州府</text>
+    `;
+    svg.appendChild(hangzhouBorder);
+  }
 
   // 🆕 Phase 5.1: 5 个细节增强图层 — 基于育碧 POI 方法 + 江南水乡史实
 
@@ -1286,23 +1287,24 @@ function renderMacro() {
   `;
   svg.appendChild(lake);
 
-  // 6. 京杭大运河（青色曲线 + 虚线波纹）
+  // 6. 京杭大运河（青色曲线 + 虚线波纹）— Phase 7.1.2 对齐 v3 底图
   const canal = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canal.setAttribute('class', 'river-path');
-  canal.setAttribute('d', 'M 480 480 Q 600 420, 700 380 Q 600 350, 480 480');
+  // v3: 南京(130,110) → 苏州(270,200) → 盛泽(500,280) → 松江(720,220)
+  canal.setAttribute('d', 'M 270 200 Q 380 230, 500 280 Q 610 250, 720 220');
   // 🆕 Phase 4.1: 河水流动 filter
   canal.setAttribute('filter', 'url(#waterFlow)');
   svg.appendChild(canal);
   const canalInner = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canalInner.setAttribute('class', 'river-path-inner');
-  canalInner.setAttribute('d', 'M 480 480 Q 600 420, 700 380 Q 600 350, 480 480');
+  canalInner.setAttribute('d', 'M 270 200 Q 380 230, 500 280 Q 610 250, 720 220');
   canalInner.setAttribute('filter', 'url(#waterFlow)');
   svg.appendChild(canalInner);
 
-  // 运河从盛泽延伸到南京
+  // 运河从南京延伸到苏州（西北段）
   const canalExt = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   canalExt.setAttribute('class', 'river-path');
-  canalExt.setAttribute('d', 'M 700 380 Q 500 280, 350 200');
+  canalExt.setAttribute('d', 'M 130 110 Q 200 150, 270 200');
   canalExt.setAttribute('stroke-width', '4');
   canalExt.setAttribute('opacity', '0.7');
   canalExt.setAttribute('filter', 'url(#waterFlow)');
