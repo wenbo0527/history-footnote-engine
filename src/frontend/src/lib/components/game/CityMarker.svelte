@@ -19,7 +19,6 @@
 
   let { city, status, onclick }: Props = $props();
 
-  let showTooltip = $state(false);
   let showDays = $state(true);
 
   const tierLabel = $derived(city.tier === 'fu' ? '府城' : '縣城');
@@ -32,8 +31,8 @@
   tabindex="0"
   on:click={onclick}
   on:keydown={(e) => e.key === 'Enter' && onclick?.()}
-  on:mouseenter={() => (showTooltip = true)}
-  on:mouseleave={() => (showTooltip = false)}
+  on:mouseenter={() => {}}
+  on:mouseleave={() => {}}
 >
   <!-- 🆕 Phase 8.5: 透明 hit-zone (覆盖 v4 底图上城簇大小, 35px) -->
   <circle
@@ -89,21 +88,19 @@
     </text>
   {/if}
 
-  <!-- 悬浮提示 -->
-  {#if showTooltip}
-    <g class="tooltip" transform="translate(20, -40)">
-      <rect class="tooltip-bg" x="0" y="0" width="180" height="48" rx="2" />
-      <text class="tooltip-title" x="8" y="16">{city.name}</text>
-      <text class="tooltip-meta" x="8" y="32">{tierLabel} · {city.meta}</text>
-      <text class="tooltip-action" x="8" y="44">→ 點擊查看詳情</text>
-    </g>
-  {/if}
+  <!-- 悬浮提示 — CSS hover 控制 -->
+  <g class="tooltip" transform="translate(20, -40)">
+    <rect class="tooltip-bg" x="0" y="0" width="180" height="48" rx="2" />
+    <text class="tooltip-title" x="8" y="16">{city.name}</text>
+    <text class="tooltip-meta" x="8" y="32">{tierLabel} · {city.meta}</text>
+    <text class="tooltip-action" x="8" y="44">→ 點擊查看詳情</text>
+  </g>
 </g>
 
 <style>
   .city-marker {
     cursor: pointer;
-    transition: transform 0.2s;
+    /* 🆕 Phase 8.5.4 fix: 移除 transition: transform (会放大闪动) */
   }
 
   /* 🆕 Phase 8.5: hit-zone 视觉反馈 (debug 可选) */
@@ -113,7 +110,8 @@
   }
 
   .city-marker:hover {
-    transform: translate(var(--tx, 0), var(--ty, 0)) scale(1.15);
+    /* 🆕 Phase 8.5.4 fix: 移除 transform scale (导致闪动) — 改用 filter 亮度 */
+    filter: brightness(1.2) drop-shadow(0 0 6px rgba(196, 69, 54, 0.5));
   }
 
   .city-marker:focus {
@@ -214,7 +212,15 @@
     stroke-width: 2;
   }
 
-  /* 悬浮提示 */
+  /* 悬浮提示 — CSS hover 控制 (无 JS 重绘) */
+  .tooltip {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-out;
+  }
+  .city-marker:hover .tooltip {
+    opacity: 1;
+  }
   .tooltip-bg {
     fill: rgba(26, 22, 18, 0.92);
     stroke: var(--cinnabar, #c44536);

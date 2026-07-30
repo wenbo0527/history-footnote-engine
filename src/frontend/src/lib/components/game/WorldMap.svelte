@@ -72,7 +72,7 @@
     },
     {
       id: 'hangzhou', name: '杭州府', tier: 'fu',
-      x: 200, y: 320, days: 2.5,
+      x: 155, y: 250, days: 2.5,
       desc: '南宋舊都，絲綢生產的源頭城',
       meta: '南宋舊都 · 京杭運河南端',
     },
@@ -151,11 +151,10 @@
     }
   }
 
-  function handleBaseMove(e: MouseEvent) {
-    const nearest = getNearestCity(e.clientX, e.clientY);
-    if (baseImg) {
-      baseImg.style.cursor = nearest ? 'pointer' : 'default';
-    }
+  // 🆕 Phase 8.5.4 fix: 移除高频 mousemove 触发 style.cursor (导致闪动)
+  // 改用 CSS :hover 在 .map-base:hover { cursor: pointer }
+  function handleBaseMove(_e: MouseEvent) {
+    // noop — cursor 由 CSS hover 处理
   }
 </script>
 
@@ -164,7 +163,7 @@
   <img
     bind:this={baseImg}
     class="map-base"
-    src="/static/mmx-output/jian-ye-A-v4.jpg"
+    src="/mmx-output/jian-ye-A-v4.jpg"
     alt="江南輿圖"
     draggable="false"
     on:click={handleBaseClick}
@@ -255,7 +254,8 @@
     z-index: 0;
     opacity: 0.78;
     mix-blend-mode: multiply;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: crosshair;
     user-select: none;
   }
 
