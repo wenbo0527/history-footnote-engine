@@ -36,6 +36,7 @@ from history_footnote.web_server.routers import (
     menu as _menu,
     misc as _misc,
     observability as _observability,
+    scripted_story as _scripted,  # 🆕 v2.10.16
     session as _session_router,
     state as _state,
     tasks as _tasks,
@@ -60,6 +61,8 @@ GET_ROUTES = {
     "/api/eras": _eras.handle_GET_eras,
     "/api/identities": _eras.handle_GET_identities,
     "/api/state": _state.handle_GET_state,
+    # 🆕 v2.10.16 故事模式（零 LLM）
+    "/api/scripted/state": _scripted.handle_GET_scripted_state,
     # 🆕 v2.8.0 章节制 API
     "/api/chapter/state": _chapter.handle_GET_chapter_state,
     "/api/chapter/blueprint": _chapter.handle_GET_chapter_blueprint,
@@ -136,6 +139,9 @@ POST_ROUTES = {
     "/api/render_narrative": _input.handle_POST_render_narrative,
     "/api/character_wiki_update": _character.handle_POST_character_wiki_update,
     "/api/input": _input.handle_POST_input,
+    # 🆕 v2.10.16 故事模式（零 LLM）
+    "/api/scripted/start": _scripted.handle_POST_scripted_start,
+    "/api/scripted/input": _scripted.handle_POST_scripted_input,
     "/api/load": _state.handle_POST_load,
     # 🆕 v2.10.1 W77: 城市变更确认
     "/api/confirm_city_change": _state.handle_POST_confirm_city_change,
