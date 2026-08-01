@@ -14,3 +14,5 @@ export { default as WorldMap } from './WorldMap.svelte';
 export { default as WorldMapContainer } from './WorldMapContainer.svelte';
 export { default as MapOverlay } from './MapOverlay.svelte';
 export { default as MiniMap } from './MiniMap.svelte';
+// 🆕 v2.10.22: 故事模式徽章
+export { default as StoryModeBadge } from './StoryModeBadge.svelte';

@@ -104,6 +104,53 @@ def handle_POST_input(handler, body) -> bool:
         handler._json(400, {"error": "missing session_id or input"})
         return True
 
+    # 🆕 v2.10.22: 剧本模式优先 — 绕过输入验证 (剧本 voice_id 可以是英文)
+    # 必须先于 v1.7.28 输入验证, 否则剧本模式被卡掉
+    try:
+        from history_footnote.story_mode import get_engine
+        from history_footnote.web_server.views.session import _get_or_load_session as _gsl_scripted
+        _gs = _gsl_scripted(sid)
+        if _gs is not None:
+            _state = _gs.__dict__ if hasattr(_gs, "__dict__") else _gs
+            if _state.get("scripted_mode"):
+                engine = get_engine()
+                narr, options, info = engine.handle_input(_state, inp)
+                # 把剧本 narrative 写入 narrative_history (best-effort)
+                try:
+                    if hasattr(_gs, "add_narrative"):
+                        from history_footnote.narrative.types import Narrative
+                        narr_obj = Narrative(
+                            round=0,
+                            content=narr,
+                            type="story",
+                            created_at=None,
+                        )
+                        _gs.add_narrative(narr_obj)
+                except Exception:
+                    pass
+                # 保存
+                try:
+                    if hasattr(_gs, "save"):
+                        _gs.save()
+                except Exception as e:
+                    logger.warning(f"scripted save failed: {e}")
+                handler._json(200, {
+                    "narrative": narr,
+                    "voice_options": engine.export_voice_options(options),
+                    "scripted_mode": True,
+                    "scripted_chapter_id": _state.get("scripted_chapter_id", 0),
+                    "scripted_node_id": info.get("new_node_id", ""),
+                    "chapter_complete": info.get("chapter_complete", False),
+                    "effects_applied": info.get("effects_applied", {}),
+                    "flag_added": info.get("flag_added", []),
+                    "scripted_flags": _state.get("scripted_flags", []),
+                    "llm_calls": 0,
+                    "fallback_mode": "scripted",
+                })
+                return True
+    except Exception as e:
+        logger.warning(f"scripted routing failed (fallback to LLM): {e}")
+
     # 🆕 v1.7.28：输入验证（非游戏内容检测）
     from history_footnote.input_validator import validate_input, is_low_quality_input
     if is_low_quality_input(inp):

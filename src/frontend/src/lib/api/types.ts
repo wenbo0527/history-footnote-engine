@@ -306,6 +306,14 @@ export interface GameState {
   round_number?: number;
   current_date?: string;
   value_shifts?: Record<string, number>;
+
+  // 🆕 v2.10.22: 故事模式状态 (跟主游戏统一存储)
+  scripted_mode?: boolean;
+  scripted_chapter_id?: number;
+  scripted_node_id?: string;
+  scripted_flags?: string[];
+  scripted_visits?: string[];
+  scripted_chapter_complete?: boolean;
   pending_city_change?: {
     from_city: string;
     to_city: string;

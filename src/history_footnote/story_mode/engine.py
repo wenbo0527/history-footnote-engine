@@ -61,7 +61,8 @@ class ScriptedStoryEngine:
     @staticmethod
     def ensure_state(game_state: dict) -> dict:
         """确保 game_state 有故事模式字段"""
-        if not game_state.get("scripted_mode"):
+        if not game_state.get("scripted_mode") and game_state.get("scripted_mode") is not False:
+            # 第一次访问 — 初始化
             game_state["scripted_mode"] = False
             game_state["scripted_chapter_id"] = 0
             game_state["scripted_node_id"] = ""
@@ -71,7 +72,10 @@ class ScriptedStoryEngine:
         return game_state
 
     def start_chapter(self, game_state: dict, chapter_id: int = 1) -> tuple[str, list[ScriptedVoiceOption]]:
-        """开始一章剧本（重置 node + flags）"""
+        """开始一章剧本（重置 node + flags，不重置主游戏 cash/debt）
+
+        🆕 v2.10.22: 改造为不重置主游戏状态 (cash/debt/rice/looms 保留)
+        """
         self.ensure_state(game_state)
         # 切换章节
         if chapter_id != self.chapter.chapter_id:
@@ -80,11 +84,24 @@ class ScriptedStoryEngine:
         game_state["scripted_mode"] = True
         game_state["scripted_chapter_id"] = chapter_id
         game_state["scripted_node_id"] = self.chapter.start_node_id
+        # 重置脚本状态 (但保留 cash/debt/rice/looms 等主游戏状态)
         game_state["scripted_flags"] = []
         game_state["scripted_visits"] = []
         game_state["scripted_chapter_complete"] = False
 
         return self._get_current_view(game_state)
+
+    def exit_scripted_mode(self, game_state: dict) -> dict:
+        """🆕 v2.10.22: 退出剧本模式
+
+        保留 scripted_flags 作为 LLM 提示
+        """
+        self.ensure_state(game_state)
+        game_state["scripted_mode"] = False
+        # 保留 scripted_flags (作为 LLM context)
+        # 清空 active state
+        game_state["scripted_chapter_complete"] = False
+        return game_state
 
     def get_current(self, game_state: dict) -> tuple[str, list[ScriptedVoiceOption]]:
         """获取当前节点视图（不动状态）"""
@@ -353,13 +370,18 @@ class ScriptedStoryEngine:
     # ============================================================
 
     def export_voice_options(self, options: list[ScriptedVoiceOption]) -> list[dict]:
-        """导出为前端格式（兼容现有 VoiceOption）"""
+        """导出为前端格式（兼容现有 VoiceOption）
+
+        🆕 v2.10.22: 加 intent_text / value_dimension, 跟主游戏对齐
+        """
         return [
             {
                 "voice_id": o.voice_id,
                 "voice_name": o.voice_name,
+                "intent_text": o.intent_text or o.description or o.voice_name,
                 "description": o.description,
                 "inner_voice": o.inner_voice,
+                "value_dimension": o.value_dimension,
             }
             for o in options
         ]

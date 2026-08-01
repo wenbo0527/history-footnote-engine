@@ -280,6 +280,13 @@ export function mapBackendState(b: BackendState): GameState {
     current_date: b.current_date,
     value_shifts: b.value_shifts ?? {},
     pending_city_change: b.pending_city_change ?? undefined,
+    // 🆕 v2.10.22: 故事模式状态透传 (跟主游戏统一)
+    scripted_mode: b.scripted_mode ?? false,
+    scripted_chapter_id: b.scripted_chapter_id ?? 0,
+    scripted_node_id: b.scripted_node_id ?? '',
+    scripted_flags: b.scripted_flags ?? [],
+    scripted_visits: b.scripted_visits ?? [],
+    scripted_chapter_complete: b.scripted_chapter_complete ?? false,
     // 🆕 v2.10.3 章节制字段（format_state chapter 块）
     current_chapter: b.current_chapter ?? 0,
     total_chapters: b.total_chapters ?? 10,

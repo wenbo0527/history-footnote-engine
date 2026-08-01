@@ -35,6 +35,8 @@
   import ChapterProgressBar from './ChapterProgressBar.svelte';
   import ChapterHistoryDrawer from './ChapterHistoryDrawer.svelte';
   import ChapterIntro from './ChapterIntro.svelte';
+  // 🆕 v2.10.22: 剧本模式徽章
+  import StoryModeBadge from './StoryModeBadge.svelte';
   // 🆕 v2.9.x W50: admin 模式组件（?admin=true 时显示）
   import PlateMap from './PlateMap.svelte';
   import ChapterTimeline from './ChapterTimeline.svelte';
@@ -223,6 +225,9 @@
 </script>
 
 {#if $game}
+  <!-- 🆕 v2.10.22: 剧本模式徽章 (scripted_mode=true 时显示) -->
+  <StoryModeBadge />
+
   <!-- 🆕 v2.10.1 W69: 章节开场遮罩（开场 narrative round=0 时显示） -->
   {#if showChapterIntro}
     {@const firstNarrative = $game?.recent_narratives?.[0] ?? null}

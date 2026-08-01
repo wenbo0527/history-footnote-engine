@@ -23,6 +23,10 @@ class ScriptedVoiceOption:
     description: str = ""                   # 详细描述
     inner_voice: Optional[str] = None       # DM 内心独白（玩家会看到）
 
+    # 🆕 v2.10.22: 跟主游戏 VoiceOption 对齐 (intent_text 必填)
+    intent_text: str = ""                   # 语义化玩家行动 ("我先去查查家里有什么...")
+    value_dimension: Optional[str] = None  # 价值维度 (跟主游戏对齐)
+
     # 触发逻辑
     next_node_id: str = ""                  # 选项 → 下个节点
     effects: dict[str, Any] = field(default_factory=dict)

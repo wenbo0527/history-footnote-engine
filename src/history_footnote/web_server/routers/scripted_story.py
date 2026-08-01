@@ -106,6 +106,37 @@ def handle_POST_scripted_input(handler, body) -> bool:
     return True
 
 
+@safe_route(scope="scripted_exit")
+def handle_POST_scripted_exit(handler, body) -> bool:
+    """🆕 v2.10.22: 退出剧本模式"""
+    sid = body.get("session_id")
+    if not sid:
+        handler._json(400, {"error": "missing session_id"})
+        return True
+
+    game = _get_or_load_session(sid)
+    if game is None:
+        handler._json(404, {"error": "session not found"})
+        return True
+
+    state_dict = game.__dict__ if hasattr(game, "__dict__") else game
+    engine = get_engine()
+    engine.exit_scripted_mode(state_dict)
+
+    try:
+        if hasattr(game, "save"):
+            game.save()
+    except Exception as e:
+        logger.warning(f"save failed: {e}")
+
+    handler._json(200, {
+        "scripted_mode": False,
+        "scripted_flags": state_dict.get("scripted_flags", []),
+        "message": "已退出剧本模式。保留 flags 作为 LLM 提示。",
+    })
+    return True
+
+
 @safe_route(scope="scripted_state")
 def handle_GET_scripted_state(handler, query) -> bool:
     """查看当前故事状态"""

@@ -142,6 +142,7 @@ POST_ROUTES = {
     # 🆕 v2.10.16 故事模式（零 LLM）
     "/api/scripted/start": _scripted.handle_POST_scripted_start,
     "/api/scripted/input": _scripted.handle_POST_scripted_input,
+    "/api/scripted/exit": _scripted.handle_POST_scripted_exit,  # 🆕 v2.10.22
     "/api/load": _state.handle_POST_load,
     # 🆕 v2.10.1 W77: 城市变更确认
     "/api/confirm_city_change": _state.handle_POST_confirm_city_change,
