@@ -68,6 +68,18 @@
       estimatedMinutes: 15,
       theme: '抉择 / 兴衰 / 家庭',
     },
+    {
+      id: 3,
+      title: '丝绢案',
+      subtitle: '万历十五年九月至次年二月 · 盛泽镇 / 苏州府 / 织造衙门',
+      desc: '织造太监采办 · 税关压迫 · 父亲冤案 · 抗税起义。',
+      nodes: 22,
+      options: 54,
+      endings: 7,
+      encounters: 6,
+      estimatedMinutes: 15,
+      theme: '抉择 / 政治 / 复仇 / 生死',
+    },
   ];
 
   let selectedChapter = $state(1);
@@ -199,9 +211,12 @@
   function getChapterEndings(chapterId: number): string[] {
     if (chapterId === 1) {
       return ['resolution', 'resolution_prosperous', 'resolution_bankrupt', 'resolution_outcast', 'resolution_father_dead'];
-    } else {
+    } else if (chapterId === 2) {
       return ['ch2_resolution_prosperous', 'ch2_resolution_normal', 'ch2_resolution_loss',
               'ch2_resolution_outcast', 'ch2_resolution_widow', 'ch2_resolution_father_dead', 'ch2_resolution_fire'];
+    } else {
+      return ['ch3_resolution_vindicator', 'ch3_resolution_resistance_leader', 'ch3_resolution_survivor',
+              'ch3_resolution_rich_traitor', 'ch3_resolution_fugitive', 'ch3_resolution_dead', 'ch3_resolution_loss'];
     }
   }
 </script>

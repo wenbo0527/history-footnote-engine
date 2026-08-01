@@ -43,10 +43,13 @@ class ScriptedStoryEngine:
     def set_chapter_by_id(self, chapter_id: int) -> None:
         """🆕 v2.10.18: 切换章节"""
         from history_footnote.story_mode.chapter_02 import get_chapter_02
+        from history_footnote.story_mode.chapter_03 import get_chapter_03
         if chapter_id == 1:
             self.chapter = get_chapter_01()
         elif chapter_id == 2:
             self.chapter = get_chapter_02()
+        elif chapter_id == 3:
+            self.chapter = get_chapter_03()
         else:
             self.chapter = get_chapter_01()
         self._chapter_id = self.chapter.chapter_id
@@ -230,6 +233,26 @@ class ScriptedStoryEngine:
                 echoes.append("\n🆕 张叔对你仍有信任，是你的靠山。")
             if echoes:
                 narrative += "\n".join(echoes)
+
+        # 第三章专属回响 (承接 ch1 + ch2)
+        if chapter_id == 3 and node_id == "ch3_intro_normal":
+            ch3_echoes = []
+            if "ch2_prosperous" in flags or cash >= 10:
+                ch3_echoes.append("\n\n🆕 第二章回响：你家境小康，三架织机仍转。")
+            if "merchant_disgraced" in flags:
+                ch3_echoes.append("\n🆕 第二章回响：你在苏州商誉受损，订单减少。")
+            if "master_dyer" in flags or "knew_color_master" in flags:
+                ch3_echoes.append("\n🆕 第二章回响：你织染技艺了得，可号召同行抗税。")
+            if "father_will" in flags or "father_secret" in flags:
+                ch3_echoes.append("\n\n🆕 父亲遗愿：万历九年的丝绢案冤情，你手中尚有文书证据。")
+            if "zhang_helped" in flags:
+                ch3_echoes.append("\n🆕 第二章回响：张叔仍可信赖，可联合抗税。")
+            if "child_born" in flags:
+                ch3_echoes.append("\n🆕 第二章回响：你有了孩子，家庭羁绊更深。")
+            if "wife_dead" in flags:
+                ch3_echoes.append("\n🆕 第二章回响：妻子已逝，你孤身一人，抗税决心更坚。")
+            if ch3_echoes:
+                narrative += "\n".join(ch3_echoes)
 
         return narrative
 
