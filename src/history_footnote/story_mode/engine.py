@@ -60,14 +60,18 @@ class ScriptedStoryEngine:
 
     @staticmethod
     def ensure_state(game_state: dict) -> dict:
-        """确保 game_state 有故事模式字段"""
-        if not game_state.get("scripted_mode") and game_state.get("scripted_mode") is not False:
-            # 第一次访问 — 初始化
+        """确保 game_state 有故事模式字段 (只补缺失的 key, 不覆盖已有值)"""
+        if "scripted_mode" not in game_state:
             game_state["scripted_mode"] = False
+        if "scripted_chapter_id" not in game_state:
             game_state["scripted_chapter_id"] = 0
+        if "scripted_node_id" not in game_state:
             game_state["scripted_node_id"] = ""
+        if "scripted_flags" not in game_state:
             game_state["scripted_flags"] = []
+        if "scripted_visits" not in game_state:
             game_state["scripted_visits"] = []
+        if "scripted_chapter_complete" not in game_state:
             game_state["scripted_chapter_complete"] = False
         return game_state
 
@@ -131,12 +135,21 @@ class ScriptedStoryEngine:
             if opt is None:
                 return self._error(game_state, f"voice_id not found: {voice_id}")
 
+        # 🆕 v2.10.22: D&D 检定 — 在跳转之前决定目标节点
+        check_result = None
+        check_d20 = None
+        if opt.check:
+            check_result, check_d20 = self._do_check(opt.check, game_state)
+
         # 1. 应用 effects
         effects_applied = dict(opt.effects)
         self._apply_effects(game_state, effects_applied)
 
         # 2. 设置 flag
         flag_added = []
+        # 检定结果作为 flag
+        if opt.check:
+            flag_added.append(f"check:{check_result}:{opt.check}")
         for flag in effects_applied.pop("flag_set", []):
             if flag not in game_state["scripted_flags"]:
                 game_state["scripted_flags"].append(flag)
@@ -147,8 +160,19 @@ class ScriptedStoryEngine:
         if city_move:
             game_state["city"] = city_move
 
-        # 4. 跳转节点
-        next_node_id = opt.next_node_id
+        # 4. 跳转节点 (检定影响)
+        if opt.check:
+            # success 或 great_success 都用 check_success_node
+            # fail 用 check_fail_node
+            # 没有对应节点时 fallback 到 next_node_id
+            if check_result in ("great_success", "success") and opt.check_success_node:
+                next_node_id = opt.check_success_node
+            elif check_result == "fail" and opt.check_fail_node:
+                next_node_id = opt.check_fail_node
+            else:
+                next_node_id = opt.next_node_id
+        else:
+            next_node_id = opt.next_node_id
         if not next_node_id:
             return self._error(game_state, "voice_option has no next_node_id")
 
@@ -323,6 +347,109 @@ class ScriptedStoryEngine:
                     game_state.setdefault("scripted_flags", []).append(flag)
 
         return text, effects
+
+    def _do_check(self, check_expr: str, game_state: dict) -> tuple[str, int]:
+        """🆕 v2.10.22: 执行 D&D 检定
+
+        check_expr 格式:
+        - "charisma >= 2" → 属性检定 (d20+charisma vs DC)
+        - "cash >= 3" → 资源硬性检查 (>= 即过, 否则 fail)
+        - "luck >= 4" → 随机检定
+        - "flag.has_debt" → flag 存在检查
+
+        返回 (结果档位, d20 值)
+        结果档位: "great_success" / "success" / "fail"
+        """
+        try:
+            # 解析 "<attr> <op> <value>"
+            parts = check_expr.split()
+            if len(parts) != 3:
+                # 特殊: "flag.<name>" 没有 op/value, 默认 >= 1
+                if parts and parts[0].startswith("flag."):
+                    attr = parts[0]
+                    op = ">="
+                    value = 1
+                else:
+                    return ("fail", 0)
+            else:
+                attr, op, value_str = parts
+                value = int(value_str)
+
+            # 获取属性值
+            actual = self._resolve_attr(attr, game_state)
+
+            # 硬性检查
+            passed = False
+            if op == ">=":
+                passed = actual >= value
+            elif op == ">":
+                passed = actual > value
+            elif op == "<=":
+                passed = actual <= value
+            elif op == "<":
+                passed = actual < value
+            elif op == "==":
+                passed = actual == value
+
+            # 资源类属性 (cash/rice/...) 是硬性检查, 无 d20
+            if attr in ("cash", "rice", "debt", "looms", "stamina"):
+                return ("success" if passed else "fail", 0)
+
+            # flag 类也是硬性检查
+            if attr.startswith("flag."):
+                return ("success" if passed else "fail", 0)
+
+            if not passed:
+                return ("fail", 0)
+
+            # D&D 检定: d20 + 属性 vs DC=10+value*2
+            # - value=2 (e.g. charisma >= 2): DC=14, 难
+            # - value=3: DC=16, 较难
+            # - value=4: DC=18, 很难
+            d20 = roll_d20()
+            total = d20 + actual
+            dc = 10 + value * 2  # DC = 14 for value=2
+
+            if total >= dc + 8:
+                return ("great_success", d20)
+            elif total >= dc:
+                return ("success", d20)
+            else:
+                return ("fail", d20)
+        except Exception as e:
+            logger.warning(f"check failed: {e}")
+            return ("fail", 0)
+
+    def _resolve_attr(self, attr: str, game_state: dict) -> int:
+        """解析属性值
+
+        支持:
+        - charisma / skill / luck / courage: 默认 2 (可被 flag 调整)
+        - cash / rice / debt / looms / stamina: 从 game_state 取
+        - flag.<name>: 1 if flag exists else 0
+        """
+        if attr.startswith("flag."):
+            flag_name = attr[5:]
+            flags = game_state.get("scripted_flags") or []
+            return 1 if flag_name in flags else 0
+
+        if attr in ("cash", "rice", "debt", "looms", "stamina"):
+            return game_state.get(attr, 0) or 0
+
+        # 抽象属性 (charisma / skill / luck / courage): 默认 2
+        # 可被 specific flag 调整
+        attr_mod_flags = {
+            "charisma": ["zhou_favor", "met_big_merchant", "knew_color_master"],
+            "skill": ["master_dyer", "learned_qixia", "knew_scale_trick"],
+            "luck": ["has_debt", "sold_loom", "lone_warrior"],
+            "courage": ["joined_resistance", "led_resistance", "lone_warrior"],
+        }
+        base = 2
+        flags = game_state.get("scripted_flags") or []
+        for f in attr_mod_flags.get(attr, []):
+            if f in flags:
+                base += 1
+        return base
 
     def _apply_effects(self, game_state: dict, effects: dict[str, Any]) -> None:
         """应用 effects 到 game_state"""
