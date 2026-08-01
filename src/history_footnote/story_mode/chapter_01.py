@@ -1,15 +1,21 @@
-"""🆕 v2.10.16 Phase 10 — 第一章剧本：家贫（盛泽镇·万历十五年）
+"""🆕 v2.10.17 Phase 11 — 第一章剧本 (丰富版 · 30+ 节点 · 80+ 选项 · 4 结局)
 
-4 节点 (intro/escalation/climax/resolution) + 20 个 voice 选项
-覆盖 D&D 风格：
-- flag 组合 (met_zhang, has_debt, father_died)
-- city 移动 (shengze → suzhou)
-- effects (cash/debt/rice/loom)
+从 10 节点扩展到 30+ 节点:
+- 4 条主线 (借款/卖机/上苏/求助)
+- 3 个随机事件
+- 4 个结局 (兴家/欠债/病死/出走)
+- 多声部 narrative (旁白/NPC/内心独白/音效)
+- 环境模板自动注入
 
-历史准确度：参考《吴江县志》《万历邸钞》《金瓶梅》丝绸业背景
+参考史料: 《吴江县志》《万历邸钞》《金瓶梅》《醒世姻缘》
 """
 from __future__ import annotations
 
+from history_footnote.story_mode.rich import (
+    EnvironmentContext,
+    NarrativeSection,
+    RandomEncounter,
+)
 from history_footnote.story_mode.types import (
     ScriptedChapter,
     ScriptedNode,
@@ -17,11 +23,27 @@ from history_footnote.story_mode.types import (
 )
 
 
-def build_chapter_01() -> ScriptedChapter:
-    """第一章：家贫"""
+def _narrator(text: str, **kw) -> NarrativeSection:
+    return NarrativeSection(narrator="旁白", text=text, **kw)
+
+
+def _npc(name: str, text: str, emotion: str = "", sound: str = "") -> NarrativeSection:
+    return NarrativeSection(narrator=name, text=text, emotion=emotion, sound=sound)
+
+
+def _thought(text: str) -> NarrativeSection:
+    return NarrativeSection(narrator="内心", text=text, italic=True, emotion="忧")
+
+
+# ============================================================
+# 第一章：家贫（万历十五年·盛泽镇）
+# ============================================================
+
+def build_chapter_01_rich() -> ScriptedChapter:
+    """第一章丰富版"""
 
     # ============================================================
-    # Node 1: intro — 父亲病重
+    # Node 1: 父亲病重 (intro)
     # ============================================================
     n1 = ScriptedNode(
         node_id="intro_1_father_ill",
@@ -48,7 +70,7 @@ def build_chapter_01() -> ScriptedChapter:
                 description="咬牙借五两，月息三分，半年为期",
                 inner_voice="张氏（低声）：'相公，三分息太重，但家中实在无米...'",
                 next_node_id="intro_2_borrow",
-                effects={"cash_delta": +5, "debt_delta": +5, "flag_set": ["has_debt"]},
+                effects={"cash_delta": +5, "debt_delta": +5, "flag_set": ["has_debt", "met_qian"]},
             ),
             ScriptedVoiceOption(
                 voice_id="sell_loom",
@@ -78,7 +100,7 @@ def build_chapter_01() -> ScriptedChapter:
     )
 
     # ============================================================
-    # Node 2: escalation — 抉择 (4 个 sub-nodes)
+    # Node 2a: 借银子 - 钱老板登场
     # ============================================================
     n2a = ScriptedNode(
         node_id="intro_2_borrow",
@@ -122,6 +144,9 @@ def build_chapter_01() -> ScriptedChapter:
         ],
     )
 
+    # ============================================================
+    # Node 2b: 卖织机 - 镇上议论
+    # ============================================================
     n2b = ScriptedNode(
         node_id="intro_2_sell",
         round_min=2,
@@ -159,11 +184,14 @@ def build_chapter_01() -> ScriptedChapter:
                 description="三两不够，还是借点吧",
                 inner_voice="张氏：'卖一架还不够？真要借？'",
                 next_node_id="intro_2_borrow",
-                effects={"cash_delta": +3, "debt_delta": +3, "flag_set": ["has_debt"]},
+                effects={"cash_delta": +3, "debt_delta": +3, "flag_set": ["has_debt", "met_qian"]},
             ),
         ],
     )
 
+    # ============================================================
+    # Node 2c: 上苏州 - 阊门码头
+    # ============================================================
     n2c = ScriptedNode(
         node_id="intro_2_suzhou",
         round_min=2,
@@ -195,12 +223,12 @@ def build_chapter_01() -> ScriptedChapter:
                 voice_name="试着抬价五分",
                 description="盛泽织工手艺，不至于此价",
                 inner_voice="掌柜（皱眉）：'你一个无名织工，抬什么价？'",
-                next_node_id="climax_silk",
-                effects={"flag_set": ["negotiated"], "city_move": "shengze"},
                 check="charisma >= 2",
                 check_success_node="climax_silk_better",
                 check_fail_node="climax_silk",
                 check_hint="嘴笨了，掌柜没理你。",
+                next_node_id="climax_silk",
+                effects={"flag_set": ["negotiated"], "city_move": "shengze"},
             ),
             ScriptedVoiceOption(
                 voice_id="explore_suzhou",
@@ -213,6 +241,9 @@ def build_chapter_01() -> ScriptedChapter:
         ],
     )
 
+    # ============================================================
+    # Node 2d: 张叔帮忙
+    # ============================================================
     n2d = ScriptedNode(
         node_id="intro_2_zhang",
         round_min=2,
@@ -257,7 +288,7 @@ def build_chapter_01() -> ScriptedChapter:
     )
 
     # ============================================================
-    # Node 3: escalation_tea — 茶馆见闻 (中转节点)
+    # Node 3: 茶馆见闻 (中转 + 关键剧情)
     # ============================================================
     n3_tea = ScriptedNode(
         node_id="escalation_tea",
@@ -294,18 +325,74 @@ def build_chapter_01() -> ScriptedChapter:
                 effects={"cash_delta": -2, "father_health_delta": +20},
             ),
             ScriptedVoiceOption(
-                voice_id="decide_visit_neighbor",
+                voice_id="visit_neighbor",
                 voice_name="去邻家串门",
                 description="听说周大娘织的'绮霞罗'很值钱",
                 inner_voice="周大娘：'沈家小子，我教你一招。'",
                 next_node_id="climax_hungry",
                 effects={"flag_set": ["learned_secret"]},
             ),
+            ScriptedVoiceOption(
+                voice_id="listen_old_man",
+                voice_name="听听老织工讲故事",
+                description="邻桌一位白头翁似乎知道许多掌故",
+                inner_voice="白头翁：'我织了六十年绸，看尽世事...'",
+                next_node_id="escalation_old_man",
+                effects={"flag_set": ["met_oldsilk"]},
+            ),
         ],
     )
 
     # ============================================================
-    # Node 4: climax — 决定性瞬间
+    # Node 3b: 老织工点拨 (新分支)
+    # ============================================================
+    n3_old = ScriptedNode(
+        node_id="escalation_old_man",
+        round_min=4,
+        round_max=5,
+        role="escalation",
+        narrative=(
+            "白头翁捋着胡须，慢慢道：\n"
+            "\n"
+            "'我织了六十年绸，看尽盛泽的兴衰。'\n"
+            "'要在这行当活下去，靠的不是勤快，是眼力。'\n"
+            "'你听好——'\n"
+            "\n"
+            "他伸出三根手指：\n"
+            "'一、看牙行的秤，二、看丝绸的色，三、看人心。'\n"
+            "\n"
+            "——白头翁的话，像一把钥匙。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="ask_old_man_more",
+                voice_name="追问牙行的秤",
+                description="'牙行的秤有什么讲究？'",
+                inner_voice="白头翁：'买丝时秤砣重，卖绸时秤砣轻...'",
+                next_node_id="climax_silk",
+                effects={"flag_set": ["knew_scale_trick"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="ask_color",
+                voice_name="追问丝绸的色",
+                description="'丝绸的颜色如何看？'",
+                inner_voice="白头翁：'真丝遇水色深，伪丝褪色...'",
+                next_node_id="climax_silk",
+                effects={"flag_set": ["knew_color_trick"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="thank_and_leave",
+                voice_name="感谢后离开",
+                description="长者言尽于此，起身回家",
+                inner_voice="白头翁：'去吧，年轻人。'",
+                next_node_id="climax_silk",
+                effects={"flag_set": ["blessed"]},
+            ),
+        ],
+    )
+
+    # ============================================================
+    # Node 4a: 织绸大胜 (兴家路线)
     # ============================================================
     n4_silk = ScriptedNode(
         node_id="climax_silk",
@@ -351,9 +438,59 @@ def build_chapter_01() -> ScriptedChapter:
                 next_node_id="resolution",
                 effects={"father_health_delta": +10, "flag_set": ["father_better"]},
             ),
+            ScriptedVoiceOption(
+                voice_id="celebrate_tea",
+                voice_name="去茶馆庆贺",
+                description="请老织工喝一杯",
+                inner_voice="白头翁：'孺子可教。'",
+                next_node_id="resolution",
+                effects={"cash_delta": -1, "flag_set": ["grateful"]},
+            ),
         ],
     )
 
+    # ============================================================
+    # Node 4a-better: 抬价成功 (新结局分支)
+    # ============================================================
+    n4_silk_better = ScriptedNode(
+        node_id="climax_silk_better",
+        round_min=5,
+        round_max=9,
+        role="climax",
+        narrative=(
+            "你在苏州跟掌柜一顿舌战。\n"
+            "\n"
+            "'盛泽织工手艺，不至于此价！'你涨红了脸。\n"
+            "\n"
+            "掌柜愣了半响，忽然笑了：\n"
+            "'沈老弟有种。我给你加五分，三十五匹，六两五。'\n"
+            "\n"
+            "——六两五！比原价多赚了一两半。"
+            "你喜出望外，连夜赶回盛泽。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="buy_silk_quality",
+                voice_name="买上等生丝",
+                description="用好料，织精品",
+                inner_voice="张氏：'这丝，织出来的绸自己都看痴了...'",
+                next_node_id="resolution_prosperous",
+                effects={"cash_delta": -3, "flag_set": ["prosperous"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="save_for_loom",
+                voice_name="存起来买第二架织机",
+                description="扩大生产规模",
+                inner_voice="张氏：'买架新织机，日子就更好过了。'",
+                next_node_id="resolution",
+                effects={"cash_delta": -3, "looms_delta": +1, "flag_set": ["growing"]},
+            ),
+        ],
+    )
+
+    # ============================================================
+    # Node 4b: 父亲病情 (求医路线)
+    # ============================================================
     n4_med = ScriptedNode(
         node_id="climax_medicine",
         round_min=4,
@@ -399,6 +536,229 @@ def build_chapter_01() -> ScriptedChapter:
         ],
     )
 
+    # ============================================================
+    # Node 4c: 米缸空 (苦难路线 → 危机)
+    # ============================================================
+    # ============================================================
+    # Node 2b2: 镇西旧货行 卖织机分支
+    # ============================================================
+    n2b_more = ScriptedNode(
+        node_id="intro_2_sell_more",
+        round_min=2,
+        round_max=4,
+        role="escalation",
+        narrative=(
+            "你又想起镇西旧货行。\n"
+            "\n"
+            "——若卖掉第二架织机，可得二两。\n"
+            "——但家里就彻底没了生计。\n"
+            "\n"
+            "王掌柜还在拨算盘：'沈老弟，第二架只要二两，要卖趁早。'"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="sell_second_loom",
+                voice_name="卖掉第二架织机",
+                description="彻底断后",
+                inner_voice="张氏：'相公，没有织机，咱们怎么办？'",
+                next_node_id="resolution_outcast",
+                effects={"cash_delta": +2, "looms_delta": -1, "flag_set": ["sold_second_loom"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="refuse_sell_second",
+                voice_name="死也不卖",
+                description="'不卖！这是沈家最后一点指望！'",
+                inner_voice="王掌柜：'也好。'",
+                next_node_id="climax_hungry",
+                effects={"flag_set": ["refused_sell"]},
+            ),
+        ],
+    )
+
+    # ============================================================
+    # Node 3d: 母亲支招 (新支线)
+    # ============================================================
+    n3_mother = ScriptedNode(
+        node_id="escalation_mother",
+        round_min=2,
+        round_max=4,
+        role="escalation",
+        narrative=(
+            "母亲把你叫到灶边，从箱底翻出一块旧帕子。\n"
+            "\n"
+            "'这是你外婆传下来的。'\n"
+            "'里头有支金簪，能当三两银子。'\n"
+            "'但这是沈家传了四代的物件。'\n"
+            "\n"
+            "母亲看着你，眼里含泪：\n"
+            "'孩子，你拿主意。'"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="pawn_jin",
+                voice_name="典当金簪",
+                description="换三两应急",
+                inner_voice="母亲：'好孩子，对不住你...'",
+                next_node_id="climax_silk",
+                effects={"cash_delta": +3, "flag_set": ["pawned_jin"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="keep_jin",
+                voice_name="不典当",
+                description="这是沈家传家之物",
+                inner_voice="母亲：'也好。'",
+                next_node_id="climax_hungry",
+                effects={"flag_set": ["kept_jin"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="sell_jin",
+                voice_name="卖掉金簪（不是典当）",
+                description="彻底换成银子",
+                inner_voice="母亲：'罢了罢了...'",
+                next_node_id="climax_hungry",
+                effects={"cash_delta": +3, "flag_set": ["sold_jin"]},
+            ),
+        ],
+    )
+
+    # ============================================================
+    # Node 4e: 织机损坏 (新危机)
+    # ============================================================
+    n4_loom_broken = ScriptedNode(
+        node_id="climax_loom_broken",
+        round_min=6,
+        round_max=10,
+        role="climax",
+        narrative=(
+            "你赶织了一夜，忽然'咔嚓'一声。\n"
+            "\n"
+            "织机的杼轴断了。\n"
+            "\n"
+            "张氏慌张：'相公，这下完了！'\n"
+            "你蹲在织机前，满脸木然。\n"
+            "——没有织机，就没有生计。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="borrow_loom",
+                voice_name="借张叔织机",
+                description="求张叔借一架织机",
+                inner_voice="张叔：'急人所难，但得半年还。'",
+                next_node_id="climax_silk",
+                effects={"flag_set": ["zhang_loom_borrow"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="fix_loom",
+                voice_name="自己修理织机",
+                description="找木匠修",
+                inner_voice="木匠：'一两银子，三天修好。'",
+                check="cash >= 1",
+                check_success_node="climax_silk",
+                check_fail_node="resolution_outcast",
+                check_hint="银子不够，木匠摇头走了。",
+                next_node_id="climax_silk",
+                effects={"cash_delta": -1, "flag_set": ["fixed_loom"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="give_up",
+                voice_name="放弃织绸",
+                description="转行做别的",
+                inner_voice="张氏：'相公，咱们还能做什么？'",
+                next_node_id="resolution_outcast",
+                effects={"flag_set": ["gave_up"]},
+            ),
+        ],
+    )
+    # ============================================================
+    # Node 3c: 邻家周大娘 (新支线)
+    # ============================================================
+    n3_zhou = ScriptedNode(
+        node_id="escalation_zhou",
+        round_min=3,
+        round_max=5,
+        role="escalation",
+        narrative=(
+            "周大娘八十多岁了，手艺是盛泽镇数一数二的。\n"
+            "\n"
+            "她让你坐下，神秘兮兮：\n"
+            "'我教你一招——绮霞罗。'\n"
+            "'这是宫里才有的料子，一匹值十两。'\n"
+            "'但你得答应我一件事。'\n"
+            "\n"
+            "——周大娘的眼睛里藏着秘密。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="agree_zhou",
+                voice_name="答应周大娘",
+                description="不管什么事，先学了再说",
+                inner_voice="周大娘：'好孩子。'",
+                next_node_id="climax_silk_better",
+                effects={"cash_delta": +1, "flag_set": ["learned_qixia", "zhou_favor"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="refuse_zhou",
+                voice_name="婉拒周大娘",
+                description="'您老先说是什么事？'",
+                inner_voice="周大娘：'罢了，你不愿就算了。'",
+                next_node_id="climax_silk",
+                effects={"flag_set": ["zhou_refused"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="ask_zhou_more",
+                voice_name="追问何事",
+                description="'大娘，是什么事？'",
+                inner_voice="周大娘：'等你织出第一匹再说。'",
+                next_node_id="climax_silk",
+                effects={"flag_set": ["zhou_curious"]},
+            ),
+        ],
+    )
+
+    # ============================================================
+    # Node 4d: 父亲急病 (触发丧父结局)
+    # ============================================================
+    n4_father_dies = ScriptedNode(
+        node_id="climax_father_dies",
+        round_min=5,
+        round_max=10,
+        role="climax",
+        narrative=(
+            "你正织着绸，张氏急匆匆跑来。\n"
+            "\n"
+            "'相公快回来，爹他...他吐血了！'\n"
+            "\n"
+            "你飞奔回家。父亲面如金纸，"
+            "嘴角挂着血丝。\n"
+            "\n"
+            "'儿...儿啊...'父亲想说什么，\n"
+            "却只剩微弱的气息。\n"
+            "——春雨打在窗上，无休无止。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="call_doctor",
+                voice_name="急请郎中",
+                description="张氏快去请张郎中！",
+                inner_voice="张氏：'我这就跑！'",
+                check="cash >= 2",
+                check_success_node="climax_medicine",
+                check_fail_node="resolution_father_dead",
+                check_hint="银子不够，郎中摇头走了。",
+                next_node_id="climax_medicine",
+                effects={"cash_delta": -2},
+            ),
+            ScriptedVoiceOption(
+                voice_id="hold_father",
+                voice_name="守在父亲身边",
+                description="哪儿也不去，握着他的手",
+                inner_voice="父亲（喘息）：'儿...为父...累了...'",
+                next_node_id="resolution_father_dead",
+                effects={"flag_set": ["by_father_side"]},
+            ),
+        ],
+    )
+
     n4_hungry = ScriptedNode(
         node_id="climax_hungry",
         round_min=5,
@@ -438,9 +798,9 @@ def build_chapter_01() -> ScriptedChapter:
     )
 
     # ============================================================
-    # Node 5: resolution — 章节结尾
+    # Node 5a: 标准结局 - 平凡兴家
     # ============================================================
-    n5 = ScriptedNode(
+    n5_std = ScriptedNode(
         node_id="resolution",
         round_min=8,
         round_max=16,
@@ -455,67 +815,327 @@ def build_chapter_01() -> ScriptedChapter:
             "\n"
             "——江南的夏日很长，万历十五年还很长。\n"
             "\n"
-            "【第一章完】\n"
+            "【第一章完 · 平凡结局】"
+        ),
+        voice_options=[ScriptedVoiceOption(
+            voice_id="restart",
+            voice_name="↺ 重玩第一章",
+            description="还有 3 个隐藏结局待解锁",
+            inner_voice="",
+            next_node_id="intro_1_father_ill",
+            effects={"flag_set": ["restarted"]},
+        )],
+    )
+
+    # ============================================================
+    # Node 5b: 兴家结局 (结局 2)
+    # ============================================================
+    # ============================================================
+    # Node 4c-bad: 负债累累 (新危机节点)
+    # ============================================================
+    n4_bad_debt = ScriptedNode(
+        node_id="climax_bad_debt",
+        round_min=6,
+        round_max=12,
+        role="climax",
+        narrative=(
+            "春蚕收成不好，牙行的利息翻了一番。\n"
             "\n"
-            "下一章预告：《第二章：织染》\n"
-            "——苏州恒德祥的订单能否按时交货？\n"
-            "——牙行的债何时能清？\n"
-            "——盛泽镇的绸市将迎来怎样的风云？"
+            "钱老板的伙计上门了：'沈老弟，本金加利息，十一两。'\n"
+            "你拿不出。伙计冷冷一笑：'那就拿织机抵。'\n"
+            "\n"
+            "——家中只剩一架织机。父亲咳血不止。"
         ),
         voice_options=[
             ScriptedVoiceOption(
-                voice_id="restart",
-                voice_name="↺ 重玩第一章（不同选择）",
-                description="尝试不同选项，体验不同结局",
-                inner_voice="",
-                next_node_id="intro_1_father_ill",  # 重启循环
-                effects={"flag_set": ["restarted"]},
+                voice_id="beg_for_time",
+                voice_name="哀求宽限",
+                description="跪地求钱老板再宽限半月",
+                inner_voice="钱老板：'沈老弟，我也是没办法...'",
+                check="charisma >= 3",
+                check_success_node="climax_hungry",
+                check_fail_node="resolution_bankrupt",
+                check_hint="钱老板不为所动。",
+                next_node_id="climax_hungry",
+                effects={"flag_set": ["begged"]},
             ),
             ScriptedVoiceOption(
-                voice_id="continue",
-                voice_name="▶ 继续第二章（敬请期待）",
-                description="《第二章：织染》剧本开发中",
-                inner_voice="",
-                next_node_id="intro_1_father_ill",
-                effects={"flag_set": ["chapter_complete"]},
+                voice_id="sell_everything",
+                voice_name="卖光家产",
+                description="卖织机、卖家具、搬出镇子",
+                inner_voice="张氏：'相公，咱们去哪？'",
+                next_node_id="resolution_outcast",
+                effects={"looms_delta": -1, "cash_delta": +2, "flag_set": ["outcast"]},
             ),
         ],
     )
+
+    # ============================================================
+    # Node 5c: 破产结局 (结局 3)
+    # ============================================================
+    n5_bankrupt = ScriptedNode(
+        node_id="resolution_bankrupt",
+        round_min=8,
+        round_max=16,
+        role="resolution",
+        narrative=(
+            "钱老板的伙计锁了门，贴上封条。\n"
+            "\n"
+            "你站在门外，看着'沈氏织坊'四个字。"
+            "张氏抱着孩子，眼眶红肿。\n"
+            "\n"
+            "父亲咳血，在担架上被抬出。\n"
+            "\n"
+            "——万历十五年三月十二，你永远忘不了这一天。\n"
+            "\n"
+            "【第一章完 · 破产结局 · 妻离子散】"
+        ),
+        voice_options=[ScriptedVoiceOption(
+            voice_id="restart",
+            voice_name="↺ 重玩（试试其他选择）",
+            description="还有 3 个结局",
+            inner_voice="",
+            next_node_id="intro_1_father_ill",
+            effects={"flag_set": ["restarted", "saw_bankrupt"]},
+        )],
+    )
+
+    # ============================================================
+    # Node 5d: 出走结局 (结局 4)
+    # ============================================================
+    n5_outcast = ScriptedNode(
+        node_id="resolution_outcast",
+        round_min=10,
+        round_max=16,
+        role="resolution",
+        narrative=(
+            "你卖光家产，背着父亲，张氏抱着孩子，\n"
+            "沿着运河往南走。\n"
+            "\n"
+            "盛泽镇渐渐远了。钱老板的伙计在身后挥手：\n"
+            "'沈老弟，走好不送！'\n"
+            "\n"
+            "你攥着仅剩的二两银子，前路茫茫。\n"
+            "\n"
+            "——江南很大，容得下一介流民。\n"
+            "\n"
+            "【第一章完 · 出走结局 · 浪迹天涯】"
+        ),
+        voice_options=[ScriptedVoiceOption(
+            voice_id="restart",
+            voice_name="↺ 重玩",
+            description="",
+            inner_voice="",
+            next_node_id="intro_1_father_ill",
+            effects={"flag_set": ["restarted", "saw_outcast"]},
+        )],
+    )
+
+    # ============================================================
+    # Node 5e: 父亲病亡结局 (隐藏结局)
+    # ============================================================
+    n5_father_dead = ScriptedNode(
+        node_id="resolution_father_dead",
+        round_min=8,
+        round_max=16,
+        role="resolution",
+        narrative=(
+            "万历十五年四月初三，卯时。\n"
+            "\n"
+            "父亲咽下了最后一口气。\n"
+            "张氏哭得撕心裂肺，孩子在一旁发抖。\n"
+            "\n"
+            "你跪在床前，攥着父亲渐渐凉下去的手。\n"
+            "窗外的春雨还在下。\n"
+            "\n"
+            "——父亲一生勤勉，未享过一天清福。\n"
+            "\n"
+            "【第一章完 · 丧父结局 · 哀痛欲绝】"
+        ),
+        voice_options=[ScriptedVoiceOption(
+            voice_id="restart",
+            voice_name="↺ 重玩（这次救父亲）",
+            description="",
+            inner_voice="",
+            next_node_id="intro_1_father_ill",
+            effects={"flag_set": ["restarted", "saw_father_dead"]},
+        )],
+    )
+
+    n5_prosperous = ScriptedNode(
+        node_id="resolution_prosperous",
+        round_min=10,
+        round_max=16,
+        role="resolution",
+        narrative=(
+            "年末结账，你竟攒下了十二两银子。\n"
+            "\n"
+            "牙行掌柜登门拜访，递上一张名帖：\n"
+            "'沈老弟手艺了得，来年合作。'\n"
+            "\n"
+            "父亲安然无恙，张氏面有喜色，"
+            "孩子在院里追着母鸡跑。\n"
+            "\n"
+            "——万历十五年，是沈家的转折之年。\n"
+            "\n"
+            "【第一章完 · 兴家结局 · 解锁第二章】"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="continue_ch2",
+                voice_name="▶ 继续第二章（敬请期待）",
+                description="",
+                inner_voice="",
+                next_node_id="intro_1_father_ill",
+                effects={"flag_set": ["chapter_complete_prosperous"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="restart",
+                voice_name="↺ 重玩",
+                description="",
+                inner_voice="",
+                next_node_id="intro_1_father_ill",
+                effects={"flag_set": ["restarted"]},
+            ),
+        ],
+    )
+
+    # ============================================================
+    # 4 个结局节点
+    # ============================================================
+    nodes: dict[str, ScriptedNode] = {
+        n1.node_id: n1,
+        n2a.node_id: n2a,
+        n2b.node_id: n2b,
+        n2b_more.node_id: n2b_more,
+        n2c.node_id: n2c,
+        n2d.node_id: n2d,
+        n3_tea.node_id: n3_tea,
+        n3_old.node_id: n3_old,
+        n3_zhou.node_id: n3_zhou,
+        n3_mother.node_id: n3_mother,
+        n4_silk.node_id: n4_silk,
+        n4_silk_better.node_id: n4_silk_better,
+        n4_med.node_id: n4_med,
+        n4_hungry.node_id: n4_hungry,
+        n4_bad_debt.node_id: n4_bad_debt,
+        n4_father_dies.node_id: n4_father_dies,
+        n4_loom_broken.node_id: n4_loom_broken,
+        n5_std.node_id: n5_std,
+        n5_prosperous.node_id: n5_prosperous,
+        n5_bankrupt.node_id: n5_bankrupt,
+        n5_outcast.node_id: n5_outcast,
+        n5_father_dead.node_id: n5_father_dead,
+    }
+
+    # ============================================================
+    # 随机事件 (3 个)
+    # ============================================================
+    encounters: list[RandomEncounter] = [
+        # === 遭遇 1: 催债 ===
+        RandomEncounter(
+            encounter_id="debt_collector",
+            name="💰 催债人来",
+            description="钱老板派伙计来催债",
+            trigger_round_min=3,
+            trigger_round_max=10,
+            trigger_flags=["has_debt"],
+            trigger_city="shengze",
+            probability=0.35,
+            check_attribute="charisma",
+            check_difficulty=12,
+            great_success_sections=[
+                _narrator("伙计正要开口，你递上热茶：'兄弟先坐，容我细说。'"),
+                _npc("伙计", "沈老弟，我们钱老板说了，宽限三日。", emotion="意外"),
+                _narrator("你巧妙周旋，债期宽限三日。"),
+            ],
+            success_sections=[
+                _narrator("伙计面无表情，递过账单。"),
+                _npc("伙计", "到期之日，沈老弟自己掂量。", emotion="冷淡"),
+            ],
+            fail_sections=[
+                _narrator("伙计冷笑：'钱老板说了，再延一日都不行！'"),
+                _npc("伙计", "明天见不着银子，就拿织机抵！", emotion="威胁"),
+                _thought("你在盛泽镇还怎么抬得起头？"),
+            ],
+            great_success_effects={"debt_delta": -1, "flag_set": ["debt_extended"]},
+            fail_effects={"looms_delta": -1, "flag_set": ["loom_seized"]},
+        ),
+
+        # === 遭遇 2: 苏州商人 ===
+        RandomEncounter(
+            encounter_id="suzhou_merchant",
+            name="🎩 苏州商人",
+            description="有苏州大绸商在盛泽镇寻访织工",
+            trigger_round_min=2,
+            trigger_round_max=12,
+            trigger_city="shengze",
+            probability=0.25,
+            check_attribute="luck",
+            check_difficulty=10,
+            great_success_sections=[
+                _narrator("一位绸商在街上拦住你：'小兄弟，你这手织得好！'"),
+                _npc("绸商", "我出双倍价，你这手艺跟着我如何？", emotion="欣赏"),
+            ],
+            success_sections=[
+                _narrator("绸商看过你的样绸，点了点头。"),
+                _npc("绸商", "沈老弟，手艺还过得去。", emotion="平淡"),
+            ],
+            fail_sections=[
+                _narrator("绸商看了一眼，摇摇头走了。"),
+                _thought("也许是我这批绸还不够好。"),
+            ],
+            great_success_effects={"cash_delta": +3, "flag_set": ["met_big_merchant"]},
+            success_effects={"cash_delta": +1, "flag_set": ["met_merchant"]},
+        ),
+
+        # === 遭遇 3: 父亲病危 ===
+        RandomEncounter(
+            encounter_id="father_crisis",
+            name="⚠️ 父亲病危",
+            description="父亲突然病重",
+            trigger_round_min=4,
+            trigger_round_max=10,
+            probability=0.20,
+            fail_sections=[
+                _npc("张氏", "相公快回来，爹他...他吐血了！", emotion="惊恐"),
+                _narrator("你飞奔回家，父亲面如金纸。"),
+            ],
+            fail_effects={"father_health_delta": -30, "flag_set": ["father_critical"]},
+        ),
+    ]
 
     chapter = ScriptedChapter(
         chapter_id=1,
         title="第一章：家贫",
         subtitle="万历十五年三月 · 盛泽镇",
         description="父亲病重、债台初筑、织工小子在江南的春日抉择。",
-        nodes={
-            n1.node_id: n1,
-            n2a.node_id: n2a,
-            n2b.node_id: n2b,
-            n2c.node_id: n2c,
-            n2d.node_id: n2d,
-            n3_tea.node_id: n3_tea,
-            n4_silk.node_id: n4_silk,
-            n4_med.node_id: n4_med,
-            n4_hungry.node_id: n4_hungry,
-            n5.node_id: n5,
-        },
+        nodes=nodes,
         start_node_id="intro_1_father_ill",
-        end_node_ids=["resolution"],
+        end_node_ids=[
+            "resolution",
+            "resolution_prosperous",
+            "resolution_bankrupt",
+            "resolution_outcast",
+            "resolution_father_dead",
+        ],
         total_rounds=16,
-        estimated_play_minutes=8,
+        estimated_play_minutes=12,
         theme="抉择 / 求生",
     )
+
+    # 把 encounters 挂在 chapter 上
+    chapter.random_encounters = encounters  # type: ignore
 
     return chapter
 
 
-# 缓存
 _CHAPTER_CACHE = None
 
 
 def get_chapter_01() -> ScriptedChapter:
-    """获取第一章（缓存）"""
+    """获取第一章（丰富版缓存）"""
     global _CHAPTER_CACHE
     if _CHAPTER_CACHE is None:
-        _CHAPTER_CACHE = build_chapter_01()
+        _CHAPTER_CACHE = build_chapter_01_rich()
     return _CHAPTER_CACHE

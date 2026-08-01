@@ -81,6 +81,9 @@ class ScriptedChapter:
     estimated_play_minutes: int = 8         # 预计游玩时间
     theme: str = ""                         # 主题（"求生"、"抉择"）
 
+    # 🆕 v2.10.17: 随机事件列表（运行时注入）
+    random_encounters: list = field(default_factory=list)
+
 
 # ============================================================
 # State 扩展（写入现有 GameState）

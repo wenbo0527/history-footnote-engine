@@ -232,17 +232,45 @@ def handle_POST_input(handler, body) -> bool:
                 logger.exception(f"[input] {error_id} state rollback failed: {rb_e}")
             # 🆕 v2.10.13+: 不同错误类型返不同 status code + suggestion
             if is_recoverable:
+                # 🆕 v2.10.17+: LLM 失败时自动降级到剧本模式
+                fallback_narrative = None
+                fallback_options = None
+                try:
+                    from history_footnote.story_mode import get_engine
+                    from history_footnote.web_server.views.session import _get_or_load_session as _gsl
+                    _game_state = _gsl(sid)
+                    if _game_state is not None:
+                        _state_dict = _game_state.__dict__ if hasattr(_game_state, "__dict__") else _game_state
+                        # 如果玩家已经在剧本模式，直接响应
+                        if _state_dict.get("scripted_mode"):
+                            engine = get_engine()
+                            fallback_narrative, fallback_options, _info = engine.handle_input(_state_dict, inp)
+                            logger.info(f"[input] {error_id} LLM fail → scripted mode fallback OK (node={_info.get('new_node_id')})")
+                        else:
+                            # 自动启动剧本模式
+                            engine = get_engine()
+                            fallback_narrative, fallback_options = engine.start_chapter(_state_dict, 1)
+                            logger.info(f"[input] {error_id} LLM fail → auto-started scripted chapter 1")
+                except Exception as fe:
+                    logger.warning(f"[input] {error_id} scripted fallback failed: {fe}")
+
                 # 服务端 stall — 503 + retry-after hint + 友好文案
-                handler._json(503, {
+                payload = {
                     "error": "server_stalled",
                     "error_id": error_id,
                     "error_class": "EXPECTED-FAIL",
                     "is_transient": is_transient,
                     "message": f"DM 服务端暂时繁忙（{getattr(e, 'attempts', 0)} 次重试失败）",
                     "suggestion": "🌙 服务端暂时休息，请在 30s 后重试（行动点已退还）",
-                    # 给前端额外 hint 减低玩家焦虑
                     "human_hint": "这不是 bug，是服务端超时。3-5 秒后重试即可。",
-                })
+                }
+                if fallback_narrative:
+                    payload["fallback_narrative"] = fallback_narrative
+                    payload["fallback_voice_options"] = fallback_options
+                    payload["fallback_mode"] = "scripted"
+                    payload["fallback_message"] = "🎭 已自动切换至故事模式（零 LLM），可正常游玩"
+                handler._json(503, payload)
+                return True
             else:
                 # 真 bug — 500
                 handler._json(500, {

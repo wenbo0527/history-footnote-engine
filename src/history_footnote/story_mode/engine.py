@@ -12,9 +12,18 @@ API 跟现有 /api/input 完全兼容 (前端零改动):
 from __future__ import annotations
 
 import logging
+import random
 from typing import Any, Optional
 
 from history_footnote.story_mode.chapter_01 import get_chapter_01
+from history_footnote.story_mode.rich import (
+    EnvironmentContext,
+    NarrativeSection,
+    maybe_trigger_encounter,
+    perform_check,
+    random_env_phrase,
+    roll_d20,
+)
 from history_footnote.story_mode.types import (
     ScriptedChapter,
     ScriptedNode,
@@ -132,7 +141,12 @@ class ScriptedStoryEngine:
     # ============================================================
 
     def _get_current_view(self, game_state: dict) -> tuple[str, list[ScriptedVoiceOption]]:
-        """获取当前节点的 (narrative, voice_options)"""
+        """获取当前节点的 (narrative, voice_options)
+
+        🆕 v2.10.17 增强:
+        - 自动注入环境描写
+        - 触发随机事件 (D&D 检定)
+        """
         node_id = game_state.get("scripted_node_id") or self.chapter.start_node_id
         node = self.chapter.nodes.get(node_id)
         if node is None:
@@ -142,11 +156,79 @@ class ScriptedStoryEngine:
         if node.on_enter_effects or node.on_enter_text:
             self._apply_effects(game_state, node.on_enter_effects)
 
-        narrative = node.narrative
+        # 🆕 注入环境描写
+        env = EnvironmentContext(
+            city=game_state.get("city", "shengze"),
+            city_chinese="盛泽镇" if game_state.get("city", "shengze") == "shengze" else "苏州府",
+        )
+        env_label = env.env_label()
+        env_phrase = random_env_phrase(env)
+
+        # 组装 narrative (环境 + 节点 + 进入文本)
+        narrative = f"{env_label}\n{env_phrase}\n\n{node.narrative}"
         if node.on_enter_text:
-            narrative = node.on_enter_text + "\n\n" + narrative
+            narrative = f"{env_label}\n{env_phrase}\n\n{node.on_enter_text}\n\n" + node.narrative
+
+        # 🆕 随机事件触发 (D&D 检定)
+        round_num = game_state.get("round_number", 1)
+        encounters = getattr(self.chapter, "random_encounters", []) or []
+        triggered = maybe_trigger_encounter(encounters, game_state, round_num)
+        if triggered:
+            encounter_text, encounter_effects = self._resolve_encounter(triggered, game_state)
+            narrative += f"\n\n🔀 【随机事件：{triggered.name}】\n{encounter_text}"
 
         return narrative, node.voice_options
+
+    def _resolve_encounter(
+        self,
+        encounter,
+        game_state: dict,
+    ) -> tuple[str, dict]:
+        """解析随机事件，根据 d20 检定返回 narrative + effects"""
+        # 取角色属性 (简化: 用 cash 或 city 推断)
+        attr_value = 2
+        # 高 cash = 富裕 = 高 charisma
+        if (game_state.get("cash") or 0) >= 5:
+            attr_value = 4
+        # 有 met_merchant flag = 高 luck
+        if "met_big_merchant" in (game_state.get("scripted_flags") or []):
+            attr_value = 5
+
+        result, d20_value = perform_check(attr_value, encounter.check_difficulty)
+
+        if result == "great_success":
+            sections = encounter.great_success_sections
+            effects = dict(encounter.great_success_effects)
+        elif result == "success":
+            sections = encounter.success_sections
+            effects = dict(encounter.success_effects)
+        else:
+            sections = encounter.fail_sections
+            effects = dict(encounter.fail_effects)
+
+        # 渲染 sections
+        text_lines = []
+        for s in sections:
+            prefix = ""
+            if s.narrator == "内心":
+                prefix = "💭 "
+            elif s.narrator == "旁白":
+                prefix = ""
+            else:
+                prefix = f"【{s.narrator}】"
+            text_lines.append(f"{prefix}{s.text}")
+
+        text = "\n".join(text_lines)
+        text += f"\n\n🎲 d20={d20_value} + attr={attr_value} ≥ 难度{encounter.check_difficulty} → {result}"
+
+        # 应用 effects (会写到 state)
+        if effects:
+            self._apply_effects(game_state, effects)
+            for flag in effects.get("flag_set", []):
+                if flag not in game_state.get("scripted_flags", []):
+                    game_state.setdefault("scripted_flags", []).append(flag)
+
+        return text, effects
 
     def _apply_effects(self, game_state: dict, effects: dict[str, Any]) -> None:
         """应用 effects 到 game_state"""
