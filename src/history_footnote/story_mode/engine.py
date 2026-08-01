@@ -1,4 +1,4 @@
-"""🆕 v2.10.16 Phase 10 — ScriptedStoryEngine 故事模式引擎
+"""🆕 v2.10.24 Phase 12 — ScriptedStoryEngine 故事模式引擎 (重构版)
 
 零 LLM 调用:
 - 玩家输入 → 匹配当前 node 的 voice_options
@@ -8,6 +8,14 @@
 API 跟现有 /api/input 完全兼容 (前端零改动):
 - 接收: {session_id, input}
 - 返回: {narrative, voice_options, scripted_node_id, ...}
+
+🆕 v2.10.24 重构:
+- 拆分常量 → constants.py
+- 拆分检定逻辑 → check_service.py
+- 拆分效果应用 → effects.py
+- 拆分跨章回响 → chapter_echo.py
+- 拆分章节加载 → chapter_loader.py
+- engine.py 瘦身: 520 行 → ~280 行
 """
 from __future__ import annotations
 
@@ -15,14 +23,20 @@ import logging
 import random
 from typing import Any, Optional
 
-from history_footnote.story_mode.chapter_01 import get_chapter_01
+from history_footnote.story_mode.check_service import CheckService
+from history_footnote.story_mode.chapter_echo import ChapterEchoService
+from history_footnote.story_mode.chapter_loader import get_chapter
+from history_footnote.story_mode.constants import (
+    CHECK_RESULT_FAIL,
+    CHECK_RESULT_SUCCESS,
+    DEFAULT_CITY,
+    SCRIPTED_STATE_KEYS,
+)
+from history_footnote.story_mode.effects import EffectsService
 from history_footnote.story_mode.rich import (
     EnvironmentContext,
-    NarrativeSection,
     maybe_trigger_encounter,
-    perform_check,
     random_env_phrase,
-    roll_d20,
 )
 from history_footnote.story_mode.types import (
     ScriptedChapter,
@@ -36,22 +50,24 @@ _LOG = logging.getLogger("history_footnote.story_mode.engine")
 class ScriptedStoryEngine:
     """故事模式引擎 (0 LLM)"""
 
-    def __init__(self, chapter: Optional[ScriptedChapter] = None):
-        self.chapter = chapter or get_chapter_01()
+    def __init__(
+        self,
+        chapter: Optional[ScriptedChapter] = None,
+        check_service: Optional[CheckService] = None,
+        effects_service: Optional[EffectsService] = None,
+        echo_service: Optional[ChapterEchoService] = None,
+        rng: Optional[random.Random] = None,
+    ):
+        self.chapter = chapter or get_chapter(1)
         self._chapter_id = self.chapter.chapter_id if self.chapter else 1
+        # 🆕 v2.10.24: 注入 services (依赖反转)
+        self._checks = check_service or CheckService(rng=rng)
+        self._effects = effects_service or EffectsService()
+        self._echo = echo_service or ChapterEchoService()
 
     def set_chapter_by_id(self, chapter_id: int) -> None:
         """🆕 v2.10.18: 切换章节"""
-        from history_footnote.story_mode.chapter_02 import get_chapter_02
-        from history_footnote.story_mode.chapter_03 import get_chapter_03
-        if chapter_id == 1:
-            self.chapter = get_chapter_01()
-        elif chapter_id == 2:
-            self.chapter = get_chapter_02()
-        elif chapter_id == 3:
-            self.chapter = get_chapter_03()
-        else:
-            self.chapter = get_chapter_01()
+        self.chapter = get_chapter(chapter_id)
         self._chapter_id = self.chapter.chapter_id
 
     # ============================================================
@@ -61,18 +77,9 @@ class ScriptedStoryEngine:
     @staticmethod
     def ensure_state(game_state: dict) -> dict:
         """确保 game_state 有故事模式字段 (只补缺失的 key, 不覆盖已有值)"""
-        if "scripted_mode" not in game_state:
-            game_state["scripted_mode"] = False
-        if "scripted_chapter_id" not in game_state:
-            game_state["scripted_chapter_id"] = 0
-        if "scripted_node_id" not in game_state:
-            game_state["scripted_node_id"] = ""
-        if "scripted_flags" not in game_state:
-            game_state["scripted_flags"] = []
-        if "scripted_visits" not in game_state:
-            game_state["scripted_visits"] = []
-        if "scripted_chapter_complete" not in game_state:
-            game_state["scripted_chapter_complete"] = False
+        for key, default in SCRIPTED_STATE_KEYS.items():
+            if key not in game_state:
+                game_state[key] = default
         return game_state
 
     def start_chapter(self, game_state: dict, chapter_id: int = 1) -> tuple[str, list[ScriptedVoiceOption]]:
@@ -230,8 +237,13 @@ class ScriptedStoryEngine:
         if node.on_enter_text:
             narrative = f"{env_label}\n{env_phrase}\n\n{node.on_enter_text}\n\n" + node.narrative
 
-        # 🆕 v2.10.19: 跨章回响 — 第二章开局根据第一章 flag 动态调整
-        narrative = self._apply_chapter_echo(narrative, game_state, node_id)
+        # 🆕 v2.10.24: 委托给 ChapterEchoService
+        narrative = self._echo.apply(
+            narrative,
+            game_state,
+            self._chapter_id,
+            node_id,
+        )
 
         # 🆕 随机事件触发 (D&D 检定)
         round_num = game_state.get("round_number", 1)
@@ -244,58 +256,8 @@ class ScriptedStoryEngine:
         return narrative, node.voice_options
 
     def _apply_chapter_echo(self, narrative: str, game_state: dict, node_id: str) -> str:
-        """🆕 v2.10.19: 跨章回响 — 第一章 flag 动态影响第二章 narrative"""
-        chapter_id = self.chapter.chapter_id if self.chapter else 1
-        flags = set(game_state.get("scripted_flags") or [])
-        cash = game_state.get("cash") or 0
-        debt = game_state.get("debt") or 0
-        rice = game_state.get("rice") or 0
-        looms = game_state.get("looms") or 0
-
-        # 第二章专属回响
-        if chapter_id == 2 and node_id == "ch2_intro_normal":
-            echoes = []
-            # 第一章 prosperity → 开局描述
-            if "prosperous" in flags or cash >= 5:
-                echoes.append("\n\n🆕 第一章回响：你攒下了些银钱，家境尚可。")
-            elif debt > 0:
-                echoes.append(f"\n\n🆕 第一章回响：你仍欠着 {debt} 两银子，月息压得你喘不过气。")
-            if "has_debt" in flags:
-                echoes.append("\n🆕 牙行钱老板的儿子钱少见你，目光闪烁。")
-            if "zhou_favor" in flags:
-                echoes.append("\n🆕 周大娘托人捎来口信：'沈老弟，有空来坐坐。'")
-            if "met_big_merchant" in flags:
-                echoes.append("\n🆕 苏州大绸商仍记得你，名帖还在案头。")
-            if "sold_loom" in flags:
-                echoes.append(f"\n🆕 你只剩 {looms} 架织机，产能捉襟见肘。")
-            if "learned_qixia" in flags:
-                echoes.append("\n🆕 你掌握了'绮霞罗'织法，这是盛泽镇不传之秘。")
-            if "met_zhang" in flags or "zhang_helped" in flags:
-                echoes.append("\n🆕 张叔对你仍有信任，是你的靠山。")
-            if echoes:
-                narrative += "\n".join(echoes)
-
-        # 第三章专属回响 (承接 ch1 + ch2)
-        if chapter_id == 3 and node_id == "ch3_intro_normal":
-            ch3_echoes = []
-            if "ch2_prosperous" in flags or cash >= 10:
-                ch3_echoes.append("\n\n🆕 第二章回响：你家境小康，三架织机仍转。")
-            if "merchant_disgraced" in flags:
-                ch3_echoes.append("\n🆕 第二章回响：你在苏州商誉受损，订单减少。")
-            if "master_dyer" in flags or "knew_color_master" in flags:
-                ch3_echoes.append("\n🆕 第二章回响：你织染技艺了得，可号召同行抗税。")
-            if "father_will" in flags or "father_secret" in flags:
-                ch3_echoes.append("\n\n🆕 父亲遗愿：万历九年的丝绢案冤情，你手中尚有文书证据。")
-            if "zhang_helped" in flags:
-                ch3_echoes.append("\n🆕 第二章回响：张叔仍可信赖，可联合抗税。")
-            if "child_born" in flags:
-                ch3_echoes.append("\n🆕 第二章回响：你有了孩子，家庭羁绊更深。")
-            if "wife_dead" in flags:
-                ch3_echoes.append("\n🆕 第二章回响：妻子已逝，你孤身一人，抗税决心更坚。")
-            if ch3_echoes:
-                narrative += "\n".join(ch3_echoes)
-
-        return narrative
+        """🆕 v2.10.24: 已委托给 ChapterEchoService, 保留方法名兼容旧调用"""
+        return self._echo.apply(narrative, game_state, self._chapter_id, node_id)
 
     def _resolve_encounter(
         self,
@@ -349,134 +311,29 @@ class ScriptedStoryEngine:
         return text, effects
 
     def _do_check(self, check_expr: str, game_state: dict) -> tuple[str, int]:
-        """🆕 v2.10.22: 执行 D&D 检定
-
-        check_expr 格式:
-        - "charisma >= 2" → 属性检定 (d20+charisma vs DC)
-        - "cash >= 3" → 资源硬性检查 (>= 即过, 否则 fail)
-        - "luck >= 4" → 随机检定
-        - "flag.has_debt" → flag 存在检查
-
-        返回 (结果档位, d20 值)
-        结果档位: "great_success" / "success" / "fail"
-        """
-        try:
-            # 解析 "<attr> <op> <value>"
-            parts = check_expr.split()
-            if len(parts) != 3:
-                # 特殊: "flag.<name>" 没有 op/value, 默认 >= 1
-                if parts and parts[0].startswith("flag."):
-                    attr = parts[0]
-                    op = ">="
-                    value = 1
-                else:
-                    return ("fail", 0)
-            else:
-                attr, op, value_str = parts
-                value = int(value_str)
-
-            # 获取属性值
-            actual = self._resolve_attr(attr, game_state)
-
-            # 硬性检查
-            passed = False
-            if op == ">=":
-                passed = actual >= value
-            elif op == ">":
-                passed = actual > value
-            elif op == "<=":
-                passed = actual <= value
-            elif op == "<":
-                passed = actual < value
-            elif op == "==":
-                passed = actual == value
-
-            # 资源类属性 (cash/rice/...) 是硬性检查, 无 d20
-            if attr in ("cash", "rice", "debt", "looms", "stamina"):
-                return ("success" if passed else "fail", 0)
-
-            # flag 类也是硬性检查
-            if attr.startswith("flag."):
-                return ("success" if passed else "fail", 0)
-
-            if not passed:
-                return ("fail", 0)
-
-            # D&D 检定: d20 + 属性 vs DC=10+value*2
-            # - value=2 (e.g. charisma >= 2): DC=14, 难
-            # - value=3: DC=16, 较难
-            # - value=4: DC=18, 很难
-            d20 = roll_d20()
-            total = d20 + actual
-            dc = 10 + value * 2  # DC = 14 for value=2
-
-            if total >= dc + 8:
-                return ("great_success", d20)
-            elif total >= dc:
-                return ("success", d20)
-            else:
-                return ("fail", d20)
-        except Exception as e:
-            logger.warning(f"check failed: {e}")
-            return ("fail", 0)
+        """🆕 v2.10.24: 委托给 CheckService"""
+        return self._checks.do_check(check_expr, game_state)
 
     def _resolve_attr(self, attr: str, game_state: dict) -> int:
-        """解析属性值
-
-        支持:
-        - charisma / skill / luck / courage: 默认 2 (可被 flag 调整)
-        - cash / rice / debt / looms / stamina: 从 game_state 取
-        - flag.<name>: 1 if flag exists else 0
-        """
-        if attr.startswith("flag."):
-            flag_name = attr[5:]
-            flags = game_state.get("scripted_flags") or []
-            return 1 if flag_name in flags else 0
-
-        if attr in ("cash", "rice", "debt", "looms", "stamina"):
-            return game_state.get(attr, 0) or 0
-
-        # 抽象属性 (charisma / skill / luck / courage): 默认 2
-        # 可被 specific flag 调整
-        attr_mod_flags = {
-            "charisma": ["zhou_favor", "met_big_merchant", "knew_color_master"],
-            "skill": ["master_dyer", "learned_qixia", "knew_scale_trick"],
-            "luck": ["has_debt", "sold_loom", "lone_warrior"],
-            "courage": ["joined_resistance", "led_resistance", "lone_warrior"],
-        }
-        base = 2
-        flags = game_state.get("scripted_flags") or []
-        for f in attr_mod_flags.get(attr, []):
-            if f in flags:
-                base += 1
-        return base
+        """🆕 v2.10.24: 委托给 CheckService"""
+        return self._checks.resolve_attr(attr, game_state)
 
     def _apply_effects(self, game_state: dict, effects: dict[str, Any]) -> None:
-        """应用 effects 到 game_state"""
-        for k, v in effects.items():
-            if k == "cash_delta":
-                game_state["cash"] = (game_state.get("cash") or 0) + v
-            elif k == "debt_delta":
-                game_state["debt"] = (game_state.get("debt") or 0) + v
-            elif k == "rice_delta":
-                game_state["rice"] = (game_state.get("rice") or 0) + v
-            elif k == "looms_delta":
-                game_state["looms"] = (game_state.get("looms") or 0) + v
-            elif k == "stamina_delta":
-                # 模拟 health/stamina 字段
-                if "stamina" in game_state:
-                    game_state["stamina"] = (game_state.get("stamina") or 0) + v
-            elif k == "father_health_delta":
-                # 简化：写到 character 字段（如果存在）
-                if "father_health" not in game_state:
-                    game_state["father_health"] = 50
-                game_state["father_health"] = max(0, min(100, game_state["father_health"] + v))
-            elif k == "flag_set":
-                pass  # 已在 handle_input 中处理
-            elif k == "city_move":
-                pass  # 已在 handle_input 中处理
-            else:
-                _LOG.warning(f"unknown effect key: {k}")
+        """🆕 v2.10.24: 委托给 EffectsService, 但保留 father_health_delta 特殊逻辑"""
+        # 抽出特殊效应
+        special = {}
+        if "father_health_delta" in effects:
+            special["father_health_delta"] = effects.pop("father_health_delta")
+
+        # 标准效应
+        self._effects.apply(game_state, effects)
+
+        # father_health 特殊处理 (clamp 0-100)
+        if "father_health_delta" in special:
+            v = special["father_health_delta"]
+            if "father_health" not in game_state:
+                game_state["father_health"] = 50
+            game_state["father_health"] = max(0, min(100, game_state["father_health"] + v))
 
     def _fuzzy_match(self, voice_id: str, options: list[ScriptedVoiceOption]) -> Optional[ScriptedVoiceOption]:
         """模糊匹配（兼容前端输入差异）"""
