@@ -38,6 +38,18 @@ class ScriptedStoryEngine:
 
     def __init__(self, chapter: Optional[ScriptedChapter] = None):
         self.chapter = chapter or get_chapter_01()
+        self._chapter_id = self.chapter.chapter_id if self.chapter else 1
+
+    def set_chapter_by_id(self, chapter_id: int) -> None:
+        """🆕 v2.10.18: 切换章节"""
+        from history_footnote.story_mode.chapter_02 import get_chapter_02
+        if chapter_id == 1:
+            self.chapter = get_chapter_01()
+        elif chapter_id == 2:
+            self.chapter = get_chapter_02()
+        else:
+            self.chapter = get_chapter_01()
+        self._chapter_id = self.chapter.chapter_id
 
     # ============================================================
     # 状态操作（直接读写 game state dict）
@@ -58,6 +70,10 @@ class ScriptedStoryEngine:
     def start_chapter(self, game_state: dict, chapter_id: int = 1) -> tuple[str, list[ScriptedVoiceOption]]:
         """开始一章剧本（重置 node + flags）"""
         self.ensure_state(game_state)
+        # 切换章节
+        if chapter_id != self.chapter.chapter_id:
+            self.set_chapter_by_id(chapter_id)
+
         game_state["scripted_mode"] = True
         game_state["scripted_chapter_id"] = chapter_id
         game_state["scripted_node_id"] = self.chapter.start_node_id

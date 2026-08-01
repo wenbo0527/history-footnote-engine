@@ -89,10 +89,10 @@ class ScriptedChapter:
 # State 扩展（写入现有 GameState）
 # ============================================================
 
-# 这些字段加到 GameState（story_mode 状态）
+# These fields 加到 GameState（story_mode 状态）
 SCRIPTED_STATE_KEYS = {
     "scripted_mode": False,        # 是否处于故事模式
-    "scripted_chapter_id": 0,      # 当前章节
+    "scripted_chapter_id": 0,      # 当前章节 (1=家贫, 2=织染)
     "scripted_node_id": "",        # 当前节点
     "scripted_flags": [],          # 已设置的 flag 列表
     "scripted_visits": [],         # 已访问节点历史
