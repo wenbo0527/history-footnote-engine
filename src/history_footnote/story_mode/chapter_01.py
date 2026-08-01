@@ -1003,8 +1003,63 @@ def build_chapter_01_rich() -> ScriptedChapter:
     # ============================================================
     # 4 个结局节点
     # ============================================================
+
+    # 🆕 v2.10.25: 多声部叙事示例节点 (展示 narrative_sections 用法)
+    n_demo_multivocal = ScriptedNode(
+        node_id="ch1_demo_multivocal",
+        round_min=1,
+        round_max=99,
+        role="intro",
+        narrative_sections=[
+            # 旁白场景
+            NarrativeSection(narrator="旁白", text="万历十五年三月十二，辰时。"),
+            NarrativeSection(narrator="旁白", text="盛泽镇春风料峭，蚕事将兴。"),
+            # 父亲咳嗽 (音效 + 动作)
+            NarrativeSection(narrator="", text="", sound="咳咳咳——", action="父亲支起身子"),
+            NarrativeSection(
+                narrator="父亲",
+                text="泽儿...米缸里还有多少？",
+                emotion="气弱",
+            ),
+            # 张氏的回应
+            NarrativeSection(
+                narrator="张氏",
+                text="相公...还有半升。",
+                emotion="忧",
+                action="眼眶红了",
+            ),
+            # 内心独白 (italic)
+            NarrativeSection(
+                narrator="内心",
+                text="我该怎么办？牙行的债，家里断粮，父亲的药...",
+                italic=True,
+            ),
+            # DM 旁白
+            NarrativeSection(narrator="旁白", text="——春日迟迟，江南的绸事一年之计在于此。"),
+        ],
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="borrow_money",
+                voice_name="💰 向牙行借银子",
+                description="咬牙借五两，月息三分",
+                inner_voice="张氏（低声）：'相公，三分息太重...'",
+                next_node_id="intro_2_borrow",
+                effects={"cash_delta": +5, "debt_delta": +5, "flag_set": ["has_debt"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="sell_loom",
+                voice_name="🧵 卖一架织机",
+                description="可换三两",
+                inner_voice="父亲：'败...败家啊...'",
+                next_node_id="intro_2_sell",
+                effects={"cash_delta": +3, "looms_delta": -1, "flag_set": ["sold_loom"]},
+            ),
+        ],
+    )
+
     nodes: dict[str, ScriptedNode] = {
         n1.node_id: n1,
+        n_demo_multivocal.node_id: n_demo_multivocal,  # 🆕 v2.10.25 多声部示例
         n2a.node_id: n2a,
         n2b.node_id: n2b,
         n2b_more.node_id: n2b_more,

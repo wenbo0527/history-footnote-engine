@@ -8,11 +8,16 @@
 兼容性：
 - VoiceOption 跟现有 voice_options 完全兼容（前端零改动）
 - Narrative 跟现有 narrative 完全兼容
+
+🆕 v2.10.25: narrative_sections (多声部) 优先于 narrative 字符串
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from history_footnote.story_mode.rich import NarrativeSection
 
 
 @dataclass
@@ -45,7 +50,11 @@ class ScriptedNode:
     node_id: str                            # 唯一 id (chapter 内)
     round_min: int = 1                      # 最小触发回合
     round_max: int = 999                    # 最大触发回合
-    narrative: str = ""                     # 静态 narrative 文本
+    narrative: str = ""                     # 静态 narrative 文本 (兜底)
+
+    # 🆕 v2.10.25: 多声部叙事 (优先于 narrative)
+    narrative_sections: list["NarrativeSection"] = field(default_factory=list)
+    # 注: 多声部格式见 rich.py: NarrativeSection (narrator/text/emotion/sound/action/italic)
 
     # 触发条件（可选）
     required_city: Optional[str] = None     # 必须在此城（如 "shengze"）

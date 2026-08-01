@@ -33,9 +33,11 @@ from history_footnote.story_mode.constants import (
     SCRIPTED_STATE_KEYS,
 )
 from history_footnote.story_mode.effects import EffectsService
+from history_footnote.story_mode.narrative_renderer import NarrativeRenderer
 from history_footnote.story_mode.rich import (
     EnvironmentContext,
     maybe_trigger_encounter,
+    perform_check,
     random_env_phrase,
 )
 from history_footnote.story_mode.types import (
@@ -56,6 +58,7 @@ class ScriptedStoryEngine:
         check_service: Optional[CheckService] = None,
         effects_service: Optional[EffectsService] = None,
         echo_service: Optional[ChapterEchoService] = None,
+        narrative_renderer: Optional[NarrativeRenderer] = None,
         rng: Optional[random.Random] = None,
     ):
         self.chapter = chapter or get_chapter(1)
@@ -64,6 +67,8 @@ class ScriptedStoryEngine:
         self._checks = check_service or CheckService(rng=rng)
         self._effects = effects_service or EffectsService()
         self._echo = echo_service or ChapterEchoService()
+        # 🆕 v2.10.25: 多声部叙事渲染
+        self._renderer = narrative_renderer or NarrativeRenderer()
 
     def set_chapter_by_id(self, chapter_id: int) -> None:
         """🆕 v2.10.18: 切换章节"""
@@ -232,10 +237,13 @@ class ScriptedStoryEngine:
         env_label = env.env_label()
         env_phrase = random_env_phrase(env)
 
-        # 组装 narrative (环境 + 节点 + 进入文本)
-        narrative = f"{env_label}\n{env_phrase}\n\n{node.narrative}"
-        if node.on_enter_text:
-            narrative = f"{env_label}\n{env_phrase}\n\n{node.on_enter_text}\n\n" + node.narrative
+        # 🆕 v2.10.25: 委托给 NarrativeRenderer (优先 narrative_sections, 兜底 narrative)
+        narrative = self._renderer.render(
+            node,
+            game_state,
+            env_label=env_label,
+            env_phrase=env_phrase,
+        )
 
         # 🆕 v2.10.24: 委托给 ChapterEchoService
         narrative = self._echo.apply(

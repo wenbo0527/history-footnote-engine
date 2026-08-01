@@ -160,16 +160,21 @@ class TemplateEngine:
 
     def _render_conditional(self, text: str) -> str:
         # {?flag}...{/flag} — 仅当 flag 存在时保留
+        # {!flag}...{/flag} — 仅当 flag 不存在时保留
+        # 🆕 v2.10.25: regex 只捕获 flag 名 (不含前导 ? 或 !), 关闭标签允许省略
         def repl(m: re.Match) -> str:
-            cond = m.group(1)
-            body = m.group(2)
-            if cond.startswith("!"):
-                # {!flag} — 当 flag 不存在
-                flag = cond[1:]
-                return "" if self._has_flag(flag) else body
-            return body if self._has_flag(cond) else ""
+            negate = m.group(1) == "!"
+            flag = m.group(2)
+            body = m.group(3)
+            has = self._has_flag(flag)
+            if negate:
+                # {!flag} — flag 不存在时保留
+                return body if not has else ""
+            # {?flag} — flag 存在时保留
+            return body if has else ""
 
-        return re.sub(r"\{(\!?[\w_]+)\}(.*?)\{/\1\}", repl, text, flags=re.DOTALL)
+        # pattern: {?!?flag}body{/flag} or {/!flag} (关闭标签也允许 ? 或 ! 前缀)
+        return re.sub(r"\{([?!]?)(\w+)\}(.*?)\{/[?!]?\2\}", repl, text, flags=re.DOTALL)
 
     def _has_flag(self, flag: str) -> bool:
         flags = self.state.get("scripted_flags") or []
