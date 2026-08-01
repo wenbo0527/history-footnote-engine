@@ -1,16 +1,16 @@
 <script lang="ts">
   /**
-   * 🆕 v2.10.16 Phase 10 — 故事模式 Demo 页
+   * 🆕 v2.10.20 — 故事模式 Demo 页 (升级版)
+   *
+   * 支持:
+   * - 章节切换 (ch1 家贫 / ch2 织染)
+   * - 章节信息显示 (节点数/选项数/结局数/随机事件数)
+   * - 跨章回响显示 (🆕 第一章回响)
+   * - LLM 降级提示
+   * - 多结局解锁提示
    *
    * 完全不依赖 LLM 的剧本体验。
-   * 玩《第一章：家贫》 — 4 节点 + 20 选项
-   *
-   * 演示 D&D 风格的:
-   * - 有限选项 (3-5 个 voice_options)
-   * - flag 组合 (met_zhang, has_debt)
-   * - effects (cash/debt/rice/looms/city)
-   * - inner_voice DM 内心独白
-   * - 节点跳转 (intro_1 → intro_2_* → climax_* → resolution)
+   * 玩《第一章：家贫》(22 节点 55 选项 5 结局) + 《第二章：织染》(33 节点 90 选项 7 结局)
    */
 
   import { onMount } from 'svelte';
@@ -26,6 +26,7 @@
     narrative: string;
     voice_options: VoiceOption[];
     scripted_node_id?: string;
+    scripted_chapter_id?: number;
     chapter_complete?: boolean;
     effects_applied?: Record<string, any>;
     flag_added?: string[];
@@ -35,10 +36,41 @@
     looms?: number;
     city?: string;
     scripted_flags?: string[];
+    scripted_visits?: string[];
+    scripted_chapter_complete?: boolean;
     llm_calls?: number;
     error?: string;
   }
 
+  // 章节元信息
+  const CHAPTERS = [
+    {
+      id: 1,
+      title: '家贫',
+      subtitle: '万历十五年三月 · 盛泽镇',
+      desc: '父亲病重、债台初筑、织工小子在江南的春日抉择。',
+      nodes: 22,
+      options: 55,
+      endings: 5,
+      encounters: 3,
+      estimatedMinutes: 10,
+      theme: '抉择 / 求生',
+    },
+    {
+      id: 2,
+      title: '织染',
+      subtitle: '万历十五年六月至九月 · 盛泽镇 / 苏州府',
+      desc: '苏州订单 · 家庭考验 · 织机扩张 · 染色危机 · 父亲秘密。',
+      nodes: 33,
+      options: 90,
+      endings: 7,
+      encounters: 5,
+      estimatedMinutes: 15,
+      theme: '抉择 / 兴衰 / 家庭',
+    },
+  ];
+
+  let selectedChapter = $state(1);
   let sessionId = $state('');
   let narrative = $state('');
   let voiceOptions: VoiceOption[] = $state([]);
@@ -46,6 +78,7 @@
   let flagAdded: string[] = $state([]);
   let scriptedFlags: string[] = $state([]);
   let chapterComplete = $state(false);
+  let currentChapter = $state(1);
   let nodeId = $state('');
   let llmCalls = $state(0);
   let totalSteps = $state(0);
@@ -53,11 +86,20 @@
   let loading = $state(false);
   let isStarted = $state(false);
 
+  // 章节进度统计
+  let visitedNodes = $state<string[]>([]);
+  let chapterVisits = $state<Record<number, string[]>>({});
+
+  let currentChapterInfo = $derived(
+    CHAPTERS.find(c => c.id === selectedChapter) || CHAPTERS[0]
+  );
+
   async function startChapter() {
     error = '';
     loading = true;
     totalSteps = 0;
     scriptedFlags = [];
+    visitedNodes = [];
 
     try {
       // 1. 创建 session
@@ -72,11 +114,14 @@
       const startData = await startRes.json();
       sessionId = startData.session_id;
 
-      // 2. 启动故事模式
+      // 2. 启动故事模式 (指定章节)
       const res = await fetch('/api/scripted/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, chapter_id: 1 }),
+        body: JSON.stringify({
+          session_id: sessionId,
+          chapter_id: selectedChapter,
+        }),
       });
       const data: ScriptedResponse = await res.json();
       if (data.error) {
@@ -84,9 +129,11 @@
       } else {
         narrative = data.narrative;
         voiceOptions = data.voice_options;
+        currentChapter = data.scripted_chapter_id || selectedChapter;
         nodeId = data.scripted_node_id || '';
         llmCalls = data.llm_calls || 0;
         isStarted = true;
+        visitedNodes = [data.scripted_node_id || ''].filter(Boolean);
       }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -114,10 +161,14 @@
         effectsApplied = data.effects_applied || {};
         flagAdded = data.flag_added || [];
         scriptedFlags = data.scripted_flags || [];
-        nodeId = data.scripted_node_id || '';
+        currentChapter = data.scripted_chapter_id || currentChapter;
         chapterComplete = data.chapter_complete || false;
         llmCalls = data.llm_calls || 0;
         totalSteps += 1;
+        if (data.scripted_node_id) {
+          nodeId = data.scripted_node_id;
+          visitedNodes = [...visitedNodes, data.scripted_node_id];
+        }
       }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -135,6 +186,24 @@
     if (k === 'flag_set') return `+flag`;
     return `${k}=${v}`;
   }
+
+  function switchChapter(chapterId: number) {
+    selectedChapter = chapterId;
+    isStarted = false;
+    narrative = '';
+    voiceOptions = [];
+    error = '';
+    chapterComplete = false;
+  }
+
+  function getChapterEndings(chapterId: number): string[] {
+    if (chapterId === 1) {
+      return ['resolution', 'resolution_prosperous', 'resolution_bankrupt', 'resolution_outcast', 'resolution_father_dead'];
+    } else {
+      return ['ch2_resolution_prosperous', 'ch2_resolution_normal', 'ch2_resolution_loss',
+              'ch2_resolution_outcast', 'ch2_resolution_widow', 'ch2_resolution_father_dead', 'ch2_resolution_fire'];
+    }
+  }
 </script>
 
 <svelte:head>
@@ -143,19 +212,60 @@
 
 <main class="story-mode-demo">
   <header class="demo-header">
-    <h1>🎭 故事模式 · 第一章</h1>
-    <p class="subtitle">万历十五年三月 · 盛泽镇 · <strong>0 LLM 调用</strong></p>
-    <div class="meta-bar">
-      <span>节点: <code>{nodeId || '(未开始)'}</code></span>
-      <span>步数: <strong>{totalSteps}</strong></span>
-      <span class="llm-badge">🤖 LLM: <strong>{llmCalls}</strong></span>
+    <h1>🎭 故事模式</h1>
+    <p class="subtitle"><strong>零 LLM</strong> · D&amp;D 风格 · 完整多章剧本</p>
+
+    <nav class="chapter-tabs">
+      {#each CHAPTERS as ch}
+        <button
+          class="chapter-tab"
+          class:active={selectedChapter === ch.id}
+          onclick={() => switchChapter(ch.id)}
+          disabled={isStarted && currentChapter !== ch.id}
+        >
+          <span class="tab-num">第{ch.id}章</span>
+          <span class="tab-title">{ch.title}</span>
+          <span class="tab-meta">{ch.nodes}节点 · {ch.endings}结局</span>
+        </button>
+      {/each}
+    </nav>
+
+    <div class="chapter-info">
+      <div class="info-row">
+        <span>📖 章节</span>
+        <strong>第{currentChapterInfo.id}章 · {currentChapterInfo.title}</strong>
+      </div>
+      <div class="info-row">
+        <span>📍 时间</span>
+        <strong>{currentChapterInfo.subtitle}</strong>
+      </div>
+      <div class="info-row stats">
+        <span class="stat"><strong>{currentChapterInfo.nodes}</strong> 节点</span>
+        <span class="stat"><strong>{currentChapterInfo.options}</strong> 选项</span>
+        <span class="stat"><strong>{currentChapterInfo.endings}</strong> 结局</span>
+        <span class="stat"><strong>{currentChapterInfo.encounters}</strong> 随机事件</span>
+        <span class="stat"><strong>~{currentChapterInfo.estimatedMinutes}</strong> 分钟</span>
+      </div>
+      <div class="info-row theme">
+        <span>🎭 主题: {currentChapterInfo.theme}</span>
+      </div>
+      <p class="chapter-desc">{currentChapterInfo.desc}</p>
     </div>
+
+    {#if isStarted}
+      <div class="state-bar">
+        <span class="state-tag">节点: <code>{nodeId || '(未开始)'}</code></span>
+        <span class="state-tag">步数: <strong>{totalSteps}</strong></span>
+        <span class="state-tag">flags: <strong>{scriptedFlags.length}</strong></span>
+        <span class="state-tag llm-badge">🤖 LLM: <strong>{llmCalls}</strong></span>
+      </div>
+    {/if}
   </header>
 
   {#if !isStarted}
     <section class="start-section">
-      <h2>第一章：家贫</h2>
-      <p>父亲病重、债台初筑、织工小子在江南的春日抉择。</p>
+      <h2>{currentChapterInfo.title}</h2>
+      <p class="narrative">{currentChapterInfo.desc}</p>
       <button onclick={startChapter} disabled={loading}>
         {loading ? '加载中…' : '▶ 开始游戏'}
       </button>
@@ -180,18 +290,29 @@
         <div class="effects-bar">
           <strong>+Flag：</strong>
           {#each flagAdded as f}
-            <span class="flag-chip">{f}</span>
+            <span class="flag-chip new">{f}</span>
           {/each}
         </div>
       {/if}
 
       {#if scriptedFlags && scriptedFlags.length > 0}
         <div class="flags-section">
-          <strong>已解锁 flag：</strong>
+          <strong>已解锁 flag ({scriptedFlags.length})：</strong>
           {#each scriptedFlags as f}
             <span class="flag-chip active">{f}</span>
           {/each}
         </div>
+      {/if}
+
+      {#if visitedNodes.length > 1}
+        <details class="path-trace">
+          <summary>📍 已访问节点 ({visitedNodes.length})</summary>
+          <ol>
+            {#each visitedNodes as n, i}
+              <li><code>{n}</code></li>
+            {/each}
+          </ol>
+        </details>
       {/if}
     </section>
 
@@ -218,9 +339,19 @@
       </section>
     {:else}
       <section class="complete-section">
-        <h3>✅ 第一章完成！</h3>
-        <p>总步数: {totalSteps} | LLM 调用: {llmCalls} | Flags: {scriptedFlags.length}</p>
-        <button onclick={startChapter}>↺ 重玩</button>
+        <h3>✅ 第{currentChapter}章完成！</h3>
+        <div class="complete-stats">
+          <span>总步数: <strong>{totalSteps}</strong></span>
+          <span>LLM 调用: <strong>{llmCalls}</strong></span>
+          <span>解锁 flags: <strong>{scriptedFlags.length}</strong></span>
+        </div>
+        <div class="complete-actions">
+          {#if currentChapter < 2}
+            <button onclick={() => switchChapter(2)}>▶ 进入第二章</button>
+          {/if}
+          <button onclick={() => { switchChapter(currentChapter); }}>↺ 重玩第{currentChapter}章</button>
+        </div>
+        <p class="complete-hint">本章节共 {currentChapterInfo.endings} 个结局，已解锁 1 个。</p>
       </section>
     {/if}
 
@@ -231,14 +362,15 @@
 
   <footer class="demo-footer">
     <details>
-      <summary>📚 设计说明</summary>
+      <summary>📚 设计说明 (v2.10.20)</summary>
       <ul>
-        <li><strong>零 LLM</strong>: 完全剧本化，零依赖</li>
-        <li><strong>D&D 风格</strong>: flag 组合 + 触发条件 + effects</li>
+        <li><strong>零 LLM</strong>: 完全剧本化，无外部依赖</li>
+        <li><strong>D&amp;D 风格</strong>: flag 组合 + 触发条件 + d20 检定</li>
         <li><strong>有限选项</strong>: 每节点 3-5 个 voice_options</li>
-        <li><strong>inner_voice</strong>: 玩家会看到的 DM 内心独白</li>
-        <li><strong>10 节点</strong>: intro_1 + 4 escalation + 3 climax + resolution</li>
-        <li><strong>历史依据</strong>: 参考《吴江县志》《万历邸钞》</li>
+        <li><strong>inner_voice</strong>: DM 内心独白</li>
+        <li><strong>跨章回响</strong>: 第一章 flag 动态影响第二章 narrative</li>
+        <li><strong>多章累计</strong>: 2 章合计 55 节点 145 选项 12 结局</li>
+        <li><strong>历史依据</strong>: 《吴江县志》《万历邸钞》《金瓶梅》</li>
       </ul>
     </details>
   </footer>
@@ -268,24 +400,133 @@
   }
 
   .subtitle {
-    margin: 4px 0 12px;
+    margin: 4px 0 16px;
     color: #5a4a36;
     font-size: 14px;
   }
 
-  .meta-bar {
+  .chapter-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .chapter-tab {
+    flex: 1;
+    min-width: 140px;
+    padding: 10px 14px;
+    background: #d4b896;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: #1a1612;
+    text-align: left;
+    font-family: inherit;
+  }
+
+  .chapter-tab:hover:not(:disabled) {
+    background: #c8a978;
+  }
+
+  .chapter-tab.active {
+    background: #c44536;
+    color: #fff8e1;
+    border-color: #8b1a1a;
+  }
+
+  .chapter-tab:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .tab-num {
+    display: block;
+    font-size: 11px;
+    opacity: 0.8;
+    margin-bottom: 2px;
+  }
+
+  .tab-title {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .tab-meta {
+    display: block;
+    font-size: 11px;
+    opacity: 0.85;
+  }
+
+  .chapter-info {
+    background: #f5e6c8;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+
+  .info-row {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 13px;
+    padding: 3px 0;
+  }
+
+  .info-row.stats {
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-top: 6px;
+    border-top: 1px dashed #5a4a36;
+    margin-top: 4px;
+  }
+
+  .stat {
+    background: #5a4a36;
+    color: #fff8e1;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .stat strong {
+    color: #f5d290;
+    margin-right: 4px;
+  }
+
+  .info-row.theme {
+    font-style: italic;
+    color: #5a4a36;
+  }
+
+  .chapter-desc {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #5a4a36;
+    font-style: italic;
+  }
+
+  .state-bar {
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
     font-size: 12px;
     color: #5a4a36;
+    margin-top: 8px;
+  }
+
+  .state-tag {
+    background: #d4b896;
+    padding: 3px 10px;
+    border-radius: 4px;
   }
 
   .llm-badge {
     background: #c44536;
     color: #fff8e1;
-    padding: 2px 8px;
-    border-radius: 4px;
   }
 
   .start-section,
@@ -338,6 +579,36 @@
     background: #c44536;
   }
 
+  .flag-chip.new {
+    background: #c47c36;
+    animation: pulse 1s ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  .path-trace {
+    margin-top: 16px;
+    padding: 8px 12px;
+    background: #f5e6c8;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .path-trace ol {
+    margin: 8px 0 0;
+    padding-left: 24px;
+  }
+
+  .path-trace code {
+    background: #d4b896;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 11px;
+  }
+
   .choices-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -354,6 +625,7 @@
     text-align: left;
     font-family: inherit;
     transition: all 0.15s;
+    color: #1a1612;
   }
 
   .choice-btn:hover:not(:disabled) {
@@ -372,6 +644,7 @@
     font-size: 18px;
     font-weight: 700;
     margin-bottom: 4px;
+    color: #1a1612;
   }
 
   .choice-desc {
@@ -419,6 +692,36 @@
     margin-top: 12px;
   }
 
+  .complete-stats {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .complete-stats span {
+    background: #f5e6c8;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  .complete-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .complete-hint {
+    text-align: center;
+    color: #5a4a36;
+    font-size: 13px;
+    margin: 8px 0 0;
+  }
+
   .complete-section {
     text-align: center;
   }
@@ -433,5 +736,10 @@
   details summary {
     cursor: pointer;
     color: #5a4a36;
+  }
+
+  details ul {
+    padding-left: 20px;
+    line-height: 1.8;
   }
 </style>
