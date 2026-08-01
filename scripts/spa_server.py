@@ -41,10 +41,86 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
     1. 优先匹配文件
     2. 否则 fallback 到 index.html（SvelteKit 客户端路由需要）
     3. 防止路径穿越
+    🆕 v2.10.11: /api/* 代理到后端 8765
     """
+
+    BACKEND_URL = "http://127.0.0.1:8765"
 
     def __init__(self, *args, directory: str | Path = None, **kwargs):
         super().__init__(*args, directory=str(directory), **kwargs)
+
+    def _proxy_to_backend(self):
+        """把 /api/* 转发到后端 8765 (返回 JSON 而不是 SPA HTML)"""
+        import urllib.request
+        import urllib.error
+
+        url = self.BACKEND_URL + self.path
+        # 读取 body
+        content_length = int(self.headers.get("Content-Length", 0) or 0)
+        body = self.rfile.read(content_length) if content_length > 0 else None
+
+        # 构造转发请求
+        req = urllib.request.Request(url, data=body, method=self.command)
+        # 复制部分 header (host 跳过，避免 upstream mismatch)
+        for h in ("Content-Type", "Cookie", "Authorization", "Accept"):
+            v = self.headers.get(h)
+            if v:
+                req.add_header(h, v)
+
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                payload = resp.read()
+                self.send_response(resp.status)
+                # 透传 Content-Type
+                ct = resp.headers.get("Content-Type")
+                if ct:
+                    self.send_header("Content-Type", ct)
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+        except urllib.error.HTTPError as e:
+            # 后端 4xx/5xx — 透传
+            payload = e.read()
+            self.send_response(e.code)
+            ct = e.headers.get("Content-Type") if e.headers else None
+            if ct:
+                self.send_header("Content-Type", ct)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        except Exception as e:
+            err = f'{{"error":"proxy error: {e}"}}'.encode("utf-8")
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(err)))
+            self.end_headers()
+            self.wfile.write(err)
+        return None
+
+    def do_GET(self):
+        if self.path.startswith("/api/"):
+            self._proxy_to_backend()
+            return
+        super().do_GET()
+
+    def do_POST(self):
+        if self.path.startswith("/api/"):
+            self._proxy_to_backend()
+            return
+        # SPA 没有 POST
+        self.send_error(405, "method not allowed")
+
+    def do_PUT(self):
+        if self.path.startswith("/api/"):
+            self._proxy_to_backend()
+            return
+        self.send_error(405)
+
+    def do_DELETE(self):
+        if self.path.startswith("/api/"):
+            self._proxy_to_backend()
+            return
+        self.send_error(405)
 
     def send_head(self):
         """重写 SimpleHTTPRequestHandler.send_head 实现 SPA fallback"""
