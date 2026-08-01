@@ -95,6 +95,15 @@
       setTimeout(() => { enteringWizard = false; }, 1500);
     }, 200);
   }
+
+  // 🆕 v2.10.22: 剧本模式入口 (零 LLM) → /wizard?scripted=1
+  function handleEnterScripted() {
+    enteringWizard = true;
+    setTimeout(() => {
+      goto('/wizard?scripted=1');
+      setTimeout(() => { enteringWizard = false; }, 1500);
+    }, 200);
+  }
 </script>
 
 <article class="start-menu">
@@ -128,6 +137,31 @@
       >
         {#snippet action()}
           <Seal text="入 局" size="md" disabled={enteringWizard} onclick={handleEnter} />
+        {/snippet}
+      </StartMenuCard>
+
+      <!-- 🆕 v2.10.22: 剧本模式入口 -->
+      <StartMenuCard
+        iconSrc="/icons/nav/choice.webp"
+        title="🎭 剧本模式 (零 LLM)"
+        primary={false}
+      >
+        {#snippet description()}
+          <div class="scripted-mode-info">
+            <div class="info-row">
+              <span>📖 第1章 家贫</span><span>22 节点 · 5 结局</span>
+            </div>
+            <div class="info-row">
+              <span>🧵 第2章 织染</span><span>33 节点 · 7 结局</span>
+            </div>
+            <div class="info-row">
+              <span>⚖️ 第3章 丝绢案</span><span>22 节点 · 7 结局</span>
+            </div>
+            <p class="scripted-mode-tip">💡 离线可用 · 无需 API · 历史依据《万历邸钞》《吴江县志》</p>
+          </div>
+        {/snippet}
+        {#snippet action()}
+          <Seal text="入剧本" size="md" disabled={enteringWizard} onclick={handleEnterScripted} />
         {/snippet}
       </StartMenuCard>
 
@@ -214,6 +248,42 @@
 </article>
 
 <style>
+  /* 🆕 v2.10.22: 剧本模式入口样式 */
+  .scripted-mode-info {
+    margin-top: 8px;
+  }
+
+  .scripted-mode-info .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+    border-bottom: 1px dashed #5a4a36;
+  }
+
+  .scripted-mode-info .info-row:last-of-type {
+    border-bottom: none;
+  }
+
+  .scripted-mode-info .info-row span:first-child {
+    font-weight: 600;
+  }
+
+  .scripted-mode-info .info-row span:last-child {
+    color: #5a4a36;
+    font-size: 12px;
+  }
+
+  .scripted-mode-tip {
+    margin: 8px 0 0;
+    padding: 6px 10px;
+    background: #f5e6c8;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #5a4a36;
+    font-style: italic;
+  }
+
   .start-menu {
     display: flex;
     flex-direction: column;

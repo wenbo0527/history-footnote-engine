@@ -24,6 +24,8 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { Spinner, toast } from '$lib/components/design-system';
+  // 🆕 v2.10.22: 剧本模式
+  import { startScriptedMode } from '$lib/api/scripted';
 
   // Mock 数据（仅 demo=1 QA 截图用）
   const MOCK_GAME = {
@@ -127,6 +129,22 @@
     try {
       const state = await getState(sessionId);
       gameActions.set(state as any);
+
+      // 🆕 v2.10.22: 检查是否要进入剧本模式
+      const scriptedFlag =
+        $page.url.searchParams.get('scripted') === '1' ||
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hfe_wizard_scripted') === '1');
+      const alreadyScripted = (state as any).scripted_mode === true;
+      if (scriptedFlag && !alreadyScripted) {
+        try {
+          await startScriptedMode(sessionId, 1);
+          // 清除 flag 防止下次重入
+          try { sessionStorage.removeItem('hfe_wizard_scripted'); } catch {}
+          toast.info('🎭 已进入剧本模式');
+        } catch (e2) {
+          console.error('scripted mode start failed', e2);
+        }
+      }
     } catch (e) {
       const err = e as Error;
       loadError = err.message ?? '加载失败';
