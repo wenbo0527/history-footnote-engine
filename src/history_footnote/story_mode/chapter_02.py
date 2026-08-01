@@ -63,7 +63,7 @@ def build_chapter_02() -> ScriptedChapter:
                 description="张叔提议合股扩大，投入 8 两，月产 7 匹",
                 inner_voice="张叔：'沈老弟，机不可失。'",
                 next_node_id="ch2_escalation_expand",
-                effects={"cash_delta": -8, "flag_set": ["ch2_expand_attempt", "looms_delta:+1"]},
+                effects={"cash_delta": -8, "looms_delta": +1, "flag_set": ["ch2_expand_attempt"]},
             ),
             ScriptedVoiceOption(
                 voice_id="train_apprentice",
@@ -100,6 +100,8 @@ def build_chapter_02() -> ScriptedChapter:
             "若违约，牙行会扣信用；若完成，至少能还清债。\n"
             "\n"
             "——梅雨刚过，又得赶工。"
+            "\n"
+            "——承接第一章 flag: 这段叙事会根据第一章结局动态调整。"
         ),
         voice_options=[
             ScriptedVoiceOption(
@@ -891,6 +893,342 @@ def build_chapter_02() -> ScriptedChapter:
     # 节点 19-20: 难产 + 妻子亡 (隐藏线)
     # ============================================================
 
+    # 节点 18.5: 张叔合股详情 (ch2_escalation_expand 的延伸)
+    n18_5_zhang_partner = ScriptedNode(
+        node_id="ch2_escalation_zhang_partner",
+        round_min=3,
+        round_max=5,
+        role="escalation",
+        narrative=(
+            "你和张叔合股后，开始共同经营新织坊。\n"
+            "\n"
+            "张叔领你看了新织坊：'这坊原本是王员外的，'\n"
+            "'他欠债跑了，留下三架好织机。'\n"
+            "'咱俩一人出三两，加起来正好六两，能买下来。'\n"
+            "\n"
+            "你心中盘算：'三架织机，月产九匹。'\n"
+            "'赚了五五分，亏了各担一半。'\n"
+            "——这是跃升的机会。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="finalize_partnership",
+                voice_name="🤝 正式合股",
+                description="'张叔，咱们签契书！'",
+                inner_voice="张叔：'好！明日去衙门登记。'",
+                next_node_id="ch2_escalation_weave",
+                effects={"cash_delta": -3, "flag_set": ["zhang_partner_final", "partnership_signed"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="keep_loom_1_only",
+                voice_name="💰 只买一架",
+                description="'张叔，我只要一架，三两够了。'",
+                inner_voice="张叔：'也好，稳当。'",
+                next_node_id="ch2_escalation_weave",
+                effects={"cash_delta": -3, "flag_set": ["single_loom", "looms_delta:+1"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="seek_third_partner",
+                voice_name="👥 找第三方入股",
+                description="拉陈小入伙，三人合股",
+                inner_voice="张叔：'也行，但要他出得起钱。'",
+                next_node_id="ch2_escalation_weave",
+                effects={"flag_set": ["seeking_third_partner"]},
+            ),
+        ],
+    )
+
+    # 节点 8.5: 妻子怀孕 (ch2_escalation_family 后续)
+    n8_5_pregnant = ScriptedNode(
+        node_id="ch2_escalation_pregnant",
+        round_min=4,
+        round_max=6,
+        role="escalation",
+        narrative=(
+            "万历十五年七月初五，卯时。\n"
+            "\n"
+            "张氏的肚子渐渐隆起。王婆叮嘱：\n"
+            "'头胎要小心，不要劳累，不要生气。'\n"
+            "\n"
+            "你看着她，心中又喜又忧：\n"
+            "——孩子是好消息，但订单呢？父亲呢？\n"
+            "——家里又得花钱了。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="save_money_for_birth",
+                voice_name="💰 提前攒钱",
+                description="从订单款里存 3 两产费",
+                inner_voice="张氏：'相公别太省了。'",
+                next_node_id="ch2_escalation_weave",
+                effects={"cash_delta": -3, "flag_set": ["birth_fund_ready"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="seek_mother_care",
+                voice_name="🤝 母亲来照顾",
+                description="让母亲搬来同住",
+                inner_voice="母亲：'娘这就来。'",
+                next_node_id="ch2_escalation_weave",
+                effects={"flag_set": ["mother_moved_in", "family_support"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="neglect_for_business",
+                voice_name="💼 顾生意为主",
+                description="订单要紧，顾不上张氏",
+                inner_voice="张氏（低头）：'相公...'",
+                next_node_id="ch2_climax_birth",
+                effects={"stamina_delta": -10, "flag_set": ["neglected_wife", "bitter_wife"]},
+            ),
+        ],
+    )
+
+    # 节点 18.6: 苏州大订单竞争
+    n18_6_suzhou_compete = ScriptedNode(
+        node_id="ch2_escalation_suzhou_compete",
+        round_min=7,
+        round_max=10,
+        role="escalation",
+        narrative=(
+            "苏州恒德祥孙掌柜来访，面色凝重：\n"
+            "\n"
+            "'沈老弟，盛泽镇今年夏绸行情紧俏。'\n"
+            "'我手里有一笔大单——五十匹上等素绸。'\n"
+            "'但有三四家织工争，你得表现出诚意。'\n"
+            "\n"
+            "他压低声音：'定金一两，但若你报价比别人低一成...'\n"
+            "'我优先给你。'"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="low_bid_for_order",
+                voice_name="💰 压价抢单",
+                description="每匹少赚 0.3 两，但拿到订单",
+                inner_voice="孙掌柜：'好，我记下了。'",
+                next_node_id="ch2_climax_quality",
+                effects={"flag_set": ["low_bidder", "big_order_secured"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="fair_bid",
+                voice_name="📜 公道出价",
+                description="'孙掌柜，我不出贱价，但手艺保证。'",
+                inner_voice="孙掌柜：'也好，公平竞争。'",
+                check="charisma >= 3",
+                check_success_node="ch2_climax_quality",
+                check_fail_node="ch2_resolution_normal",
+                check_hint="孙掌柜摇头：'沈老弟，价高者得。'",
+                next_node_id="ch2_climax_quality",
+                effects={"flag_set": ["fair_bidder"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="decline_order",
+                voice_name="❌ 放弃这单",
+                description="'孙掌柜，我手上的三十匹还没做完。'",
+                inner_voice="孙掌柜（叹气）：'也好。'",
+                next_node_id="ch2_escalation_weave",
+                effects={"flag_set": ["declined_big_order"]},
+            ),
+        ],
+    )
+
+    # 节点 18.7: 学徒线深入
+    n18_7_apprentice = ScriptedNode(
+        node_id="ch2_escalation_apprentice",
+        round_min=4,
+        round_max=7,
+        role="escalation",
+        narrative=(
+            "陈小跟了你三个月，已经能独立织素绸了。\n"
+            "\n"
+            "这天他红着脸来找你：'沈师傅，我想学织'绮霞罗'。'\n"
+            "'那是宫里才有的料子，一匹值十两！'\n"
+            "你心中一紧——这可是周大娘的绝技。\n"
+            "\n"
+            "——陈小的野心不小。"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="teach_qixia",
+                voice_name="💎 教他绮霞罗",
+                description="若第一章 flag learned_qixia，可教独门手艺",
+                inner_voice="陈小：'沈师傅大恩！'",
+                check="flag.learned_qixia",
+                check_success_node="ch2_escalation_weave",
+                check_fail_node="ch2_escalation_weave",
+                check_hint="你自己还没学到，先教基础吧。",
+                next_node_id="ch2_escalation_weave",
+                effects={"flag_set": ["qixia_passed", "master_dyer"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="warn_xiao_chen",
+                voice_name="⚠️ 警告陈小",
+                description="'陈小，先把基础打牢。'",
+                inner_voice="陈小（低头）：'是，沈师傅。'",
+                next_node_id="ch2_escalation_weave",
+                effects={"flag_set": ["warned_xiao_chen"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="send_to_zhou",
+                voice_name="🤝 让陈小拜周大娘",
+                description="'你想学，去问周大娘。'",
+                inner_voice="周大娘：'沈老弟，我欠你人情，教就教。'",
+                check="flag.zhou_favor",
+                check_success_node="ch2_escalation_weave",
+                check_fail_node="ch2_escalation_weave",
+                check_hint="你还没攒够周大娘的人情。",
+                next_node_id="ch2_escalation_weave",
+                effects={"flag_set": ["xiao_chen_to_zhou", "qixia_passed"]},
+            ),
+        ],
+    )
+
+    # 节点 18.8: 父亲弥留 (承接 father_secret 深度)
+    n18_8_father_dying = ScriptedNode(
+        node_id="ch2_climax_father_dying",
+        round_min=8,
+        round_max=12,
+        role="climax",
+        narrative=(
+            "万历十五年八月初八，卯时。\n"
+            "\n"
+            "父亲病危。他躺在床上，气若游丝。\n"
+            "'儿啊...'他颤巍巍握住你的手。\n"
+            "\n"
+            "——这是沈家两代人的诀别时刻。"
+            "——flag `father_dying`"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="ask_father_truth",
+                voice_name="📜 问父亲真相",
+                description="'爹，那年究竟发生了什么？'",
+                inner_voice="父亲：'李保...狗阉人...那年...那年...'",
+                check="flag.father_secret",
+                check_success_node="ch2_resolution_prosperous",
+                check_fail_node="ch2_climax_father_secret",
+                check_hint="父亲摇头：'罢了，罢了...'",
+                next_node_id="ch2_climax_father_secret",
+                effects={"flag_set": ["father_truth_revealed", "father_will", "knew_father_truth"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="comfort_father",
+                voice_name="🤝 安慰父亲",
+                description="'爹，您养病要紧，别想那些。'",
+                inner_voice="父亲：'好孩子...'",
+                next_node_id="ch2_resolution_prosperous",
+                effects={"flag_set": ["father_comforted", "father_will"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="hold_father_hand",
+                voice_name="🤝 紧握父亲的手",
+                description="哪儿也不去，握着他的手",
+                inner_voice="父亲（微弱）：'儿啊，爹累了...'",
+                next_node_id="ch2_resolution_prosperous",
+                effects={"flag_set": ["by_father_side"]},
+            ),
+        ],
+    )
+
+    # 节点 18.9: 父亲安详离世 (隐藏结局)
+    n18_9_father_dead = ScriptedNode(
+        node_id="ch2_resolution_father_dead",
+        round_min=10,
+        round_max=16,
+        role="resolution",
+        narrative=(
+            "万历十五年八月初八，辰时。\n"
+            "\n"
+            "父亲咽下了最后一口气。\n"
+            "\n"
+            "张氏哭得撕心裂肺，你跪在床前，攥着渐渐凉下去的手。"
+            "——flag `father_dead`，孤身入第三章\n"
+            "\n"
+            "——flag `father_secret`, `father_will` 触发第三章核心剧情\n"
+            "\n"
+            "【第二章完 · 丧父结局 · 隐藏结局 · 解锁第三章复仇线】"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="continue_ch3_vindicator",
+                voice_name="▶ 继续第三章 (复仇线)",
+                description="为父亲申冤",
+                inner_voice="",
+                next_node_id="ch2_resolution_father_dead",
+                effects={"flag_set": ["chapter_complete_father_dead"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="restart_ch2",
+                voice_name="↺ 重玩",
+                description="",
+                inner_voice="",
+                next_node_id="ch2_intro_normal",
+                effects={"flag_set": ["restarted"]},
+            ),
+        ],
+    )
+
+    # 节点 18.10: 织坊失火 (隐藏结局·最惨)
+    n18_10_fire = ScriptedNode(
+        node_id="ch2_climax_fire",
+        round_min=10,
+        round_max=14,
+        role="climax",
+        narrative=(
+            "万历十五年八月二十，亥时。\n"
+            "\n"
+            "你在睡梦中被张氏推醒：'相公，织机着火了！'\n"
+            "——火星四溅，三架织机烧得精光。"
+            "\n"
+            "——flag `fire_loss`, `looms=0`"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="save_house",
+                voice_name="🏠 救房子",
+                description="先救房子，织机顾不上了",
+                inner_voice="张氏：'孩子！孩子还在屋里！'",
+                next_node_id="ch2_resolution_fire",
+                effects={"flag_set": ["house_saved", "looms_lost"]},
+            ),
+            ScriptedVoiceOption(
+                voice_id="save_loom",
+                voice_name="🧵 抢救织机",
+                description="不顾一切冲进火里救织机",
+                inner_voice="邻居：'沈老弟，快出来！'",
+                next_node_id="ch2_resolution_fire",
+                effects={"stamina_delta": -20, "flag_set": ["loom_rescue_attempt"]},
+            ),
+        ],
+    )
+
+    # 节点: 织坊失火结局 (隐藏·最惨)
+    n_e_fire = ScriptedNode(
+        node_id="ch2_resolution_fire",
+        round_min=12,
+        round_max=16,
+        role="resolution",
+        narrative=(
+            "万历十五年八月二十一，卯时。\n"
+            "\n"
+            "织坊烧成灰烬，三架织机化为乌有。\n"
+            "张氏抱着孩子，眼眶红肿。\n"
+            "你蹲在废墟前，满脸木然。\n"
+            "\n"
+            "——flag `ch2_fire_loss`, `looms=0`\n"
+            "\n"
+            "【第二章完 · 织坊焚毁结局 · 隐藏结局 · 重玩】"
+        ),
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="restart_ch2",
+                voice_name="↺ 重玩",
+                description="",
+                inner_voice="",
+                next_node_id="ch2_intro_normal",
+                effects={"flag_set": ["restarted", "saw_fire"]},
+            ),
+        ],
+    )
+
     # 节点 19: 难产
     n19_birth = ScriptedNode(
         node_id="ch2_climax_birth",
@@ -1179,7 +1517,12 @@ def build_chapter_02() -> ScriptedChapter:
         n4_expand.node_id: n4_expand,
         n4_master.node_id: n4_master,
         n4_family.node_id: n4_family,
-        # climax (10)
+        # 🆕 v2.10.19: 深度支线 (6)
+        n18_5_zhang_partner.node_id: n18_5_zhang_partner,
+        n8_5_pregnant.node_id: n8_5_pregnant,
+        n18_6_suzhou_compete.node_id: n18_6_suzhou_compete,
+        n18_7_apprentice.node_id: n18_7_apprentice,
+        # climax (10 + 2 新)
         n9_dye.node_id: n9_dye,
         n10_dye_success.node_id: n10_dye_success,
         n11_dye_fail.node_id: n11_dye_fail,
@@ -1190,14 +1533,18 @@ def build_chapter_02() -> ScriptedChapter:
         n16_suzhou_news.node_id: n16_suzhou_news,
         n17_eunuch.node_id: n17_eunuch,
         n18_zhouqi.node_id: n18_zhouqi,
+        n18_8_father_dying.node_id: n18_8_father_dying,
+        n18_10_fire.node_id: n18_10_fire,
         n19_birth.node_id: n19_birth,
         n20_summary.node_id: n20_summary,
-        # 结局 (5)
+        # 结局 (5 + 2 新隐藏)
         n_e_prosperous.node_id: n_e_prosperous,
         n_e_normal.node_id: n_e_normal,
         n_e_loss.node_id: n_e_loss,
         n_e_outcast.node_id: n_e_outcast,
         n_e_widow.node_id: n_e_widow,
+        n18_9_father_dead.node_id: n18_9_father_dead,
+        n_e_fire.node_id: n_e_fire,
     }
 
     # ============================================================
@@ -1338,6 +1685,8 @@ def build_chapter_02() -> ScriptedChapter:
             "ch2_resolution_loss",
             "ch2_resolution_outcast",
             "ch2_resolution_widow",
+            "ch2_resolution_father_dead",
+            "ch2_resolution_fire",
         ],
         total_rounds=16,
         estimated_play_minutes=15,

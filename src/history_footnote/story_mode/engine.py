@@ -162,6 +162,7 @@ class ScriptedStoryEngine:
         🆕 v2.10.17 增强:
         - 自动注入环境描写
         - 触发随机事件 (D&D 检定)
+        - 🆕 v2.10.19: 跨章回响 — 根据第一章 flag 动态调整 narrative
         """
         node_id = game_state.get("scripted_node_id") or self.chapter.start_node_id
         node = self.chapter.nodes.get(node_id)
@@ -185,6 +186,9 @@ class ScriptedStoryEngine:
         if node.on_enter_text:
             narrative = f"{env_label}\n{env_phrase}\n\n{node.on_enter_text}\n\n" + node.narrative
 
+        # 🆕 v2.10.19: 跨章回响 — 第二章开局根据第一章 flag 动态调整
+        narrative = self._apply_chapter_echo(narrative, game_state, node_id)
+
         # 🆕 随机事件触发 (D&D 检定)
         round_num = game_state.get("round_number", 1)
         encounters = getattr(self.chapter, "random_encounters", []) or []
@@ -194,6 +198,40 @@ class ScriptedStoryEngine:
             narrative += f"\n\n🔀 【随机事件：{triggered.name}】\n{encounter_text}"
 
         return narrative, node.voice_options
+
+    def _apply_chapter_echo(self, narrative: str, game_state: dict, node_id: str) -> str:
+        """🆕 v2.10.19: 跨章回响 — 第一章 flag 动态影响第二章 narrative"""
+        chapter_id = self.chapter.chapter_id if self.chapter else 1
+        flags = set(game_state.get("scripted_flags") or [])
+        cash = game_state.get("cash") or 0
+        debt = game_state.get("debt") or 0
+        rice = game_state.get("rice") or 0
+        looms = game_state.get("looms") or 0
+
+        # 第二章专属回响
+        if chapter_id == 2 and node_id == "ch2_intro_normal":
+            echoes = []
+            # 第一章 prosperity → 开局描述
+            if "prosperous" in flags or cash >= 5:
+                echoes.append("\n\n🆕 第一章回响：你攒下了些银钱，家境尚可。")
+            elif debt > 0:
+                echoes.append(f"\n\n🆕 第一章回响：你仍欠着 {debt} 两银子，月息压得你喘不过气。")
+            if "has_debt" in flags:
+                echoes.append("\n🆕 牙行钱老板的儿子钱少见你，目光闪烁。")
+            if "zhou_favor" in flags:
+                echoes.append("\n🆕 周大娘托人捎来口信：'沈老弟，有空来坐坐。'")
+            if "met_big_merchant" in flags:
+                echoes.append("\n🆕 苏州大绸商仍记得你，名帖还在案头。")
+            if "sold_loom" in flags:
+                echoes.append(f"\n🆕 你只剩 {looms} 架织机，产能捉襟见肘。")
+            if "learned_qixia" in flags:
+                echoes.append("\n🆕 你掌握了'绮霞罗'织法，这是盛泽镇不传之秘。")
+            if "met_zhang" in flags or "zhang_helped" in flags:
+                echoes.append("\n🆕 张叔对你仍有信任，是你的靠山。")
+            if echoes:
+                narrative += "\n".join(echoes)
+
+        return narrative
 
     def _resolve_encounter(
         self,
