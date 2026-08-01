@@ -9,3 +9,8 @@ export { default as LocationPanel } from './LocationPanel.svelte';
 export { default as FateHandPanel } from './FateHandPanel.svelte';
 export { default as ShareCardButton } from './ShareCardButton.svelte';
 export { default as LoadingOverlay } from './LoadingOverlay.svelte';
+// 🆕 v2.10.x
+export { default as WorldMap } from './WorldMap.svelte';
+export { default as WorldMapContainer } from './WorldMapContainer.svelte';
+export { default as MapOverlay } from './MapOverlay.svelte';
+export { default as MiniMap } from './MiniMap.svelte';

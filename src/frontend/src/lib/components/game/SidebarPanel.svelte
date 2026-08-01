@@ -19,6 +19,7 @@
   import type { LocationListResponse, FateCard } from '$lib/api/types';
   import LocationPanel from './LocationPanel.svelte';
   import FateHandPanel from './FateHandPanel.svelte';
+  import MiniMap from './MiniMap.svelte';  // 🆕 v2.10.x
 
   interface Props {
     game: GameState;
@@ -47,6 +48,17 @@
   {#if locationData}
     <LocationPanel data={locationData} />
   {/if}
+
+  <!-- 🆕 v2.10.x: 江南舆图缩略图 (点击展开完整地图) -->
+  <section class="sidebar-section">
+    <Chapter title="🗺️ 江南輿圖" level={4} />
+    <MiniMap
+      gameState={game}
+      visitedCities={(game as any).visited_cities ?? []}
+      heardCities={(game as any).heard_locations ?? []}
+      onOpenFullMap={() => (window as any).__openMapOverlay?.()}
+    />
+  </section>
 
   <!-- 🆕 v2.5: 命运卡手牌 -->
   {#if fateHandData && fateHandData.length > 0}

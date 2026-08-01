@@ -9,7 +9,7 @@
    * - debug 模式：?demo=1 仍可用 mock（QA 截图用）
    */
   import { game, gameActions, isLoading } from '$lib/stores';
-  import { GameView, GameHeader } from '$lib/components/game';
+  import { GameView, GameHeader, MapOverlay } from '$lib/components/game';  // 🆕 v2.10.x: MapOverlay
   // 🆕 v2.10.1 W73: 恢复静态 import（W66 dynamic import 导致 modal 不可用）
   import {
     CharacterWikiModal,
@@ -95,10 +95,16 @@
   let glossaryOpen = $state(false);
   let feedbackOpen = $state(false);
   let settingsOpen = $state(false);
+  // 🆕 v2.10.x: 地图浮层
+  let mapOpen = $state(false);
   let loading = $state(false);
   let loadError = $state<string | null>(null);
 
   onMount(async () => {
+    // 🆕 v2.10.x: 暴露全局方法 (MiniMap 点击触发)
+    if (typeof window !== 'undefined') {
+      (window as any).__openMapOverlay = () => { mapOpen = true; };
+    }
     // 调试模式：mock data
     if ($page.url.searchParams.get('demo') === '1') {
       gameActions.set(MOCK_GAME as any);
@@ -151,6 +157,7 @@
       onglossary={() => glossaryOpen = true}
       onfeedback={() => feedbackOpen = true}
       onsettings={() => settingsOpen = true}
+      onmap={() => mapOpen = true}
     />
     <div class="game-page-body">
       <GameView />
@@ -163,6 +170,9 @@
   <GlossaryModal open={glossaryOpen} onclose={() => glossaryOpen = false} />
   <FeedbackModal open={feedbackOpen} onclose={() => feedbackOpen = false} />
   <SettingsModal open={settingsOpen} onclose={() => settingsOpen = false} />
+
+  <!-- 🆕 v2.10.x: 地图浮层 (顶部 tab + mini-map 点击触发) -->
+  <MapOverlay visible={mapOpen} onClose={() => mapOpen = false} />
 {:else if loadError}
   <div class="game-error">
     <p>⚠ {loadError}</p>

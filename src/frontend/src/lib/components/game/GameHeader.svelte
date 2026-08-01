@@ -20,9 +20,10 @@
     onglossary?: () => void;
     onfeedback?: () => void;
     onsettings?: () => void;
+    onmap?: () => void;  // 🆕 v2.10.x: 打开地图
   }
 
-  let { game, onwiki, onrecap, onglossary, onfeedback, onsettings }: Props = $props();
+  let { game, onwiki, onrecap, onglossary, onfeedback, onsettings, onmap }: Props = $props();
 
   // 派生
   const yearLabel = $derived(`万历${game.year_current - 1573}年（${game.year_current}）`);
@@ -87,6 +88,7 @@
     {onglossary}
     {onfeedback}
     {onsettings}
+    {onmap}
   />
 </header>
 

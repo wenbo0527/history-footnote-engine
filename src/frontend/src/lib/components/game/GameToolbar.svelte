@@ -15,11 +15,14 @@
     onglossary?: () => void;
     onfeedback?: () => void;
     onsettings?: () => void;
+    onmap?: () => void;  // 🆕 v2.10.x: 打开江南舆图
   }
 
-  let { onwiki, onrecap, onglossary, onfeedback, onsettings }: Props = $props();
+  let { onwiki, onrecap, onglossary, onfeedback, onsettings, onmap }: Props = $props();
 
   const tools = $derived([
+    // 🆕 v2.10.x: 地图用 emoji fallback (icon 暂无)
+    { id: 'map',       label: '地图', icon: null,                       emoji: '🗺️', onclick: onmap },
     { id: 'wiki',      label: '档案', icon: '/icons/nav/wiki.webp',     onclick: onwiki },
     { id: 'recap',     label: '回顾', icon: '/icons/nav/recap.webp',    onclick: onrecap },
     { id: 'glossary',  label: '词条', icon: '/icons/nav/recap.webp',    onclick: onglossary },
@@ -37,7 +40,11 @@
       aria-label={t.label}
       title={t.label}
     >
-      <img src={t.icon} alt="" class="game-tool-icon" />
+      {#if t.icon}
+        <img src={t.icon} alt="" class="game-tool-icon" />
+      {:else if t.emoji}
+        <span class="game-tool-emoji">{t.emoji}</span>
+      {/if}
       <span class="game-tool-label">{t.label}</span>
     </button>
   {/each}
@@ -76,6 +83,12 @@
     width: 1.2em;
     height: 1.2em;
     object-fit: contain;
+  }
+
+  /* 🆕 v2.10.x: emoji fallback (如地图 tab) */
+  .game-tool-emoji {
+    font-size: 1.2em;
+    line-height: 1;
   }
 
   /* 移动端：只显示图标 */
