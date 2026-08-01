@@ -25,6 +25,47 @@ class NarrativeSection:
     italic: bool = False    # 斜体（内心独白用）
 
 
+# ============================================================
+# 🆕 v2.10.26: 便捷构造函数 (减少样板代码)
+# ============================================================
+
+def _narrator(text: str) -> NarrativeSection:
+    """旁白快捷构造"""
+    return NarrativeSection(narrator="旁白", text=text)
+
+
+def _npc(name: str, text: str, emotion: str = "", action: str = "") -> NarrativeSection:
+    """NPC 对话快捷构造"""
+    return NarrativeSection(
+        narrator=name,
+        text=text,
+        emotion=emotion,
+        action=action,
+    )
+
+
+def _thought(text: str) -> NarrativeSection:
+    """内心独白快捷构造 (italic=True)"""
+    return NarrativeSection(narrator="内心", text=text, italic=True)
+
+
+def _sound(text: str, action: str = "") -> NarrativeSection:
+    """音效/动作快捷构造 (无文本)"""
+    return NarrativeSection(narrator="", text="", sound=text, action=action)
+
+
+def _npc_action(name: str, action: str, text: str = "") -> NarrativeSection:
+    """NPC 动作 + 文本"""
+    return NarrativeSection(narrator=name, text=text, action=action)
+
+
+# 别名 (兼容 chapter_01 已有的 _narrator/_npc/_thought)
+N = _narrator
+D = _npc  # dialogue
+T = _thought
+S = _sound
+
+
 @dataclass
 class EnvironmentContext:
     """当前环境"""

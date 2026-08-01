@@ -16,10 +16,13 @@
 """
 from __future__ import annotations
 
-from history_footnote.story_mode.chapter_01 import _narrator, _npc, _thought
 from history_footnote.story_mode.rich import (
     NarrativeSection,
     RandomEncounter,
+    _narrator,
+    _npc,
+    _sound,
+    _thought,
 )
 from history_footnote.story_mode.types import (
     ScriptedChapter,
@@ -96,6 +99,17 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=1,
         round_max=2,
         role="intro",
+        # 🆕 v2.10.26: 多声部迁移
+        narrative_sections=[
+            _narrator("万历十五年九月初九，盛泽镇金风送爽。"),
+            _narrator("家中只有一架织机，米缸将空。"),
+            _npc("张氏", "相公，擦擦汗。", action="递来湿巾", emotion="忧"),
+            _sound("——砰", action="远处有衙役吆喝"),
+            _narrator("苏州织造太监李保南下采办的消息传遍了盛泽镇。"),
+            _narrator("每匹要抽 0.3 两——这意味着什么？"),
+            _thought("意味着更多税、更多盘剥。"),
+            _narrator("——你攥着手中织好的素绸，满脸愁容。"),
+        ],
         narrative=(
             "万历十五年九月初九，盛泽镇金风送爽。\n"
             "\n"

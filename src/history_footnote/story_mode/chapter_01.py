@@ -15,6 +15,11 @@ from history_footnote.story_mode.rich import (
     EnvironmentContext,
     NarrativeSection,
     RandomEncounter,
+    _narrator,
+    _npc,
+    _npc_action,
+    _sound,
+    _thought,
 )
 from history_footnote.story_mode.types import (
     ScriptedChapter,
@@ -23,16 +28,9 @@ from history_footnote.story_mode.types import (
 )
 
 
-def _narrator(text: str, **kw) -> NarrativeSection:
-    return NarrativeSection(narrator="旁白", text=text, **kw)
-
-
-def _npc(name: str, text: str, emotion: str = "", sound: str = "") -> NarrativeSection:
-    return NarrativeSection(narrator=name, text=text, emotion=emotion, sound=sound)
-
-
-def _thought(text: str) -> NarrativeSection:
-    return NarrativeSection(narrator="内心", text=text, italic=True, emotion="忧")
+# 🆕 v2.10.26: helper 已在 rich.py 统一提供, 不再本地定义
+# 但保留兼容别名 (旧代码用 _npc / _thought)
+_npc_action = _npc  # alias
 
 
 # ============================================================
@@ -50,6 +48,20 @@ def build_chapter_01_rich() -> ScriptedChapter:
         round_min=1,
         round_max=2,
         role="intro",
+        # 🆕 v2.10.26: 多声部迁移 (从 narrative 字符串 → narrative_sections)
+        narrative_sections=[
+            _narrator("万历十五年三月十二，辰时。"),
+            _narrator("盛泽镇春风料峭，蚕事将兴。"),
+            _npc_action("父亲", "支起身子, 咳嗽两声", ""),
+            _npc("父亲", "泽儿...米缸里还有多少？", emotion="气弱"),
+            _npc("张氏", "相公...还有半升，撑不过明日了。", emotion="忧", action="眼眶红了"),
+            _narrator("你叫盛泽织工，年二十八。父亲沈茂卧病在床已三月，汤药不断，医家说'须长服补剂，否则入秋难支'。"),
+            _narrator("家中现银不足二两，织机两架吱呀作响，米缸见底。"),
+            _thought("——春日迟迟，江南的绸事一年之计在于此。我必须做出选择。"),
+            # 💢 背景音效 (营造氛围)
+            _sound("——吱呀", action="织机声远"),
+        ],
+        # 兜底 narrative 字段保留 (向后兼容)
         narrative=(
             "万历十五年三月十二，辰时。\n"
             "盛泽镇春风料峭，蚕事将兴。\n"
@@ -107,6 +119,17 @@ def build_chapter_01_rich() -> ScriptedChapter:
         round_min=2,
         round_max=3,
         role="escalation",
+        # 🆕 v2.10.26: 多声部迁移
+        narrative_sections=[
+            _narrator("镇东牙行，你坐在柜台前。"),
+            _sound("——噼里啪啦", action="算盘响"),
+            _npc("钱老板", "沈老弟，借多少？", emotion="笑"),
+            _narrator("你递上借据，他核过指印。"),
+            _npc("钱老板", "五两足色纹银，月息三分，半年为期。到期莫误，误则加息，再误则上堂。", emotion="假笑"),
+            _sound("——吹", action="钱老板吹了吹借据"),
+            _narrator("你揣着五两银子走出牙行，春风扑面，心中却沉甸甸。"),
+            _thought("——债，就这样背上了。"),
+        ],
         narrative=(
             "镇东牙行钱老板接过借据，笑眯眯地核过指印。\n"
             "\n"

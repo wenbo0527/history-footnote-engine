@@ -15,6 +15,10 @@ from history_footnote.story_mode.chapter_01 import _narrator, _npc, _thought
 from history_footnote.story_mode.rich import (
     NarrativeSection,
     RandomEncounter,
+    _narrator,
+    _npc,
+    _sound,
+    _thought,
 )
 from history_footnote.story_mode.types import (
     ScriptedChapter,
@@ -90,6 +94,17 @@ def build_chapter_02() -> ScriptedChapter:
         round_min=1,
         round_max=2,
         role="intro",
+        # 🆕 v2.10.26: 多声部迁移
+        narrative_sections=[
+            _narrator("万历十五年六月十八，盛泽镇梅雨初歇。"),
+            _sound("——滴答", action="屋檐滴水"),
+            _narrator("家中只有一架织机，米缸将空。"),
+            _npc("张氏", "相公，擦擦汗。", action="递来湿巾", emotion="忧"),
+            _thought("三十匹夏绸月底前要交。家中只有一架织机……"),
+            _narrator("苏州恒德祥的来信还在桌上。"),
+            _narrator("若违约，牙行会扣信用；若完成，至少能还清债。"),
+            _thought("——梅雨刚过，又得赶工。"),
+        ],
         narrative=(
             "万历十五年六月十八，盛泽镇梅雨初歇。\n"
             "\n"
