@@ -44,6 +44,28 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=1,
         round_max=2,
         role="intro",
+                narrative_sections=[
+            _narrator('"万历十五年九月初九，盛泽镇金风送爽。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _sound('"桂花开了。你站在自家院中，三架织机吱呀作响。"'),
+            _narrator('"张氏抱着刚满月的孩子，面有喜色。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"忽然，镇东牙行来人，神色紧张：'),
+            _narrator('"'),
+            _narrator('"\'沈老弟，大事不好。\''),
+            _narrator('"'),
+            _narrator('"\'苏州织造太监李保要来盛泽采办贡绸。\''),
+            _narrator('"'),
+            _narrator('"\'每匹要抽 0.3 两——整个盛泽镇都得配合。\''),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"——承接第二章\'兴家结局\'，这是沈家的小康之年，但风暴将至。"'),
+        ],
         narrative=(
             "万历十五年九月初九，盛泽镇金风送爽。\n"
             "\n"
@@ -172,6 +194,32 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=1,
         round_max=2,
         role="intro",
+                narrative_sections=[
+            _narrator('"万历十五年九月初九，盛泽镇金风送爽。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"你独自在灯下展开父亲遗下的文书。"'),
+            _narrator('"那卷泛黄的丝绢，在烛光下泛着幽光。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"上面的名字触目惊心：'),
+            _narrator('"'),
+            _narrator('"- \'织造太监李保\'（万历九年采办贪墨）'),
+            _narrator('"'),
+            _narrator('"- \'原吴江县令王公\'（现已升迁苏州知府）'),
+            _narrator('"'),
+            _narrator('"- \'父亲沈茂\'（被诬陷，流放三月）'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"——证据确凿。'),
+            _narrator('"'),
+            _narrator('"——李保仍在任。'),
+            _narrator('"'),
+            _narrator('"——父亲已逝，但你心里那团火还在燃烧。"'),
+        ],
         narrative=(
             "万历十五年九月初九，盛泽镇金风送爽。\n"
             "\n"
@@ -225,6 +273,24 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=1,
         round_max=2,
         role="intro",
+                narrative_sections=[
+            _narrator('"万历十五年九月初九，盛泽镇金风送爽。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"你独自坐在空荡荡的屋里，手中攥着张氏的遗物。"'),
+            _narrator('"——她走了八月初五。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"孩子由母亲照看。织坊关门。"'),
+            _narrator('"——承接第二章\'丧妻结局\'，你孤身一人。"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"太监李保的消息传来，你心中一凛。'),
+            _narrator('"'),
+            _narrator('"——命运不再留情。"'),
+        ],
         narrative=(
             "万历十五年九月初九，盛泽镇金风送爽。\n"
             "\n"
@@ -275,6 +341,20 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=1,
         round_max=2,
         role="intro",
+                narrative_sections=[
+            _narrator('"万历十五年九月初九，盛泽镇金风送爽。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"你蹲在空荡荡的屋檐下，满脸木然。"'),
+            _narrator('"织坊没了，家产没了，父亲坟前的草也长满了。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"苏州织造太监李保的消息传来——"'),
+            _narrator('"你苦笑：\'我还有什么可被抢的呢？\'"'),
+            _narrator('"——承接第二章\'破产结局\'。"'),
+        ],
         narrative=(
             "万历十五年九月初九，盛泽镇金风送爽。\n"
             "\n"
@@ -323,6 +403,16 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=2,
         round_max=4,
         role="escalation",
+                narrative_sections=[
+            _narrator('"周七领着人上门收税：\'沈老弟，李公公说了，\''),
+            _narrator('"'),
+            _narrator('"\'每匹绸 0.3 两，一两不能少。\''),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"你看着张氏和孩子，心中纠结。"'),
+            _narrator('"——flag `ch3_eunuch_complied` 已设置"'),
+        ],
         narrative=(
             "周七领着人上门收税：'沈老弟，李公公说了，'\n"
             "'每匹绸 0.3 两，一两不能少。'\n"
@@ -368,6 +458,19 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=3,
         round_max=6,
         role="escalation",
+                narrative_sections=[
+            _narrator('"你缴了税，但周七不肯走：'),
+            _narrator('"'),
+            _narrator('"\'沈老弟，李公公听说你手艺不错，\''),
+            _narrator('"'),
+            _narrator('"\'想让你做一批贡绸——上等素绸五十匹。\''),
+            _narrator('"'),
+            _narrator('"\'每匹官价 5 两，但要现银交付。\''),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"——这是李保的连环套：先抽税，再压价。"'),
+        ],
         narrative=(
             "你缴了税，但周七不肯走：\n"
             "'沈老弟，李公公听说你手艺不错，'\n"
@@ -406,6 +509,22 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=2,
         round_max=4,
         role="escalation",
+                narrative_sections=[
+            _narrator('"你公开拒绝接太监订单。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"镇上织工们面面相觑。钱老板悄悄靠过来：'),
+            _narrator('"'),
+            _narrator('"\'沈老弟，你有种。\''),
+            _narrator('"'),
+            _narrator('"\'但李保这人... 你可要小心。\''),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"——你站在织机前，心中坦然。"'),
+            _narrator('"——flag `ch3_refused_eunuch`, `refused_eunuch`"'),
+        ],
         narrative=(
             "你公开拒绝接太监订单。\n"
             "\n"
@@ -454,6 +573,19 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=2,
         round_max=5,
         role="escalation",
+                narrative_sections=[
+            _narrator('"你决定暗中周旋。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"孙掌柜来访：\'沈老弟，盛泽镇织工谁没受李保盘剥？\''),
+            _narrator('"'),
+            _narrator('"\'但你可以装作软弱的，让他觉得你可欺。\''),
+            _narrator('"'),
+            _narrator('"\'背地里，咱们联合。\''),
+            _narrator('"'),
+            _narrator('"——flag `ch3_neutral` 已设置"'),
+        ],
         narrative=(
             "你决定暗中周旋。\n"
             "\n"
@@ -492,6 +624,21 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=3,
         round_max=6,
         role="escalation",
+                narrative_sections=[
+            _narrator('"你和镇上的织工们暗中联合。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"张叔（若在镇上）、孙掌柜、织工刘二、钱少...'),
+            _narrator('"'),
+            _narrator('"——\'沈老弟，\'张叔压低声音，\''),
+            _narrator('"'),
+            _narrator('"\'刘二那边已经准备好抗税。\''),
+            _narrator('"'),
+            _narrator('"\'你呢？\''),
+            _narrator('"'),
+            _narrator('"——flag `joined_resistance` 即将触发"'),
+        ],
         narrative=(
             "你和镇上的织工们暗中联合。\n"
             "\n"
@@ -535,6 +682,19 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=3,
         round_max=6,
         role="escalation",
+                narrative_sections=[
+            _narrator('"你来到苏州织造局，找到宋明。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"宋明压低声音：\'沈老弟，李保明年春天会被清查。\''),
+            _narrator('"'),
+            _narrator('"\'这是万历朝的老规矩——每三年换一批太监。\''),
+            _narrator('"'),
+            _narrator('"\'届时... 证据有用。\''),
+            _narrator('"'),
+            _narrator('"——flag `song_advised`, `ch2_political_eye`"'),
+        ],
         narrative=(
             "你来到苏州织造局，找到宋明。\n"
             "\n"
@@ -637,6 +797,19 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=5,
         round_max=10,
         role="climax",
+                narrative_sections=[
+            _narrator('"万历十五年十月十五，辰时。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"苏州税关前人山人海。周七领着人挨家挨户收税。'),
+            _narrator('"'),
+            _narrator('"\'每匹绸 0.3 两，一两不能少！\''),
+            _narrator('"'),
+            _narrator('"你攥着张氏和孩子，心中冰凉。'),
+            _narrator('"'),
+            _narrator('"——flag `ch3_tax_pressure`"'),
+        ],
         narrative=(
             "万历十五年十月十五，辰时。\n"
             "\n"
@@ -695,6 +868,27 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=6,
         round_max=10,
         role="climax",
+                narrative_sections=[
+            _narrator('"夜深，你独自在灯下展开父亲的文书。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"那卷泛黄的丝绢，上面有万历九年的官印。"'),
+            _narrator('"你认出了几个名字：'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"- \'织造太监李保\'（采办贪墨）'),
+            _narrator('"'),
+            _narrator('"- \'原吴江县令王公\'（现已升迁苏州知府）'),
+            _narrator('"'),
+            _narrator('"- \'父亲沈茂\'（被诬陷，流放三月）'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"——证据确凿。"'),
+            _narrator('"——flag `father_will`, `knew_father_truth` 触发"'),
+        ],
         narrative=(
             "夜深，你独自在灯下展开父亲的文书。\n"
             "\n"
@@ -819,6 +1013,30 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+                narrative_sections=[
+            _narrator('"万历十六年三月，辰时。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"苏州知府王公亲自审案，李保伏法。"'),
+            _narrator('"父亲当年的冤案平反，朝廷下旨褒奖。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"\'沈氏一门，忠义可风。\''),
+            _narrator('"'),
+            _narrator('"你跪在父亲坟前：\'爹，您的冤屈昭雪了。\''),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"张氏抱着孩子：\'相公，咱们回家。\''),
+            _narrator('"'),
+            _narrator('"——flag `father_vindicated`'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"【第三章完 · 申冤结局 · 大圆满】"'),
+        ],
         narrative=(
             "万历十六年三月，辰时。\n"
             "\n"
@@ -850,6 +1068,29 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+                narrative_sections=[
+            _narrator('"万历十五年十一月，巳时。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"你站在最前面，率领盛泽镇的织工冲向税关。"'),
+            _narrator('"刀光剑影，血染青石。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"最终，朝廷派兵镇压。"'),
+            _narrator('"你倒在血泊中，看着张氏和孩子。'),
+            _narrator('"'),
+            _narrator('"\'活下去...\''),
+            _narrator('"'),
+            _narrator('"——flag `revolution_succeeded` (短期胜利，长期失败)'),
+            _narrator('"'),
+            _narrator('"——flag `hero_dead`'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"【第三章完 · 抗税领袖结局 · 悲剧英雄】"'),
+        ],
         narrative=(
             "万历十五年十一月，巳时。\n"
             "\n"
@@ -881,6 +1122,25 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+                narrative_sections=[
+            _narrator('"你缴了税，隐忍不发。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"李保被调走（后任太监接手），风波暂息。"'),
+            _narrator('"家业保全，但心中有愧。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"父亲坟前，你沉默良久。"'),
+            _narrator('"\'爹，原谅儿子...\''),
+            _narrator('"'),
+            _narrator('"——flag `survived_persecution`, 商誉仍在，孩子长大'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"【第三章完 · 苟活者结局 · 生存结局】"'),
+        ],
         narrative=(
             "你缴了税，隐忍不发。\n"
             "\n"
@@ -910,6 +1170,26 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+                narrative_sections=[
+            _narrator('"你把父亲的文书卖给了李保，得银 30 两。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"李保笑着：\'沈老弟识时务。\''),
+            _narrator('"'),
+            _narrator('"你回家，张氏问起，你支吾其词。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"三个月后，父亲坟前被人泼了粪。"'),
+            _narrator('"——flag `sold_evidence`, 你成了全镇公敌'),
+            _narrator('"'),
+            _narrator('"——flag `family_disgraced`'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"【第三章完 · 卖证据结局 · 大坏结局】"'),
+        ],
         narrative=(
             "你把父亲的文书卖给了李保，得银 30 两。\n"
             "\n"
@@ -939,6 +1219,20 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+                narrative_sections=[
+            _narrator('"你没接太监订单，也没抗税，连夜逃走。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"张氏抱着孩子，跟着你沿运河南下。"'),
+            _narrator('"盛泽镇在身后渐渐远去。'),
+            _narrator('"'),
+            _narrator('"——flag `fugitive`, 你在杭州/南京开始新生活'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"【第三章完 · 流亡结局 · 边缘结局】"'),
+        ],
         narrative=(
             "你没接太监订单，也没抗税，连夜逃走。\n"
             "\n"
@@ -965,6 +1259,25 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+                narrative_sections=[
+            _narrator('"税关前，你身中三刀。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"周七狞笑：\'这就是抗税的下场！\''),
+            _narrator('"'),
+            _narrator('"你倒下，看着天上的云。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"\'爹，媳妇，孩子... 对不住...\''),
+            _narrator('"'),
+            _narrator('"——flag `hero_dead`, 家人被张叔照顾'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"【第三章完 · 死于抗税结局 · 悲壮结局】"'),
+        ],
         narrative=(
             "税关前，你身中三刀。\n"
             "\n"
@@ -997,6 +1310,18 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+                narrative_sections=[
+            _narrator('"你无力反抗，银子被周七搜刮一空。'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"织机被抵押，父亲坟前的草越长越高。"'),
+            _narrator('"——flag `ch3_loss`'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"'),
+            _narrator('"【第三章完 · 破产结局 · 重玩】"'),
+        ],
         narrative=(
             "你无力反抗，银子被周七搜刮一空。\n"
             "\n"
