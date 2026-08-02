@@ -525,6 +525,16 @@ def build_chapter_02() -> ScriptedChapter:
         round_min=6,
         round_max=9,
         role="climax",
+        # 🆕 v2.10.28: 多声部迁移
+        narrative_sections=[
+            _narrator("赵师傅喝了你的药，竟真的好了起来。"),
+            _narrator("他接过素绸，手微微颤抖。"),
+            _npc("赵师傅", "沈老弟，这颜色，我用了四十年的功夫。", emotion="郑重"),
+            _npc("赵师傅", "今天，我把它传给你。", emotion="正色"),
+            _sound("——咕嘟咕嘟", action="染料翻滚"),
+            _narrator("——你学会了'玄黄染色法'，这是盛泽镇不传之秘。"),
+            _thought("——flag `knew_color_master`, `master_dyer`"),
+        ],
         narrative=(
             "赵师傅喝了你的药，竟真的好了起来。\n"
             "\n"
@@ -561,6 +571,14 @@ def build_chapter_02() -> ScriptedChapter:
         round_min=6,
         round_max=9,
         role="climax",
+        # 🆕 v2.10.28: 多声部迁移
+        narrative_sections=[
+            _narrator("赵师傅染坏了 3 匹绸，颜色深浅不一。"),
+            _npc("赵师傅", "沈老弟，对不起...", emotion="愧疚", action="满脸通红"),
+            _narrator("你攥着染坏的绸，心中发凉。"),
+            _thought("——苏州订单的尾款扣了一半。"),
+            _thought("——flag `dye_failed`, `cash_delta=-3`"),
+        ],
         narrative=(
             "赵师傅染坏了 3 匹绸，颜色深浅不一。\n"
             "\n"
@@ -596,6 +614,15 @@ def build_chapter_02() -> ScriptedChapter:
         round_min=7,
         round_max=10,
         role="climax",
+        # 🆕 v2.10.28: 多声部迁移
+        narrative_sections=[
+            _narrator("玄黄染法，配上等生丝，三十匹夏绸终于完成。"),
+            _narrator("你看着那一匹匹绸：绛紫、月白、鸦青、藕荷..."),
+            _thought("——这批绸，光泽如月，质地如云。"),
+            _narrator("孙掌柜在苏州恒德祥接到货，眼睛瞪大。"),
+            _npc("孙掌柜", "沈老弟，这批绸... 比我想象的还要好！", emotion="惊叹"),
+            _narrator("——订单大成功。"),
+        ],
         narrative=(
             "玄黄染法，配上等生丝，三十匹夏绸终于完成。\n"
             "\n"
@@ -644,6 +671,13 @@ def build_chapter_02() -> ScriptedChapter:
         round_min=7,
         round_max=10,
         role="climax",
+        # 🆕 v2.10.28: 多声部迁移
+        narrative_sections=[
+            _narrator("三十匹绸只交了二十匹，剩下的还在赶工。"),
+            _npc("孙掌柜", "沈老弟，这次只能算部分完成。", emotion="叹气"),
+            _npc("孙掌柜", "尾款打八折。", emotion="为难"),
+            _thought("——flag `partial_complete`, `cash_delta=8`"),
+        ],
         narrative=(
             "三十匹绸只交了二十匹，剩下的还在赶工。\n"
             "\n"

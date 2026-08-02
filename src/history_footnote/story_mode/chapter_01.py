@@ -493,6 +493,16 @@ def build_chapter_01_rich() -> ScriptedChapter:
         round_min=5,
         round_max=9,
         role="climax",
+        # 🆕 v2.10.28: 多声部迁移
+        narrative_sections=[
+            _narrator("你在苏州跟掌柜一顿舌战。"),
+            _npc("你", "盛泽织工手艺，不至于此价！", emotion="涨红了脸"),
+            _sound("——啪", action="掌柜拍桌"),
+            _npc("掌柜", "沈老弟有种。我给你加五分，三十五匹，六两五。", emotion="笑"),
+            _thought("——六两五！比原价多赚了一两半。"),
+            _narrator("你喜出望外，连夜赶回盛泽。"),
+            _sound("——踢踏踢踏", action="赶路马蹄声"),
+        ],
         narrative=(
             "你在苏州跟掌柜一顿舌战。\n"
             "\n"
@@ -713,6 +723,15 @@ def build_chapter_01_rich() -> ScriptedChapter:
         round_min=3,
         round_max=5,
         role="escalation",
+        # 🆕 v2.10.28: 多声部迁移
+        narrative_sections=[
+            _narrator("周大娘八十多岁了，手艺是盛泽镇数一数二的。"),
+            _narrator("她让你坐下，神秘兮兮。"),
+            _npc("周大娘", "我教你一招——绮霞罗。", emotion="神秘", action="压低声音"),
+            _npc("周大娘", "这是宫里才有的料子，一匹值十两。", emotion="严肃"),
+            _npc("周大娘", "但你得答应我一件事。", emotion="眼神闪烁"),
+            _thought("——周大娘的眼睛里藏着秘密。"),
+        ],
         narrative=(
             "周大娘八十多岁了，手艺是盛泽镇数一数二的。\n"
             "\n"

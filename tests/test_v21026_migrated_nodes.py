@@ -141,6 +141,87 @@ def test_ch3_climax_resistance():
     print(f"  ch3_climax_resistance: ✅ ({len(n.narrative_sections)} sections)")
 
 
+# 🆕 v2.10.28 新增测试
+
+def test_ch1_climax_silk_better():
+    """v2.10.28: ch1 climax_silk_better (舌战掌柜, 绮霞罗成功)"""
+    ch = get_chapter(1)
+    n = ch.nodes["climax_silk_better"]
+    assert len(n.narrative_sections) >= 5
+
+    out = NarrativeRenderer().render(n, {})
+    assert "舌战" in out
+    assert "【你】" in out
+    assert "【掌柜】" in out
+    assert "💢 ——啪" in out  # 拍桌
+    assert "💢 ——踢踏踢踏" in out  # 马蹄
+    print(f"  ch1_climax_silk_better: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch1_escalation_zhou():
+    """v2.10.28: ch1 escalation_zhou (周大娘教绮霞罗)"""
+    ch = get_chapter(1)
+    n = ch.nodes["escalation_zhou"]
+    assert len(n.narrative_sections) >= 5
+
+    out = NarrativeRenderer().render(n, {})
+    assert "周大娘" in out
+    assert "【周大娘】" in out
+    assert "绮霞罗" in out
+    assert "「" in out  # 内心独白
+    print(f"  ch1_escalation_zhou: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch2_climax_dye_success():
+    """v2.10.28: ch2 染色成功 (学会玄黄染色法)"""
+    ch = get_chapter(2)
+    n = ch.nodes["ch2_climax_dye_success"]
+    assert len(n.narrative_sections) >= 5
+
+    out = NarrativeRenderer().render(n, {})
+    assert "赵师傅" in out
+    assert "玄黄染色法" in out
+    assert "💢 ——咕嘟咕嘟" in out  # 染料翻滚
+    print(f"  ch2_climax_dye_success: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch2_climax_dye_fail():
+    """v2.10.28: ch2 染色失败"""
+    ch = get_chapter(2)
+    n = ch.nodes["ch2_climax_dye_fail"]
+    assert len(n.narrative_sections) >= 3
+
+    out = NarrativeRenderer().render(n, {})
+    assert "赵师傅" in out
+    assert "【赵师傅】（愧疚）" in out
+    print(f"  ch2_climax_dye_fail: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch2_climax_quality():
+    """v2.10.28: ch2 染色大成功 (订单大成功)"""
+    ch = get_chapter(2)
+    n = ch.nodes["ch2_climax_quality"]
+    assert len(n.narrative_sections) >= 4
+
+    out = NarrativeRenderer().render(n, {})
+    assert "孙掌柜" in out
+    assert "绛紫、月白、鸦青、藕荷" in out
+    assert "【孙掌柜】（惊叹）" in out
+    print(f"  ch2_climax_quality: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch2_climax_quality_partial():
+    """v2.10.28: ch2 部分完成 (八折)"""
+    ch = get_chapter(2)
+    n = ch.nodes["ch2_climax_quality_partial"]
+    assert len(n.narrative_sections) >= 3
+
+    out = NarrativeRenderer().render(n, {})
+    assert "孙掌柜" in out
+    assert "八折" in out
+    print(f"  ch2_climax_quality_partial: ✅ ({len(n.narrative_sections)} sections)")
+
+
 def test_ch2_intro_normal():
     """ch2_intro_normal 已迁移"""
     ch = get_chapter(2)
@@ -201,17 +282,23 @@ def test_backward_compatible():
 
 
 def run_all():
-    print("=== v2.10.27 多声部迁移验证测试 ===\n")
+    print("=== v2.10.28 多声部迁移验证测试 ===\n")
     print("## ch1 节点")
     test_ch1_intro_father_ill()
     test_ch1_intro_2_borrow()
     test_ch1_climax_silk()
+    test_ch1_climax_silk_better()
     test_ch1_climax_father_dies()
     test_ch1_resolution_prosperous()
+    test_ch1_escalation_zhou()
 
     print("\n## ch2 节点")
     test_ch2_intro_normal()
     test_ch2_climax_dye()
+    test_ch2_climax_dye_success()
+    test_ch2_climax_dye_fail()
+    test_ch2_climax_quality()
+    test_ch2_climax_quality_partial()
     test_ch2_climax_father_secret()
 
     print("\n## ch3 节点")
@@ -224,7 +311,7 @@ def run_all():
     test_backward_compatible()
 
     print("\n" + "=" * 60)
-    print("✅ 全部 13 个迁移验证测试通过!")
+    print("✅ 全部 18 个迁移验证测试通过!")
     print("=" * 60)
 
 
