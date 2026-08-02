@@ -221,11 +221,31 @@ class ScriptedStoryEngine:
         - 触发随机事件 (D&D 检定)
         - 🆕 v2.10.19: 跨章回响 — 根据第一章 flag 动态调整 narrative
         - 🆕 v2.10.30: NodeFilter 检查 required_city / required_flags / forbidden_flags
+        - 🆕 v2.10.31: AutoNextNode — 无选项时自动跳到 auto_next_node_id
         """
         node_id = game_state.get("scripted_node_id") or self.chapter.start_node_id
         node = self.chapter.nodes.get(node_id)
         if node is None:
             return "【剧本损坏：找不到节点】", []
+
+        # 🆕 v2.10.31: AutoNextNode — 空 voice_options + auto_next_node_id 自动跳转
+        # 防循环: 最多跳跃 50 次
+        visited_chain: list[str] = []
+        while (
+            not node.voice_options
+            and node.auto_next_node_id
+            and len(visited_chain) < 50
+        ):
+            next_id = node.auto_next_node_id
+            if next_id in visited_chain:
+                _LOG.warning(f"AutoNextNode cycle detected: {' → '.join(visited_chain)} → {next_id}")
+                break
+            visited_chain.append(node_id)
+            node_id = next_id
+            node = self.chapter.nodes.get(node_id)
+            if node is None:
+                return "【剧本损坏：auto_next 目标节点不存在】", []
+            game_state["scripted_node_id"] = node_id
 
         # 🆕 v2.10.30: 检查节点可见性 (required_city / required_flags / forbidden_flags)
         if not NodeFilter.is_accessible(node, game_state):

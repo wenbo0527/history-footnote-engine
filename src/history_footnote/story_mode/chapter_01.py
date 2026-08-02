@@ -1436,10 +1436,46 @@ def build_chapter_01_rich() -> ScriptedChapter:
         ],
     )
 
+    # 🆕 v2.10.31: AutoNextNode 示例 (无选项自动跳转)
+    # ch1_demo_autonext 没有 voice_options, 但有 auto_next_node_id → 跳到 target
+    n_demo_autonext = ScriptedNode(
+        node_id="ch1_demo_autonext",
+        round_min=1,
+        round_max=99,
+        role="escalation",
+        narrative_sections=[
+            _narrator("【AutoNextNode 示例 1/2】这是一个无选项节点。"),
+            _narrator("应自动跳转到下一个节点，无须玩家输入。"),
+        ],
+        voice_options=[],  # 空 → 触发自动跳转
+        auto_next_node_id="ch1_demo_autonext_target",
+    )
+
+    n_demo_autonext_target = ScriptedNode(
+        node_id="ch1_demo_autonext_target",
+        round_min=1,
+        round_max=99,
+        role="escalation",
+        narrative_sections=[
+            _narrator("【AutoNextNode 示例 2/2】你从上一个节点自动到达这里。"),
+            _npc("你", "原来这就是自动跳转！", emotion="恍然大悟"),
+            _narrator("——AutoNextNode 已生效。"),
+        ],
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="back_intro",
+                voice_name="↩️ 回 intro",
+                next_node_id="intro_1_father_ill",
+            ),
+        ],
+    )
+
     nodes: dict[str, ScriptedNode] = {
         n1.node_id: n1,
         n_demo_multivocal.node_id: n_demo_multivocal,  # 🆕 v2.10.25 多声部示例
         n_demo_filter.node_id: n_demo_filter,  # 🆕 v2.10.30 NodeFilter 示例
+        n_demo_autonext.node_id: n_demo_autonext,  # 🆕 v2.10.31 AutoNextNode 示例
+        n_demo_autonext_target.node_id: n_demo_autonext_target,  # 🆕 v2.10.31 AutoNextNode 目标
         n2a.node_id: n2a,
         n2b.node_id: n2b,
         n2b_more.node_id: n2b_more,
