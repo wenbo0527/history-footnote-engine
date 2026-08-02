@@ -50,6 +50,35 @@ from history_footnote.story_mode.types import (
 _LOG = logging.getLogger("history_footnote.story_mode.engine")
 
 
+# 🆕 v2.10.32: 中文关键词提取 (用于自然语言输入 → voice_option 匹配)
+_STOPWORDS = set("我你他她它吗呢啊吧了着的也是就不很都和与及或")
+
+
+def _extract_keywords(text: str) -> list[str]:
+    """从中文文本提取关键词
+
+    简单实现: 按字符切分 (去除停用词), 也保留常见 2 字词组
+    """
+    keywords = []
+    # 1. 单字关键词 (去除停用词)
+    for ch in text:
+        if '\u4e00' <= ch <= '\u9fff' and ch not in _STOPWORDS:
+            keywords.append(ch)
+    # 2. 2 字词组
+    for i in range(len(text) - 1):
+        if '\u4e00' <= text[i] <= '\u9fff' and '\u4e00' <= text[i + 1] <= '\u9fff':
+            word = text[i:i + 2]
+            if not any(c in _STOPWORDS for c in word):
+                keywords.append(word)
+    # 3. 3 字词组 (如 "借银子", "卖织机")
+    for i in range(len(text) - 2):
+        if all('\u4e00' <= text[i + j] <= '\u9fff' for j in range(3)):
+            word = text[i:i + 3]
+            if not any(c in _STOPWORDS for c in word):
+                keywords.append(word)
+    return keywords
+
+
 class ScriptedStoryEngine:
     """故事模式引擎 (0 LLM)"""
 
@@ -374,13 +403,57 @@ class ScriptedStoryEngine:
             game_state["father_health"] = max(0, min(100, game_state["father_health"] + v))
 
     def _fuzzy_match(self, voice_id: str, options: list[ScriptedVoiceOption]) -> Optional[ScriptedVoiceOption]:
-        """模糊匹配（兼容前端输入差异）"""
+        """模糊匹配（兼容前端输入差异 + 🆕 v2.10.32 中文关键词匹配）
+
+        匹配策略 (按优先级):
+        1. voice_id 精确匹配 (含大小写不敏感)
+        2. voice_id 子串匹配 (e.g. "borrow_money" 包含 "borrow")
+        3. 🆕 中文关键词匹配 — 玩家自由输入 → 匹配 voice_name / inner_voice / description / emotion
+           例: 输入"借钱" → 匹配 voice_name="💰 向牙行借银子"
+        4. 全失败 → 返回 None
+        """
         vid = voice_id.lower().strip()
+
+        # 1. 精确匹配
         for o in options:
-            if o.voice_id.lower() == vid:
+            if o.voice_id.lower() == vid or voice_id == o.voice_id:
                 return o
-            if voice_id == o.voice_id or vid == o.voice_id:
+
+        # 2. 子串匹配
+        for o in options:
+            if vid in o.voice_id.lower() or o.voice_id.lower() in vid:
                 return o
+
+        # 3. 🆕 中文关键词匹配 (玩家输入自然语言)
+        #    提取玩家输入中的关键词, 与 voice_name / inner_voice / description / emotion 比较
+        if any('\u4e00' <= ch <= '\u9fff' for ch in vid):
+            # 是中文输入, 才做关键词匹配
+            keywords = set(_extract_keywords(vid))
+            best_match: Optional[ScriptedVoiceOption] = None
+            best_score = 0
+            for o in options:
+                text_blob = ' '.join(filter(None, [
+                    o.voice_name or '',
+                    o.inner_voice or '',
+                    getattr(o, 'description', '') or '',
+                    getattr(o, 'emotion', '') or '',
+                ]))
+                opt_keywords = set(_extract_keywords(text_blob))
+                # 计算交集
+                common = keywords & opt_keywords
+                # 相似度: 交集 / min(玩家输入关键词数, 选项关键词数)
+                #   - 短输入"借" vs 长选项: min(2, 30) = 2 → 1/2 = 0.5 ✓
+                #   - 长输入"借钱买米" vs 选项: min(7, 5) = 5 → 1/5 = 0.2 ✓
+                #   - 任意交集 (至少 1) 即视为匹配
+                denom = max(min(len(keywords), len(opt_keywords)), 1)
+                score = len(common) / denom
+                if score > best_score and score >= 0.2 and len(common) >= 1:
+                    best_score = score
+                    best_match = o
+            if best_match:
+                _LOG.info(f"keyword match: '{voice_id}' → '{best_match.voice_id}' (score={best_score:.2f})")
+                return best_match
+
         return None
 
     def _error(self, game_state: dict, msg: str) -> tuple[str, list[ScriptedVoiceOption], dict]:
