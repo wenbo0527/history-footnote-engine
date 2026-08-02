@@ -43,6 +43,104 @@ def test_ch1_intro_2_borrow():
     print(f"  ch1_intro_2_borrow: ✅ ({len(n.narrative_sections)} sections)")
 
 
+def test_ch1_climax_silk():
+    """🆕 v2.10.27: ch1 climax_silk 已迁移"""
+    ch = get_chapter(1)
+    n = ch.nodes["climax_silk"]
+    assert len(n.narrative_sections) >= 8
+
+    out = NarrativeRenderer().render(n, {})
+    assert "一连十日" in out
+    assert "【钱老板】" in out
+    assert "五两银子" in out
+    assert "💢 ——叮" in out  # 银子音效
+    assert "「" in out  # 内心独白
+    print(f"  ch1_climax_silk: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch1_climax_father_dies():
+    """🆕 v2.10.27: ch1 climax_father_dies (关键悲剧)"""
+    ch = get_chapter(1)
+    n = ch.nodes["climax_father_dies"]
+    assert len(n.narrative_sections) >= 5
+
+    out = NarrativeRenderer().render(n, {})
+    assert "张氏" in out
+    assert "【张氏】（惊恐）" in out
+    assert "【父亲】" in out
+    assert "「父亲想说什么" in out
+    assert "💢 ——沙沙沙" in out  # 雨声
+    print(f"  ch1_climax_father_dies: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch1_resolution_prosperous():
+    """🆕 v2.10.27: ch1 resolution_prosperous (完美结局)"""
+    ch = get_chapter(1)
+    n = ch.nodes["resolution_prosperous"]
+    assert len(n.narrative_sections) >= 6
+
+    out = NarrativeRenderer().render(n, {})
+    assert "十二两银子" in out
+    assert "【牙行掌柜】" in out
+    assert "【张氏】" in out
+    assert "【第一章完" in out
+    print(f"  ch1_resolution_prosperous: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch2_climax_dye():
+    """🆕 v2.10.27: ch2 ch2_climax_dye (关键转折)"""
+    ch = get_chapter(2)
+    n = ch.nodes["ch2_climax_dye"]
+    assert len(n.narrative_sections) >= 5
+
+    out = NarrativeRenderer().render(n, {})
+    assert "赵师傅" in out
+    assert "张氏" in out
+    assert "染色" in out
+    print(f"  ch2_climax_dye: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch2_climax_father_secret():
+    """🆕 v2.10.27: ch2 father_secret (关键 - 复仇火种)"""
+    ch = get_chapter(2)
+    n = ch.nodes["ch2_climax_father_secret"]
+    assert len(n.narrative_sections) >= 7
+
+    out = NarrativeRenderer().render(n, {})
+    assert "织造太监李保" in out
+    assert "父亲沈茂" in out
+    assert "证据确凿" in out
+    assert "「——万历十五年，李保仍在任" in out
+    print(f"  ch2_climax_father_secret: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch3_climax_zhouqi():
+    """🆕 v2.10.27: ch3 周七上门"""
+    ch = get_chapter(3)
+    n = ch.nodes["ch3_climax_zhouqi"]
+    assert len(n.narrative_sections) >= 4
+
+    out = NarrativeRenderer().render(n, {})
+    assert "周七" in out
+    assert "【周七】" in out
+    assert "李公公" in out
+    print(f"  ch3_climax_zhouqi: ✅ ({len(n.narrative_sections)} sections)")
+
+
+def test_ch3_climax_resistance():
+    """🆕 v2.10.27: ch3 抗税起义"""
+    ch = get_chapter(3)
+    n = ch.nodes["ch3_climax_resistance"]
+    assert len(n.narrative_sections) >= 6
+
+    out = NarrativeRenderer().render(n, {})
+    assert "号角" in out
+    assert "刘二" in out
+    assert "抗税" in out
+    assert "💢 ——呜" in out  # 号角声
+    print(f"  ch3_climax_resistance: ✅ ({len(n.narrative_sections)} sections)")
+
+
 def test_ch2_intro_normal():
     """ch2_intro_normal 已迁移"""
     ch = get_chapter(2)
@@ -103,27 +201,30 @@ def test_backward_compatible():
 
 
 def run_all():
-    print("=== v2.10.26 多声部迁移验证测试 ===\n")
-    print("## Test 1: ch1 intro_1_father_ill")
+    print("=== v2.10.27 多声部迁移验证测试 ===\n")
+    print("## ch1 节点")
     test_ch1_intro_father_ill()
-
-    print("\n## Test 2: ch1 intro_2_borrow")
     test_ch1_intro_2_borrow()
+    test_ch1_climax_silk()
+    test_ch1_climax_father_dies()
+    test_ch1_resolution_prosperous()
 
-    print("\n## Test 3: ch2 intro")
+    print("\n## ch2 节点")
     test_ch2_intro_normal()
+    test_ch2_climax_dye()
+    test_ch2_climax_father_secret()
 
-    print("\n## Test 4: ch3 intro")
+    print("\n## ch3 节点")
     test_ch3_intro_normal()
+    test_ch3_climax_zhouqi()
+    test_ch3_climax_resistance()
 
-    print("\n## Test 5: 迁移计数")
+    print("\n## 整体")
     test_migration_count()
-
-    print("\n## Test 6: 向后兼容 (未迁移节点)")
     test_backward_compatible()
 
     print("\n" + "=" * 60)
-    print("✅ 全部 6 个迁移验证测试通过!")
+    print("✅ 全部 13 个迁移验证测试通过!")
     print("=" * 60)
 
 

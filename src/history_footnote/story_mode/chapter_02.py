@@ -454,6 +454,16 @@ def build_chapter_02() -> ScriptedChapter:
         round_min=5,
         round_max=8,
         role="climax",
+        # 🆕 v2.10.27: 多声部迁移
+        narrative_sections=[
+            _narrator("你把织好的素绸送到赵师傅处染色。"),
+            _npc("赵师傅", "好料！但这颜色...", emotion="皱眉", action="接过素绸"),
+            _npc("赵师傅", "我近来得了一种怪病，染出来总不匀。", emotion="苦"),
+            _npc("张氏", "莫不是又喝多了？", emotion="怀疑", action="从灶房出来"),
+            _npc("赵师傅", "嫂子聪明。欠了酒债，心里苦。", emotion="苦笑"),
+            _narrator("——赵师傅的染色手艺，盛泽镇无人能及。但他若倒下了..."),
+            _thought("……这是 ch2 的关键转折点。"),
+        ],
         narrative=(
             "你把织好的素绸送到赵师傅处染色。\n"
             "\n"
@@ -668,6 +678,18 @@ def build_chapter_02() -> ScriptedChapter:
         round_min=2,
         round_max=4,
         role="climax",
+        # 🆕 v2.10.27: 多声部迁移
+        narrative_sections=[
+            _narrator("你展开父亲递来的文书。"),
+            _narrator("那是一卷泛黄的丝绢，上面有万历九年的官印。"),
+            _sound("——嘶啦", action="展开旧绢"),
+            _narrator("你认出了几个名字："),
+            _narrator("- '织造太监李保'（采办贪墨）"),
+            _narrator("- '原吴江县令王公'（现已升迁苏州知府）"),
+            _narrator("- '父亲沈茂'（被诬陷，流放三月）"),
+            _narrator("——证据确凿。"),
+            _thought("——万历十五年，李保仍在任。这份文书，是复仇的火种。"),
+        ],
         narrative=(
             "你展开父亲递来的文书。\n"
             "\n"

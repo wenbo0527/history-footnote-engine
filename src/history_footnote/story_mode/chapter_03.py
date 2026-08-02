@@ -577,6 +577,15 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=4,
         round_max=8,
         role="climax",
+        # 🆕 v2.10.27: 多声部迁移
+        narrative_sections=[
+            _sound("——砰砰砰", action="急促敲门"),
+            _narrator("周七忽然登门，神色诡异。"),
+            _npc("周七", "沈老弟，李公公听说了你的事。", emotion="阴沉"),
+            _npc("周七", "你手里...似乎有点东西？", emotion="试探", action="眼睛紧盯你"),
+            _thought("你心中一凛——他指的是父亲的文书吗？"),
+            _narrator("——flag `zhouqi_knows`"),
+        ],
         narrative=(
             "周七忽然登门，神色诡异。\n"
             "\n"
@@ -745,6 +754,16 @@ def build_chapter_03() -> ScriptedChapter:
         round_min=8,
         round_max=14,
         role="climax",
+        # 🆕 v2.10.27: 多声部迁移
+        narrative_sections=[
+            _narrator("万历十五年十一月，辰时。"),
+            _sound("——呜——呜——", action="号角声响彻云霄"),
+            _narrator("苏州织工抗税的号角吹响了。"),
+            _narrator("刘二领着盛泽镇的织工冲向税关。"),
+            _npc("刘二", "沈老弟，跟我们一起！", emotion="激昂"),
+            _sound("——当——当——噗", action="刀光剑影，血染青石"),
+            _thought("——flag `revolution_succeeded` (短期)"),
+        ],
         narrative=(
             "万历十五年十一月，辰时。\n"
             "\n"

@@ -422,6 +422,19 @@ def build_chapter_01_rich() -> ScriptedChapter:
         round_min=4,
         round_max=8,
         role="climax",
+        # 🆕 v2.10.27: 多声部迁移
+        narrative_sections=[
+            _narrator("一连十日，你和张氏日夜赶织。"),
+            _sound("——吱呀——唰", action="梭子穿行"),
+            _narrator("妻儿睡下，你独自坐在织机前。"),
+            _narrator("这天傍晚，你捧着织好的春绸去牙行。"),
+            _npc("钱老板", "嗯，不错。沈老弟手艺见长。", emotion="点头"),
+            _npc("钱老板", "五两银子，你点点。", emotion="微笑"),
+            _sound("——叮", action="银子落入钱袋"),
+            _narrator("——五两！除去成本，净赚二两。"),
+            _narrator("你攥着银子站在牙行门口，春风拂面。"),
+            _thought("……日夜辛苦，值得。"),
+        ],
         narrative=(
             "一连十日，你和张氏日夜赶织。\n"
             "\n"
@@ -746,6 +759,16 @@ def build_chapter_01_rich() -> ScriptedChapter:
         round_min=5,
         round_max=10,
         role="climax",
+        # 🆕 v2.10.27: 多声部迁移
+        narrative_sections=[
+            _narrator("你正织着绸，张氏急匆匆跑来。"),
+            _npc("张氏", "相公快回来，爹他...他吐血了！", emotion="惊恐", action="攥住你的手"),
+            _sound("——沙沙沙", action="春雨打在窗上"),
+            _narrator("你飞奔回家。父亲面如金纸，嘴角挂着血丝。"),
+            _npc("父亲", "儿...儿啊...", emotion="气弱"),
+            _thought("父亲想说什么……却只剩微弱的气息。"),
+            _narrator("——春雨打在窗上，无休无止。"),
+        ],
         narrative=(
             "你正织着绸，张氏急匆匆跑来。\n"
             "\n"
@@ -990,6 +1013,18 @@ def build_chapter_01_rich() -> ScriptedChapter:
         round_min=10,
         round_max=16,
         role="resolution",
+        # 🆕 v2.10.27: 多声部迁移
+        narrative_sections=[
+            _narrator("年末结账，你竟攒下了十二两银子。"),
+            _sound("——砰砰砰", action="敲门声"),
+            _narrator("牙行掌柜登门拜访，递上一张名帖。"),
+            _npc("牙行掌柜", "沈老弟手艺了得，来年合作。", emotion="赞许"),
+            _narrator("父亲安然无恙，张氏面有喜色。"),
+            _npc("张氏", "相公，今年总算过了好日子。", emotion="喜"),
+            _sound("——咯咯咯", action="孩子在院里追着母鸡跑"),
+            _narrator("——万历十五年，是沈家的转折之年。"),
+            _narrator("【第一章完 · 兴家结局 · 解锁第二章】"),
+        ],
         narrative=(
             "年末结账，你竟攒下了十二两银子。\n"
             "\n"
