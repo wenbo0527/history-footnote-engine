@@ -34,6 +34,7 @@ from history_footnote.story_mode.constants import (
 )
 from history_footnote.story_mode.effects import EffectsService
 from history_footnote.story_mode.narrative_renderer import NarrativeRenderer
+from history_footnote.story_mode.node_filter import NodeFilter
 from history_footnote.story_mode.rich import (
     EnvironmentContext,
     maybe_trigger_encounter,
@@ -219,11 +220,20 @@ class ScriptedStoryEngine:
         - 自动注入环境描写
         - 触发随机事件 (D&D 检定)
         - 🆕 v2.10.19: 跨章回响 — 根据第一章 flag 动态调整 narrative
+        - 🆕 v2.10.30: NodeFilter 检查 required_city / required_flags / forbidden_flags
         """
         node_id = game_state.get("scripted_node_id") or self.chapter.start_node_id
         node = self.chapter.nodes.get(node_id)
         if node is None:
             return "【剧本损坏：找不到节点】", []
+
+        # 🆕 v2.10.30: 检查节点可见性 (required_city / required_flags / forbidden_flags)
+        if not NodeFilter.is_accessible(node, game_state):
+            reasons = NodeFilter.get_unmet_requirements(node, game_state)
+            warning = f"【节点 {node_id} 暂不可访问】\n原因: {', '.join(reasons)}\n请先满足前置条件。"
+            _LOG.warning(f"node {node_id} inaccessible: {reasons}")
+            # 返回警告 narrative + 空 options
+            return warning, []
 
         # 应用 on_enter 效果 (一次性)
         if node.on_enter_effects or node.on_enter_text:

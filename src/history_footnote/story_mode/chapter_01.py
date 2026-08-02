@@ -1409,9 +1409,37 @@ def build_chapter_01_rich() -> ScriptedChapter:
         ],
     )
 
+    # 🆕 v2.10.30: NodeFilter 示例 (前置条件访问)
+    n_demo_filter = ScriptedNode(
+        node_id="ch1_demo_filter",
+        round_min=1,
+        round_max=99,
+        role="escalation",
+        # 🔑 三个过滤条件:
+        # 1. required_city: 必须苏州
+        required_city="suzhou",
+        # 2. required_flags: 必须有 has_debt 和 zhou_favor
+        required_flags=["has_debt", "zhou_favor"],
+        # 3. forbidden_flags: 不能有 sold_loom
+        forbidden_flags=["sold_loom"],
+        narrative_sections=[
+            _narrator("【NodeFilter 示例】这是苏州场景，需要 has_debt + zhou_favor。"),
+            _npc("你", "我终于凑齐了去苏州的条件。", emotion="舒了口气"),
+            _narrator("——NodeFilter 已生效。"),
+        ],
+        voice_options=[
+            ScriptedVoiceOption(
+                voice_id="back_to_shengze",
+                voice_name="🚣 回盛泽",
+                next_node_id="intro_2_borrow",
+            ),
+        ],
+    )
+
     nodes: dict[str, ScriptedNode] = {
         n1.node_id: n1,
         n_demo_multivocal.node_id: n_demo_multivocal,  # 🆕 v2.10.25 多声部示例
+        n_demo_filter.node_id: n_demo_filter,  # 🆕 v2.10.30 NodeFilter 示例
         n2a.node_id: n2a,
         n2b.node_id: n2b,
         n2b_more.node_id: n2b_more,
