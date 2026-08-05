@@ -99,6 +99,21 @@ export function setInviteCode(code: string): void {
 /** 登出 */
 export function logout(): void {
   if (typeof window === 'undefined') return;
+  // 🆕 v2.10.33 D3.1: 清空所有 hfe_* localStorage/sessionStorage key
+  // (避免旧 session_id / wizard scripted flag 残留导致下一次登录异常)
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('hfe_')) localStorage.removeItem(key);
+    }
+  } catch {}
+  try {
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith('hfe_')) sessionStorage.removeItem(key);
+    }
+  } catch {}
+  // 显式清关键 key (兼容非 hfe_ 前缀的)
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(USERNAME_KEY);
   localStorage.removeItem(GUEST_KEY);

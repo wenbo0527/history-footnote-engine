@@ -17,6 +17,8 @@
     GlossaryModal,
     FeedbackModal,
     SettingsModal,
+    // 🆕 v2.10.33 P0-3: 结局结算弹窗
+    EndingModal,
   } from '$lib/components/modals';
   import { getSessionId } from '$lib/api/start';
   import { getState } from '$lib/api/state';
@@ -97,6 +99,9 @@
   let glossaryOpen = $state(false);
   let feedbackOpen = $state(false);
   let settingsOpen = $state(false);
+  // 🆕 v2.10.33 P0-3: 结局结算弹窗 — 自动触发 (game.ending 出现就显示)
+  let endingOpen = $state(false);
+  let seenEndingKey = $state<string | null>(null);
   // 🆕 v2.10.x: 地图浮层
   let mapOpen = $state(false);
   let loading = $state(false);
@@ -130,21 +135,22 @@
       const state = await getState(sessionId);
       gameActions.set(state as any);
 
-      // 🆕 v2.10.22: 检查是否要进入剧本模式
-      const scriptedFlag =
-        $page.url.searchParams.get('scripted') === '1' ||
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hfe_wizard_scripted') === '1');
+      // 🆕 v2.10.33 D2.2: 检查是否要进入剧本模式 — 改用后端 state.scripted_intent
+      // 旧方案：读 URL ?scripted=1 + sessionStorage (跨路由状态)
+      // 新方案：state.scripted_intent 是 single source of truth
+      const intentScripted = (state as any).scripted_intent === true;
       const alreadyScripted = (state as any).scripted_mode === true;
-      if (scriptedFlag && !alreadyScripted) {
+      if (intentScripted && !alreadyScripted) {
         try {
-          await startScriptedMode(sessionId, 1);
-          // 清除 flag 防止下次重入
-          try { sessionStorage.removeItem('hfe_wizard_scripted'); } catch {}
+          const chapterId = (state as any).scripted_intent_chapter ?? 1;
+          await startScriptedMode(sessionId, chapterId);
           toast.info('🎭 已进入剧本模式');
         } catch (e2) {
           console.error('scripted mode start failed', e2);
         }
       }
+      // 兼容清旧 sessionStorage (用户登录后可能还有残留)
+      try { sessionStorage.removeItem('hfe_wizard_scripted'); } catch {}
     } catch (e) {
       const err = e as Error;
       loadError = err.message ?? '加载失败';
@@ -154,6 +160,18 @@
     } finally {
       loading = false;
     }
+  });
+
+  // 🆕 v2.10.33 P0-3: 自动触发结局弹窗 — 用 session+ending_type 作去重 key,
+  // 同一结局只弹一次（避免每次 state 更新重复弹）
+  $effect(() => {
+    if (!$game) return;
+    const ending = $game.ending;
+    if (!ending || !ending.type) return;
+    const key = `${$game.session_id}:${ending.type}:${ending.triggered_round ?? 0}`;
+    if (seenEndingKey === key) return;
+    seenEndingKey = key;
+    endingOpen = true;
   });
 </script>
 
@@ -188,6 +206,13 @@
   <GlossaryModal open={glossaryOpen} onclose={() => glossaryOpen = false} />
   <FeedbackModal open={feedbackOpen} onclose={() => feedbackOpen = false} />
   <SettingsModal open={settingsOpen} onclose={() => settingsOpen = false} />
+
+  <!-- 🆕 v2.10.33 P0-3: 结局结算弹窗（game.ending 出现时自动弹） -->
+  <EndingModal
+    open={endingOpen}
+    ending={$game?.ending ?? null}
+    onclose={() => { endingOpen = false; }}
+  />
 
   <!-- 🆕 v2.10.x: 地图浮层 (顶部 tab + mini-map 点击触发) -->
   <MapOverlay visible={mapOpen} onClose={() => mapOpen = false} />

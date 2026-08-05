@@ -19,12 +19,19 @@ export interface StartRequest {
   identity: Identity;
   gender: Gender;
   character: Character;
+  /** 🆕 v2.10.33 D2.1: 是否剧本模式（写到后端 state.scripted_intent） */
+  scripted?: boolean;
+  /** 🆕 v2.10.33 D2.1: 剧本起始章节 */
+  scripted_chapter_id?: number;
 }
 
 export async function startGame(req: StartRequest): Promise<GameState> {
   // 🆕 v1.7.30: 把 account_id 加到 body
   const accountId = getCurrentAccountId() ?? '';
-  const body = { ...req, account_id: accountId };
+  const body: Record<string, any> = { ...req, account_id: accountId };
+  // 🆕 v2.10.33 D2.1: scripted 字段透传到后端
+  if (req.scripted) body.scripted = true;
+  if (req.scripted_chapter_id) body.scripted_chapter_id = req.scripted_chapter_id;
   const raw = await call<any>('/start', { body });
   const data = mapBackendState(raw);
 

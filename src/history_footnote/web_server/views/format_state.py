@@ -49,6 +49,61 @@ def _flatten_custom_character(cc: dict | None) -> dict:
 # 侧边栏数据
 # ============================================================
 
+def _compute_ending(game) -> dict | None:
+    """🆕 v2.10.33 P0-3: 实时判定玩家当前触发的结局
+
+    旧行为：EndingSystem 只在 GameLoop 初始化时创建，从不调用 .check()
+    新行为：在 /api/state 序列化时实时计算（纯逻辑，无副作用）
+
+    返回 dict: {type, name, icon, narrative, priority, triggered_round}
+    返回 None: 未触发结局
+    """
+    try:
+        from history_footnote.ending_system import EndingSystem
+
+        # 🆕 v2.10.33 P0-3: round < MIN_ENDING_ROUND 时不触发结局
+        # 原因: EndingSystem 的 struggling 兜底条件(cash>=0, debt<=10)无 round guard,
+        #       玩家 round=1 也会被判定 ending=struggling, 体验上「开局就结局」不可接受。
+        MIN_ENDING_ROUND = 10
+        round_num = getattr(game.state, "round_number", 0)
+        if round_num < MIN_ENDING_ROUND:
+            return None
+
+        es = EndingSystem()
+        # 🆕 v2.10.33 P0-3: 给 GameState 打补丁, 让 EndingSystem.check 不报 triggered_events 缺失
+        # (EndingSystem 假设所有 state 字段存在; 这里 minimal state 时补默认)
+        state = game.state
+        if not hasattr(state, "triggered_events"):
+            try:
+                state.triggered_events = []
+            except Exception:
+                pass
+
+        ending = es.check(state)
+        if ending is None:
+            return None
+        return {
+            "type": ending.type,
+            "name": ending.name,
+            "icon": ending.icon,
+            "narrative": ending.narrative_template,
+            "priority": ending.priority,
+            "triggered_round": round_num,
+            # 触发时的财务快照（用于结算页 UI）
+            "snapshot": {
+                "cash": getattr(state, "cash", 0.0),
+                "debt": getattr(state, "debt", 0.0),
+                "rice": getattr(state, "rice", 0.0),
+                "city": getattr(state, "current_city", ""),
+                "round": round_num,
+                "current_date": getattr(state, "current_date", ""),
+            },
+        }
+    except Exception as e:  # 防止 ending 检查抛错阻塞 /api/state
+        logger.warning(f"[v2.10.33] ending check failed: {e}")
+        return None
+
+
 def build_sidebar_data(state, recent_narratives: list) -> dict:
     """🆕 v1.7.26: 构建侧边栏数据（任务/还债/财务）
 
@@ -161,6 +216,11 @@ def format_state(game) -> dict:
         # 🆕 v2.5 NPC 关系 + 当前 buff（命运卡影响展示）
         "npc_relations": dict(getattr(s, "npc_relations", {}) or {}),
         "active_buffs": list(getattr(s, "active_buffs", []) or []),
+        # 🆕 v2.10.33 P0-3: 实时判定结局（GameLoop 缺这步, 这里补上）
+        "ending": _compute_ending(game),
+        # 🆕 v2.10.33 D2.1: 透传 scripted_intent（前端 /game 路由用它决定是否启动剧本）
+        "scripted_intent": bool(getattr(s, "scripted_intent", False)),
+        "scripted_intent_chapter": int(getattr(s, "scripted_intent_chapter", 1) or 1),
     }
     # 🆕 v1.7.32 修复：移除 voice_freetext 兜底。
     # 原因：前端 InputArea 已是独立 textarea（不是 voice_options 的一部分），

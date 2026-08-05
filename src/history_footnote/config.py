@@ -65,8 +65,8 @@ def _getenv_bool(key: str, default: bool) -> bool:
 # 版本号（与 issue_reporter.py 保持同步）
 # ⚠️ 升级版本时同时修改这两个文件
 # 未来可改为 issue_reporter → config 的单向依赖
-APP_VERSION = _getenv_str("APP_VERSION", "2.10.7")
-APP_VERSION_NAME = _getenv_str("APP_VERSION_NAME", "v2.10.7 - 修 2 个 Svelte 错误 (archives + voice_id)")
+APP_VERSION = _getenv_str("APP_VERSION", "2.10.33")
+APP_VERSION_NAME = _getenv_str("APP_VERSION_NAME", "v2.10.33 - P0 修复: 剧本模式自由输入兜底 + 结局弹窗接入 + 访客快速试玩 + 跨路由状态后端化")
 APP_IS_BETA = _getenv_bool("APP_IS_BETA", True)
 
 

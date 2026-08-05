@@ -11,16 +11,15 @@
   onMount(() => {
     // 进入 wizard 时重置
     wizard.reset();
-    // 🆕 v2.10.22: 剧本模式标记 (来自 StartMenu 入口)
+    // 🆕 v2.10.33 D2.1: 剧本模式标记 — 写到 wizard state, 提交时由 WizardShell 传给后端
+    // 不再用 sessionStorage 中转 (跨路由状态)
     const scripted = $page.url.searchParams.get('scripted') === '1';
-    if (scripted) {
-      // 可以存到 wizard state
-      wizard.setScriptedMode?.(true);
-      // 也存到 sessionStorage 给 /game 路由用
-      try { sessionStorage.setItem('hfe_wizard_scripted', '1'); } catch {}
-    } else {
-      try { sessionStorage.removeItem('hfe_wizard_scripted'); } catch {}
-    }
+    wizard.setScripted(scripted);
+    // 兼容旧 sessionStorage key (用户可能老 sessionStorage 里有残留)
+    try {
+      if (scripted) sessionStorage.setItem('hfe_wizard_scripted', '1');
+      else sessionStorage.removeItem('hfe_wizard_scripted');
+    } catch {}
     // 调试用：URL ?step=N 跳到指定步骤
     const target = parseInt($page.url.searchParams.get('step') ?? '0', 10);
     if (target > 0) {

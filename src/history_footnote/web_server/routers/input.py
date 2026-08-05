@@ -146,6 +146,9 @@ def handle_POST_input(handler, body) -> bool:
                     "scripted_flags": _state.get("scripted_flags", []),
                     "llm_calls": 0,
                     "fallback_mode": "scripted",
+                    # 🆕 v2.10.33 P0-1: 剧本模式自由输入未匹配 → 前端 toast 提示
+                    "no_match": info.get("no_match", False),
+                    "match_attempted": info.get("match_attempted", ""),
                 })
                 return True
     except Exception as e:

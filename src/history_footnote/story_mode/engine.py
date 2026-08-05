@@ -162,6 +162,9 @@ class ScriptedStoryEngine:
         - new_node_id: str
         - effects_applied: dict
         - flag_added: list
+        - no_match: bool (🆕 v2.10.33: 自由输入模糊匹配失败的标记)
+        - suggested_options: list[dict] (🆕 v2.10.33: 建议玩家重选)
+        - match_attempted: str (🆕 v2.10.33: 玩家原始输入, 便于前端 toast)
         """
         self.ensure_state(game_state)
         node_id = game_state.get("scripted_node_id") or self.chapter.start_node_id
@@ -175,7 +178,8 @@ class ScriptedStoryEngine:
             # 模糊匹配（兼容前端 typo）
             opt = self._fuzzy_match(voice_id, node.voice_options)
             if opt is None:
-                return self._error(game_state, f"voice_id not found: {voice_id}")
+                # 🆕 v2.10.33 P0-1: 模糊匹配失败不再静默 — 返回当前节点 + no_match 信号
+                return self._no_match_response(game_state, voice_id, node)
 
         # 🆕 v2.10.22: D&D 检定 — 在跳转之前决定目标节点
         check_result = None
@@ -235,6 +239,9 @@ class ScriptedStoryEngine:
             "new_node_id": next_node_id,
             "effects_applied": effects_applied,
             "flag_added": flag_added,
+            # 🆕 v2.10.33 P0-1: 成功路径也明确 no_match=False（前端无需另判）
+            "no_match": False,
+            "match_attempted": voice_id,
         }
         return narr, options, info
 
@@ -459,6 +466,53 @@ class ScriptedStoryEngine:
     def _error(self, game_state: dict, msg: str) -> tuple[str, list[ScriptedVoiceOption], dict]:
         _LOG.warning(msg)
         return f"【剧本错误：{msg}】", [], {"error": msg}
+
+    def _no_match_response(
+        self,
+        game_state: dict,
+        voice_id: str,
+        node: "ScriptedNode",
+    ) -> tuple[str, list[ScriptedVoiceOption], dict]:
+        """🆕 v2.10.33 P0-1: 玩家自由输入未匹配到任何 voice_option
+
+        旧行为: 返回空 options + 不报错, 玩家看到"按了没反应"。
+        新行为:
+        1. 不改 state（节点不变, 玩家不前进）
+        2. 返回原节点的 narrative（玩家看到上下文不丢失）
+        3. 返回原节点的 voice_options（让玩家可以重选）
+        4. info.no_match = True + match_attempted + suggestions
+        """
+        _LOG.info(
+            f"[v2.10.33 no_match] voice_id='{voice_id}' not matched in node '{node.node_id}' "
+            f"({len(node.voice_options)} options available)"
+        )
+        # 重新渲染当前节点（不动 state）
+        narr, options = self._get_current_view(game_state)
+
+        # 在 narrative 顶部插入"未识别"提示
+        hint = (
+            f"【未识别】DM 没有听懂「{voice_id[:30]}」——"
+            f"请从下方选项中选择，或用更简单的词重述。"
+        )
+        narr = hint + "\n\n" + narr
+
+        info = {
+            "no_match": True,
+            "match_attempted": voice_id,
+            "chapter_complete": False,
+            "new_node_id": node.node_id,
+            "effects_applied": {},
+            "flag_added": [],
+            "suggested_options": [
+                {
+                    "voice_id": o.voice_id,
+                    "voice_name": o.voice_name,
+                    "intent_text": o.intent_text or o.description or o.voice_name,
+                }
+                for o in options
+            ],
+        }
+        return narr, options, info
 
     # ============================================================
     # 导出给前端（兼容现有 VoiceOption 格式）

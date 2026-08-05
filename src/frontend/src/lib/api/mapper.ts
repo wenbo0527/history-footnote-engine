@@ -287,6 +287,14 @@ export function mapBackendState(b: BackendState): GameState {
     scripted_flags: b.scripted_flags ?? [],
     scripted_visits: b.scripted_visits ?? [],
     scripted_chapter_complete: b.scripted_chapter_complete ?? false,
+    // 🆕 v2.10.33 P0-1: 剧本模式自由输入未匹配 → 透传给前端用于 toast
+    no_match: b.no_match ?? false,
+    match_attempted: b.match_attempted ?? '',
+    // 🆕 v2.10.33 P0-3: 结局结算（实时计算）
+    ending: b.ending ?? null,
+    // 🆕 v2.10.33 D2.1: scripted_intent 后端透传（替代 sessionStorage flag）
+    scripted_intent: b.scripted_intent ?? false,
+    scripted_intent_chapter: b.scripted_intent_chapter ?? 1,
     // 🆕 v2.10.3 章节制字段（format_state chapter 块）
     current_chapter: b.current_chapter ?? 0,
     total_chapters: b.total_chapters ?? 10,

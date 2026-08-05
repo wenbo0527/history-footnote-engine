@@ -3,6 +3,24 @@
  * 跟 Python 后端 /api/* 响应结构对齐
  */
 
+// ============ Ending 结局 (🆕 v2.10.33 P0-3) ============
+export interface Ending {
+  type: string;            // e.g. "bankrupt_beggar"
+  name: string;            // e.g. "破产流民"
+  icon: string;            // e.g. "💀"
+  narrative: string;       // 结局叙事模板
+  priority: number;
+  triggered_round: number;
+  snapshot?: {
+    cash: number;
+    debt: number;
+    rice: number;
+    city: string;
+    round: number;
+    current_date: string;
+  };
+}
+
 // ============ Era 朝代 ============
 export interface Era {
   id: string;
@@ -314,6 +332,14 @@ export interface GameState {
   scripted_flags?: string[];
   scripted_visits?: string[];
   scripted_chapter_complete?: boolean;
+  // 🆕 v2.10.33 P0-1: 剧本模式自由输入未匹配信号
+  no_match?: boolean;
+  match_attempted?: string;
+  // 🆕 v2.10.33 P0-3: 结局结算
+  ending?: Ending | null;
+  // 🆕 v2.10.33 D2.1: 剧本意图（替代 sessionStorage flag）
+  scripted_intent?: boolean;
+  scripted_intent_chapter?: number;
   pending_city_change?: {
     from_city: string;
     to_city: string;

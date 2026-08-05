@@ -31,6 +31,8 @@
     submitError = null;
 
     try {
+      // 🆕 v2.10.33 D2.1: 从 wizard.state.scripted 读取剧本标记（不再用 sessionStorage 中转）
+      const isScripted = wizard.state.scripted === true;
       const data = await startGame({
         era_id: 'wanli1587',
         identity: wizard.state.identity,
@@ -40,12 +42,15 @@
           age: wizard.inferredProfile.age,
           occupation: wizard.inferredProfile.occupation,
           hometown: wizard.inferredProfile.hometown
-        }
+        },
+        scripted: isScripted,
+        scripted_chapter_id: 1,
       });
 
       gameActions.set(data);
+      // 🆕 v2.10.33 D2.1: 不再写 sessionStorage — 后端 state.scripted_intent 是 single source of truth
       wizard.reset();
-      // 🆕 v1.7.30: 跳到 game 页时带 session_id（startGame 已写 localStorage）
+      // 跳到 game 页时带 session_id（startGame 已写 localStorage）
       goto(`/game?session=${data.session_id}`);
     } catch (e) {
       submitError = e instanceof Error ? e.message : '开始游戏失败';

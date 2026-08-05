@@ -16,7 +16,7 @@
   import { Chapter, Divider, Button, Seal, Spinner, toast } from '$lib/components/design-system';
   import { session, sessionActions } from '$lib/stores';
   import { listArchives } from '$lib/api/archives';
-  import { getCurrentUsername, getCurrentAccountId, logout, getAccountInfo, isLoggedIn, isGuest, ensureGuestAccountId } from '$lib/api/account';
+  import { getCurrentUsername, getCurrentAccountId, logout, getAccountInfo, isLoggedIn, isGuest, setGuest, ensureGuestAccountId } from '$lib/api/account';
   import type { Archive } from '$lib/api/types';
   import StartMenuCard from './StartMenuCard.svelte';
   import ArchiveList from './ArchiveList.svelte';
@@ -67,6 +67,27 @@
     } finally {
       loadingArchives = false;
     }
+  }
+
+  // 🆕 v2.10.33 D1.2: 游客快速试玩 — 一键拿 guest_id 后跳 wizard
+  // 不用经过 /login 页, 适合营销入口的第一跳
+  let enteringAsGuest = $state(false);
+  async function handleQuickGuestTry() {
+    if (enteringAsGuest || enteringWizard) return;
+    enteringAsGuest = true;
+    try {
+      await ensureGuestAccountId();
+      setGuest();
+      toast.success('已以访客身份进入');
+    } catch (e) {
+      toast.error('游客初始化失败：' + (e instanceof Error ? e.message : '未知错误'));
+      enteringAsGuest = false;
+      return;
+    }
+    setTimeout(() => {
+      goto('/wizard');
+      setTimeout(() => { enteringAsGuest = false; enteringWizard = false; }, 1500);
+    }, 200);
   }
 
   function handleLoadArchive(sessionId: string) {
@@ -128,12 +149,29 @@
   <div class="start-menu-grid">
     <!-- 左侧 1 列：开始新游戏 / 设置 / 账户 -->
     <aside class="start-menu-left">
+      <!-- 🆕 v2.10.33 D1.2: 游客快速试玩（最大转化漏斗入口） -->
+      <StartMenuCard
+        iconSrc="/icons/nav/home.webp"
+        title="⚡ 游客快速试玩"
+        description="无需注册，1 秒入局"
+        primary
+      >
+        {#snippet action()}
+          <Seal
+            text={enteringAsGuest ? '进入中…' : '立刻开局'}
+            size="md"
+            disabled={enteringAsGuest || enteringWizard}
+            onclick={handleQuickGuestTry}
+          />
+        {/snippet}
+      </StartMenuCard>
+
       <!-- 开始新游戏 -->
       <StartMenuCard
         iconSrc="/icons/nav/home.webp"
         title="开始新游戏"
         description="选择一个朝代，创建你的角色，开启一段历史注脚"
-        primary
+        primary={false}
       >
         {#snippet action()}
           <Seal text="入 局" size="md" disabled={enteringWizard} onclick={handleEnter} />

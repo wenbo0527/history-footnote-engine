@@ -9,3 +9,5 @@ export { default as SettingsModal } from './SettingsModal.svelte';
 export { default as CityChangeModal } from './CityChangeModal.svelte';
 // 🆕 v2.10.1 W80: 命运卡详情
 export { default as FateCardDetailModal } from './FateCardDetailModal.svelte';
+// 🆕 v2.10.33 P0-3: 结局结算弹窗
+export { default as EndingModal } from './EndingModal.svelte';

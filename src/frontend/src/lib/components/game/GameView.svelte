@@ -96,6 +96,23 @@
     }
   });
 
+  // 🆕 v2.10.33 P0-1: 剧本模式自由输入未匹配 → toast 引导玩家重输
+  // 用 "key 变化触发" 模式：每次 match_attempted 变化（一次未匹配）就 toast 一次
+  let lastNoMatchKey = $state<string | null>(null);
+  $effect(() => {
+    if (!$game) return;
+    if (!$game.no_match) return;
+    // 用 session + match_attempted 作去重 key —
+    // 同一个未匹配输入只 toast 一次（重输不同文本会再触发）
+    const stableKey = `${$game.session_id}:${$game.match_attempted ?? ''}`;
+    if (lastNoMatchKey === stableKey) return;
+    lastNoMatchKey = stableKey;
+    const tried = $game.match_attempted || '你的输入';
+    toast.warning(
+      `DM 没听懂「${tried}」——剧本模式下请从下方选项中选择，或用更简单的词重述（如「借钱」「卖织机」「去苏州」）`
+    );
+  });
+
   async function handleConfirmCity() {
     if (!$game) return;
     try {

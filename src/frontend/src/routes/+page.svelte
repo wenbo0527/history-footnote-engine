@@ -1,36 +1,27 @@
 <script lang="ts">
   /**
-   * 首页 - 默认强制登录（v2.10.1+）
+   * 首页 - StartMenu (🆕 v2.10.33 D1.1: 取消强制跳登录)
    *
-   * 🆕 v2.10.1 W67: 强制登录体验
-   * - 默认 → 跳 /login?next=/（必须登录/访客/注册）
-   * - 已登录 → 直接显示 StartMenu
-   * - ?skip_login=1 → 调试用（跳过）
+   * 历史：v2.10.1 W67 强制跳 /login (访客也必须走登录页)
+   * 现在：直接显示 StartMenu (游客/登录/注册入口都在 StartMenu 内)
+   *
+   * 旧 ?skip_login=1 调试 flag 仍保留兼容
    */
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { StartMenu } from '$lib/components/home';
-  import { isLoggedIn } from '$lib/api/account';
   import { Spinner } from '$lib/components/design-system';
 
   let checking = $state(true);
 
   onMount(() => {
-    // 调试用：?skip_login=1 → 跳过登录检查
+    // 调试用：?skip_login=1 仍支持
     if ($page.url.searchParams.get('skip_login') === '1') {
       checking = false;
       return;
     }
-
-    // 已登录 → 直接进 StartMenu
-    if (isLoggedIn()) {
-      checking = false;
-      return;
-    }
-
-    // 默认：未登录 → 强制跳登录页（访客/注册入口都在 /login）
-    goto('/login?next=/');
+    // 🆕 v2.10.33 D1.1: 不再强制跳 /login，访客也能看 StartMenu
+    checking = false;
   });
 </script>
 

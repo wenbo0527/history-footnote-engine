@@ -96,6 +96,22 @@ def handle_POST_start(handler, body) -> bool:
         except Exception:
             pass
 
+    # 🆕 v2.10.33 D2.1: 接受 scripted 标记 — 写到 state 供后续路由用
+    # 旧方案：wizard 用 sessionStorage 中转 flag 到 /game
+    # 新方案：直接写到 game.state.scripted_intent（创建意图）
+    # /game 路由读 state.scripted_intent 自动决定是否调 /api/scripted/start
+    scripted_intent = bool(body.get("scripted", False)) or bool(body.get("scripted_mode", False))
+    if scripted_intent and hasattr(game, 'state'):
+        try:
+            game.state.scripted_intent = True
+            game.state.scripted_intent_chapter = int(body.get("scripted_chapter_id", 1))
+            logger.info(
+                f"[v2.10.33 D2] session {sid[:8] if sid else '?'} "
+                f"marked scripted_intent=True, chapter={game.state.scripted_intent_chapter}"
+            )
+        except Exception:
+            pass
+
     # 🆕 v2.5: 全局随机种子（replay 机制）
     # 玩家可传 seed 用同一 seed 重玩（分享 / debug / 重玩）
     # 不传则系统生成随机 seed

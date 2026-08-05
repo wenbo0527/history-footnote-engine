@@ -28,6 +28,9 @@ export interface WizardState {
 
   // 步骤 2：姓名
   name: string;
+
+  // 🆕 v2.10.33 D2.1: 是否剧本模式（写到后端 state.scripted_intent）
+  scripted: boolean;
 }
 
 // 🆕 v2.0：身份预设表
@@ -74,7 +77,8 @@ const initial: WizardState = {
   currentStep: 0,
   totalSteps: 3,
   identity: null,
-  name: ''
+  name: '',
+  scripted: false,
 };
 
 // 🆕 v2.0：Svelte 5 runes-based store
@@ -138,6 +142,11 @@ class WizardStore {
 
   setName(name: string) {
     this.state.name = name;
+  }
+
+  // 🆕 v2.10.33 D2.1: 设置剧本模式（在 wizard 挂载时由 URL/外部传入）
+  setScripted(scripted: boolean) {
+    this.state.scripted = scripted;
   }
 }
 
